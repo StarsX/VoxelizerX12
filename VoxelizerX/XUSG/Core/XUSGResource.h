@@ -6,7 +6,7 @@
 
 #include "XUSGDescriptor.h"
 
-#define	BIND_PACKED_UAV	ResourceFlags(0x8 | 0x8000)
+#define	BIND_PACKED_UAV	ResourceFlags(0x4 | 0x8000)
 
 namespace XUSG
 {
@@ -21,7 +21,8 @@ namespace XUSG
 
 		void Create(uint32_t byteWidth, uint32_t cbvSize);
 
-		uint8_t	*Map();
+		void *Map();
+		void Unmap();
 
 		const Resource			&GetResource() const;
 		const DescriptorView	&GetCBV() const;
@@ -29,7 +30,7 @@ namespace XUSG
 	protected:
 		Resource		m_resource;
 		DescriptorView	m_CBV;
-		uint8_t			*m_pDataBegin;
+		void			*m_pDataBegin;
 
 		Device			m_device;
 	};
@@ -159,6 +160,33 @@ namespace XUSG
 	};
 
 	//--------------------------------------------------------------------------------------
+	// 3D Texture
+	//--------------------------------------------------------------------------------------
+	class Texture3D :
+		public ResourceBase
+	{
+	public:
+		Texture3D(const Device &device);
+		virtual ~Texture3D();
+
+		void Create(uint32_t width, uint32_t height, uint32_t depth, Format format,
+			ResourceFlags resourceFlags = ResourceFlags(0), uint8_t numMips = 1,
+			PoolType poolType = PoolType(1), ResourceState state = ResourceState(0));
+		void CreateSRV(Format format = Format(0), uint8_t numMips = 1);
+		void CreateUAV(Format format = Format(0), uint8_t numMips = 1);
+		void CreateSubSRVs();
+
+		const DescriptorView	&GetUAV(uint8_t i = 0) const;
+		const DescriptorView	&GetSRVLevel(uint8_t i) const;
+		const DescriptorView	&GetSubSRV(uint8_t i) const;
+
+	protected:
+		std::vector<DescriptorView>	m_UAVs;
+		std::vector<DescriptorView>	m_SRVs;
+		std::vector<DescriptorView>	m_subSRVs;
+	};
+
+	//--------------------------------------------------------------------------------------
 	// Buffer base
 	//--------------------------------------------------------------------------------------
 	class BufferBase :
@@ -190,6 +218,9 @@ namespace XUSG
 		const DescriptorView &GetUAV() const;
 
 	protected:
+		void create(uint32_t byteWidth, ResourceFlags resourceFlags, PoolType poolType,
+			ResourceState state, bool hasSRV, bool hasUAV);
+
 		DescriptorView m_UAV;
 	};
 
@@ -229,5 +260,38 @@ namespace XUSG
 
 	protected:
 		IndexBufferView m_IBV;
+	};
+
+	//--------------------------------------------------------------------------------------
+	// Typed buffer
+	//--------------------------------------------------------------------------------------
+	class TypedBuffer :
+		public RawBuffer
+	{
+	public:
+		TypedBuffer(const Device &device);
+		virtual ~TypedBuffer();
+
+		void Create(uint32_t numElements, uint32_t stride, Format format,
+			ResourceFlags resourceFlags = ResourceFlags(0), PoolType poolType = PoolType(1),
+			ResourceState state = ResourceState(0));
+		void CreateSRV(uint32_t numElements, uint32_t stride, Format format);
+		void CreateUAV(uint32_t numElements, uint32_t stride, Format format);
+	};
+
+	//--------------------------------------------------------------------------------------
+	// Structured buffer
+	//--------------------------------------------------------------------------------------
+	class StructuredBuffer :
+		public RawBuffer
+	{
+	public:
+		StructuredBuffer(const Device &device);
+		virtual ~StructuredBuffer();
+
+		void Create(uint32_t numElements, uint32_t stride, ResourceFlags resourceFlags = ResourceFlags(0),
+			PoolType poolType = PoolType(1), ResourceState state = ResourceState(0));
+		void CreateSRV(uint32_t numElements, uint32_t stride);
+		void CreateUAV(uint32_t numElements, uint32_t stride);
 	};
 }

@@ -244,10 +244,6 @@ void VoxelizerX::LoadAssets()
 		m_constantBuffer = make_unique<ConstantBuffer>(m_device);
 		m_constantBuffer->Create(1024 * 64, sizeof(XMFLOAT4));
 
-		// Map and initialize the constant buffer. We don't unmap this until the
-		// app closes. Keeping things mapped for the lifetime of the resource is okay.
-		m_pCbvDataBegin = m_constantBuffer->Map();
-
 		Util::DescriptorTable cbvTable;
 		cbvTable.SetDescriptors(0, 1, &m_constantBuffer->GetCBV());
 		m_cbvTable = cbvTable.GetDescriptorTable(m_descriptorTablePool);
@@ -350,10 +346,12 @@ void VoxelizerX::OnUpdate()
 
 	m_cbData_Offset.x += translationSpeed;
 	if (m_cbData_Offset.x > offsetBounds)
-	{
 		m_cbData_Offset.x = -offsetBounds;
-	}
-	memcpy(m_pCbvDataBegin, &m_cbData_Offset, sizeof(m_cbData_Offset));
+
+	// Map and initialize the constant buffer. We don't unmap this until the
+		// app closes. Keeping things mapped for the lifetime of the resource is okay.
+	const auto pCbData = reinterpret_cast<XMFLOAT4*>(m_constantBuffer->Map());
+	*pCbData = m_cbData_Offset;
 }
 
 // Render the scene.

@@ -78,7 +78,6 @@ private:
 	std::unique_ptr<XUSG::IndexBuffer>	m_indexBuffer;
 	std::unique_ptr<XUSG::ConstantBuffer> m_constantBuffer;
 	std::unique_ptr<XUSG::Texture2D>	m_textures[8];
-	uint8_t* m_pCbvDataBegin;
 	XMFLOAT4 m_cbData_Offset;
 
 	// Synchronization objects.
