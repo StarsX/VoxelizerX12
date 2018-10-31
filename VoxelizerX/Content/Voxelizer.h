@@ -62,6 +62,7 @@ protected:
 	void createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData, XUSG::Resource& vbUpload);
 	void createIB(uint32_t numIndices, const uint32_t *pData, XUSG::Resource& ibUpload);
 	void createCBs();
+	void voxelize(bool depthPeel, uint8_t mipLevel);
 
 	uint32_t	m_vertexStride;
 	uint32_t	m_numIndices;
