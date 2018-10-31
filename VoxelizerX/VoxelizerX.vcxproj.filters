@@ -81,6 +81,12 @@
     <ClInclude Include="VoxelizerX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Content\Voxelizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Content\ObjLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Common\DXFramework.cpp">
@@ -114,6 +120,12 @@
       <Filter>XUSG\Core\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="VoxelizerX.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Content\Voxelizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Content\ObjLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
