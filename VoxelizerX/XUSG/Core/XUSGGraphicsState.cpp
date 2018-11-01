@@ -228,7 +228,8 @@ PipelineState Pool::createPipeline(const State::Key *pKey)
 {
 	// Fill desc
 	PipelineDesc desc = {};
-	desc.pRootSignature = static_cast<decltype(desc.pRootSignature)>(pKey->PipelineLayout);
+	if (pKey->PipelineLayout)
+		desc.pRootSignature = static_cast<decltype(desc.pRootSignature)>(pKey->PipelineLayout);
 
 	if (pKey->Shaders[Shader::Stage::VS])
 		desc.VS = Shader::ByteCode(static_cast<BlobType*>(pKey->Shaders[Shader::Stage::VS]));
@@ -249,7 +250,8 @@ PipelineState Pool::createPipeline(const State::Key *pKey)
 	const auto depthStencil = static_cast<decltype(desc.DepthStencilState)*>(pKey->DepthStencil);
 	desc.RasterizerState = *(rasterizer ? rasterizer : GetRasterizer(RasterizerPreset::CULL_BACK).get());
 	desc.DepthStencilState = *(depthStencil ? depthStencil : GetDepthStencil(DepthStencilPreset::DEFAULT).get());
-	desc.InputLayout = *static_cast<decltype(desc.InputLayout)*>(pKey->InputLayout);
+	if (pKey->InputLayout)
+		desc.InputLayout = *static_cast<decltype(desc.InputLayout)*>(pKey->InputLayout);
 	desc.PrimitiveTopologyType = static_cast<PrimitiveTopologyType>(pKey->PrimitiveTopologyType);
 	desc.NumRenderTargets = pKey->NumRenderTargets;
 

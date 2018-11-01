@@ -86,6 +86,16 @@ void Voxelizer::UpdateFrame(CXMVECTOR eyePt, CXMMATRIX viewProj)
 
 void Voxelizer::Render(const RenderTargetTable& rtvs, const DepthStencilHandle& dsv)
 {
+	// Get SRV
+	Util::DescriptorTable utilSrvTable;
+	utilSrvTable.SetDescriptors(0, 1, &m_grid->GetSRV());
+	const auto srvTable = utilSrvTable.GetDescriptorTable(m_descriptorTablePool);
+
+	// Get CBVs
+	Util::DescriptorTable utilCbvTable;
+	utilCbvTable.SetDescriptors(0, 1, &m_cbMatrices->GetCBV());
+	const auto cbvTable = utilCbvTable.GetDescriptorTable(m_descriptorTablePool);
+
 	voxelize();
 
 	m_commandList->ResourceBarrier(1, &m_grid->Transition(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
@@ -177,7 +187,7 @@ void Voxelizer::createCBs()
 void Voxelizer::voxelize(bool depthPeel, uint8_t mipLevel)
 {
 	// Get UAVs
-	const DescriptorView uavs[] = { m_grid->GetUAV(), m_KBufferDepth->GetUAV() };
+	const DescriptorView uavs[] = { m_grid->GetUAV() };// , m_KBufferDepth->GetUAV() };
 	Util::DescriptorTable utilUavTable;
 	utilUavTable.SetDescriptors(0, _countof(uavs), uavs);
 	const auto uavTable = utilUavTable.GetDescriptorTable(m_descriptorTablePool);

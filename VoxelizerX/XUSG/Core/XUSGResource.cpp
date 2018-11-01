@@ -856,6 +856,7 @@ void Texture3D::CreateUAV(Format format, uint8_t numMips)
 		descriptor = createUAV(format);
 		descriptor->Uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
 		descriptor->Uav.Texture3D.MipSlice = mipLevel++;
+		descriptor->Uav.Texture3D.WSize = 1;
 	}
 }
 
@@ -977,8 +978,9 @@ void RawBuffer::CreateSRV(uint32_t byteWidth)
 	descriptor = createSRV(DXGI_FORMAT_R32_TYPELESS);
 
 	const auto stride = 4u;
+	descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	descriptor->Srv.Buffer.NumElements = byteWidth / stride;
-	descriptor->Srv.Buffer.StructureByteStride = stride;
+	descriptor->Srv.Buffer.StructureByteStride = 0;// stride;
 	descriptor->Srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
 }
 
@@ -988,6 +990,7 @@ void RawBuffer::CreateUAV(uint32_t byteWidth)
 	descriptor = createUAV(DXGI_FORMAT_R32_TYPELESS);
 
 	const auto stride = 4u;
+	descriptor->Uav.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 	descriptor->Uav.Buffer.FirstElement = 0;
 	descriptor->Uav.Buffer.NumElements = byteWidth / stride;
 	descriptor->Uav.Buffer.StructureByteStride = stride;
@@ -1163,6 +1166,7 @@ void TypedBuffer::CreateSRV(uint32_t numElements, uint32_t stride, Format format
 
 	auto& descriptor = m_SRV;
 	descriptor = createSRV(format);
+	descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	descriptor->Srv.Buffer.NumElements = numElements;
 	descriptor->Srv.Buffer.StructureByteStride = stride;
 }
@@ -1174,6 +1178,7 @@ void TypedBuffer::CreateUAV(uint32_t numElements, uint32_t stride, Format format
 
 	auto& descriptor = m_UAV;
 	descriptor = createUAV(format);
+	descriptor->Uav.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 	descriptor->Uav.Buffer.NumElements = numElements;
 	descriptor->Uav.Buffer.StructureByteStride = stride;
 }
@@ -1213,6 +1218,7 @@ void StructuredBuffer::CreateSRV(uint32_t numElements, uint32_t stride)
 {
 	auto& descriptor = m_SRV;
 	descriptor = createSRV(m_resource->GetDesc().Format);
+	descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	descriptor->Srv.Buffer.NumElements = numElements;
 	descriptor->Srv.Buffer.StructureByteStride = stride;
 }
@@ -1221,6 +1227,7 @@ void StructuredBuffer::CreateUAV(uint32_t numElements, uint32_t stride)
 {
 	auto& descriptor = m_UAV;
 	descriptor = createUAV(m_resource->GetDesc().Format);
+	descriptor->Uav.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 	descriptor->Uav.Buffer.NumElements = numElements;
 	descriptor->Uav.Buffer.StructureByteStride = stride;
 }
