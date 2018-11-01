@@ -10,6 +10,7 @@
 //*********************************************************
 
 #include "VoxelizerX.h"
+#include "Advanced/XUSGSharedConst.h"
 
 using namespace std;
 using namespace XUSG;
@@ -175,9 +176,6 @@ void VoxelizerX::LoadAssets()
 		m_shaderPool.CreateShader(Shader::Stage::VS, VS_TRIANGLE, L"VertexShader.cso");
 		m_shaderPool.CreateShader(Shader::Stage::PS, PS_TRIANGLE, L"PixelShader.cso");
 
-		const auto vertexShader = m_shaderPool.GetShader(Shader::Stage::VS, VS_TRIANGLE);
-		const auto pixelShader = m_shaderPool.GetShader(Shader::Stage::PS, PS_TRIANGLE);
-
 		// Define the vertex input layout.
 		InputElementTable inputElementDescs =
 		{
@@ -202,7 +200,12 @@ void VoxelizerX::LoadAssets()
 	}
 
 	// Create the command list.
-	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
+	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
+
+	m_voxelizer = make_unique<Voxelizer>(m_device, m_commandList);
+
+	Resource vbUpload, ibUpload;
+	m_voxelizer->Init(m_width, m_height, vbUpload, ibUpload);
 
 	// Create the vertex buffer.
 	Resource vertexUpload;
@@ -299,6 +302,11 @@ void VoxelizerX::LoadAssets()
 		// complete before continuing.
 		WaitForPreviousFrame();
 	}
+
+	// Projection
+	const auto aspectRatio = m_width / static_cast<float>(m_height);
+	const auto proj = XMMatrixPerspectiveFovLH(g_FOVAngleY, aspectRatio, g_zNear, g_zFar);
+	XMStoreFloat4x4(&m_proj, proj);
 }
 
 // Generate a simple black and white checkerboard texture.
@@ -352,6 +360,13 @@ void VoxelizerX::OnUpdate()
 		// app closes. Keeping things mapped for the lifetime of the resource is okay.
 	const auto pCbData = reinterpret_cast<XMFLOAT4*>(m_constantBuffer->Map());
 	*pCbData = m_cbData_Offset;
+
+	// View
+	const auto focusPt = XMVectorSet(0.0f, 4.0f, 0.0f, 1.0f);
+	const auto eyePt = XMVectorSet(-8.0f, 12.0f, 14.0f, 1.0f);
+	const auto view = XMMatrixLookAtLH(eyePt, focusPt, XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f));
+	const auto proj = XMLoadFloat4x4(&m_proj);
+	m_voxelizer->UpdateFrame(eyePt, view * proj);
 }
 
 // Render the scene.
@@ -389,9 +404,10 @@ void VoxelizerX::PopulateCommandList()
 	// However, when ExecuteCommandList() is called on a particular command 
 	// list, that command list can then be reset at any time and must be before 
 	// re-recording.
-	ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
+	ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
 	// Set necessary state.
+	m_commandList->SetPipelineState(m_pipelineState.Get());
 	m_commandList->SetGraphicsRootSignature(m_pipelineLayout.Get());
 
 	DescriptorPool::InterfaceType* ppHeaps[] =
@@ -420,6 +436,8 @@ void VoxelizerX::PopulateCommandList()
 	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer->GetVBV());
 	m_commandList->IASetIndexBuffer(&m_indexBuffer->GetIBV());
 	m_commandList->DrawIndexedInstanced(3, 2, 0, 0, 0);
+
+	m_voxelizer->Render(m_swapChainRtvTables[m_frameIndex], m_dsvHandle);
 
 	// Indicate that the back buffer will now be used to present.
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));

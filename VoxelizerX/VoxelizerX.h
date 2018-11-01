@@ -11,9 +11,7 @@
 
 #pragma once
 
-#include "DXFramework.h"
-#include "Core/XUSGGraphicsState.h"
-#include "Core/XUSGResource.h"
+#include "Voxelizer.h"
 
 using namespace DirectX;
 
@@ -52,6 +50,9 @@ private:
 
 	XUSG::PipelineLayout			m_pipelineLayout;
 	XUSG::InputLayout 				m_inputLayout;
+
+	std::unique_ptr<Voxelizer>		m_voxelizer;
+	DirectX::XMFLOAT4X4				m_proj;
 
 	// Pipeline objects.
 	CD3DX12_VIEWPORT	m_viewport;

@@ -40,6 +40,12 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{b260c74f-31ac-461c-aa6e-80f763f7e27d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="XUSG\Shaders">
+      <UniqueIdentifier>{58365fd1-dd2c-4665-af7f-26a2a89f171f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\Advanced">
+      <UniqueIdentifier>{e02eb163-b419-4362-90fe-77044bf6b63f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common\d3dx12.h">
@@ -86,6 +92,9 @@
     </ClInclude>
     <ClInclude Include="Content\ObjLoader.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Advanced\XUSGSharedConst.h">
+      <Filter>XUSG\Advanced</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -142,12 +151,30 @@
     <None Include="XUSG\Core\XUSGSampler.inl">
       <Filter>XUSG\Core\Source Files\Inc</Filter>
     </None>
+    <None Include="Common\d3dx_dxgiformatconvert.inl">
+      <Filter>Common</Filter>
+    </None>
+    <None Include="XUSG\Shaders\CHDataSize.hlsli">
+      <Filter>XUSG\Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PixelShader.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="VertexShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\PSSimple.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\PSTriProj.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\VSBoxArray.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\VSTriProj.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

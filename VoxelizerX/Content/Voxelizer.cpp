@@ -5,11 +5,9 @@ using namespace std;
 using namespace DirectX;
 using namespace XUSG;
 
-Voxelizer::Voxelizer(const Device& device, const GraphicsCommandList& commandList,
-	const ComPtr<ID3D12CommandQueue>& commandQueue) :
+Voxelizer::Voxelizer(const Device& device, const GraphicsCommandList& commandList) :
 	m_device(device),
 	m_commandList(commandList),
-	m_commandQueue(commandQueue),
 	m_vertexStride(0),
 	m_numIndices(0)
 {
@@ -84,6 +82,17 @@ void Voxelizer::UpdateFrame(CXMVECTOR eyePt, CXMMATRIX viewProj)
 	// Per-frame data
 	const auto pCbPerFrame = reinterpret_cast<CBPerFrame*>(m_cbPerFrame->Map());
 	XMStoreFloat4(&pCbPerFrame->eyePos, eyePt);
+}
+
+void Voxelizer::Render(const RenderTargetTable& rtvs, const DepthStencilHandle& dsv)
+{
+	voxelize();
+
+	m_commandList->ResourceBarrier(1, &m_grid->Transition(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+
+	renderBoxArray(rtvs, dsv);
+
+	m_commandList->ResourceBarrier(1, &m_grid->Transition(D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 }
 
 void Voxelizer::createShaders()
@@ -200,7 +209,7 @@ void Voxelizer::voxelize(bool depthPeel, uint8_t mipLevel)
 	utilPipelineLayout.SetShaderStage(2, Shader::Stage::VS);
 	utilPipelineLayout.SetShaderStage(3, Shader::Stage::VS);
 	utilPipelineLayout.SetShaderStage(4, Shader::Stage::PS);
-	const auto pipelineLayout = utilPipelineLayout.GetPipelineLayout(m_pipelinePool, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	const auto pipelineLayout = utilPipelineLayout.GetPipelineLayout(m_pipelinePool, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 
 	// Get pipeline
 	Graphics::State state;
@@ -242,4 +251,62 @@ void Voxelizer::voxelize(bool depthPeel, uint8_t mipLevel)
 	//m_commandList->ClearUnorderedAccessViewUint(*uavTable, null, m_grid->GetResource().Get(), XMVECTORU32{ 0 }.u, 0, nullptr);
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_commandList->DrawInstanced(3, m_numIndices / 3, 0, 0);
+}
+
+void Voxelizer::renderBoxArray(const RenderTargetTable& rtvs, const DepthStencilHandle& dsv)
+{
+	// Get SRV
+	Util::DescriptorTable utilSrvTable;
+	utilSrvTable.SetDescriptors(0, 1, &m_grid->GetSRV());
+	const auto srvTable = utilSrvTable.GetDescriptorTable(m_descriptorTablePool);
+
+	// Get CBVs
+	Util::DescriptorTable utilCbvTable;
+	utilCbvTable.SetDescriptors(0, 1, &m_cbMatrices->GetCBV());
+	const auto cbvTable = utilCbvTable.GetDescriptorTable(m_descriptorTablePool);
+
+	// Get pipeline layout
+	Util::PipelineLayout utilPipelineLayout;
+	utilPipelineLayout.SetRange(0, Descriptor::SRV, 1, 0);
+	utilPipelineLayout.SetRange(1, Descriptor::CBV, 1, 0);
+	utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
+	utilPipelineLayout.SetShaderStage(1, Shader::Stage::VS);
+	const auto pipelineLayout = utilPipelineLayout.GetPipelineLayout(m_pipelinePool, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+
+	// Get pipeline
+	Graphics::State state;
+	//state.IASetInputLayout(m_inputLayout);
+	state.SetPipelineLayout(pipelineLayout);
+	state.SetShader(Shader::Stage::VS, m_shaderPool.GetShader(Shader::Stage::VS, VS_BOX_ARRAY));
+	state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_SIMPLE));
+	state.IASetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	state.OMSetNumRenderTargets(1);
+	state.OMSetRTVFormat(0, DXGI_FORMAT_R8G8B8A8_UNORM);
+	state.OMSetDSVFormat(DXGI_FORMAT_D24_UNORM_S8_UINT);
+	const auto pipelineState = state.GetPipeline(m_pipelinePool);
+
+	// Set pipeline state
+	m_commandList->SetPipelineState(pipelineState.Get());
+	m_commandList->SetGraphicsRootSignature(pipelineLayout.Get());
+
+	// Set descriptor tables
+	m_commandList->SetDescriptorHeaps(1, m_descriptorTablePool.GetSrvUavCbvPool().GetAddressOf());
+	m_commandList->SetGraphicsRootDescriptorTable(0, *srvTable);
+	m_commandList->SetGraphicsRootDescriptorTable(1, *cbvTable);
+	
+	// Set viewport
+	const auto gridSize = GRID_SIZE >> SHOW_MIP;
+	CD3DX12_VIEWPORT viewport(0.0f, 0.0f, m_viewport.x, m_viewport.y);
+	CD3DX12_RECT scissorRect(0, 0, static_cast<long>(m_viewport.x), static_cast<long>(m_viewport.y));
+	m_commandList->RSSetViewports(1, &viewport);
+	m_commandList->RSSetScissorRects(1, &scissorRect);
+
+	m_commandList->OMSetRenderTargets(1, rtvs.get(), FALSE, dsv.get());
+
+	// Record commands.
+	//if (depthPeel)
+	//	m_commandList->ClearUnorderedAccessViewUint(*uavTable, null, m_KBufferDepth->GetResource().Get(), XMVECTORU32{ UINT32_MAX }.u, 0, nullptr);
+	//m_commandList->ClearUnorderedAccessViewUint(*uavTable, null, m_grid->GetResource().Get(), XMVECTORU32{ 0 }.u, 0, nullptr);
+	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	m_commandList->DrawInstanced(4, 6 * gridSize * gridSize * gridSize, 0, 0);
 }

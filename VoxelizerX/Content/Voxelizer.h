@@ -28,14 +28,13 @@ public:
 		CS_RAY_CAST
 	};
 
-	Voxelizer(const XUSG::Device& device, const XUSG::GraphicsCommandList& commandList,
-		const ComPtr<ID3D12CommandQueue>& commandQueue);
+	Voxelizer(const XUSG::Device& device, const XUSG::GraphicsCommandList& commandList);
 	virtual ~Voxelizer();
 
 	void Init(uint32_t width, uint32_t height, XUSG::Resource& vbUpload, XUSG::Resource& ibUpload,
 		const char *fileName = "Media\\bunny.obj");
 	void UpdateFrame(DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
-	void Render();
+	void Render(const XUSG::RenderTargetTable& rtvs, const XUSG::DepthStencilHandle& dsv);
 
 protected:
 	struct CBMatrices
@@ -62,7 +61,8 @@ protected:
 	void createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData, XUSG::Resource& vbUpload);
 	void createIB(uint32_t numIndices, const uint32_t *pData, XUSG::Resource& ibUpload);
 	void createCBs();
-	void voxelize(bool depthPeel, uint8_t mipLevel);
+	void voxelize(bool depthPeel = false, uint8_t mipLevel = 0);
+	void renderBoxArray(const XUSG::RenderTargetTable& rtvs, const XUSG::DepthStencilHandle& dsv);
 
 	uint32_t	m_vertexStride;
 	uint32_t	m_numIndices;
@@ -92,5 +92,4 @@ protected:
 
 	XUSG::Device m_device;
 	XUSG::GraphicsCommandList m_commandList;
-	ComPtr<ID3D12CommandQueue> m_commandQueue;
 };
