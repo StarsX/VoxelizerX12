@@ -39,8 +39,8 @@ void Voxelizer::Init(uint32_t width, uint32_t height, Resource& vbUpload, Resour
 	createIB(objLoader.GetNumIndices(), objLoader.GetIndices(), ibUpload);
 
 	// Extract boundary
-	const auto venter = objLoader.GetCenter();
-	m_bound = XMFLOAT4(venter.x, venter.y, venter.z, objLoader.GetRadius());
+	const auto center = objLoader.GetCenter();
+	m_bound = XMFLOAT4(center.x, center.y, center.z, objLoader.GetRadius());
 
 	m_numLevels = max(static_cast<uint32_t>(log2(GRID_SIZE)), 1);
 	createCBs();
