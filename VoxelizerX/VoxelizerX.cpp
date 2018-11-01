@@ -406,6 +406,7 @@ void VoxelizerX::PopulateCommandList()
 	// re-recording.
 	ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
+#if 0
 	// Set necessary state.
 	m_commandList->SetPipelineState(m_pipelineState.Get());
 	m_commandList->SetGraphicsRootSignature(m_pipelineLayout.Get());
@@ -422,6 +423,7 @@ void VoxelizerX::PopulateCommandList()
 	m_commandList->SetGraphicsRootDescriptorTable(2, *m_samplerTable);
 	m_commandList->RSSetViewports(1, &m_viewport);
 	m_commandList->RSSetScissorRects(1, &m_scissorRect);
+#endif
 
 	// Indicate that the back buffer will be used as a render target.
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
@@ -432,10 +434,12 @@ void VoxelizerX::PopulateCommandList()
 	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 	m_commandList->ClearRenderTargetView(*m_swapChainRtvTables[m_frameIndex], clearColor, 0, nullptr);
 	m_commandList->ClearDepthStencilView(*m_dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+#if 0
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer->GetVBV());
 	m_commandList->IASetIndexBuffer(&m_indexBuffer->GetIBV());
 	m_commandList->DrawIndexedInstanced(3, 2, 0, 0, 0);
+#endif
 
 	m_voxelizer->Render(m_swapChainRtvTables[m_frameIndex], m_dsvHandle);
 

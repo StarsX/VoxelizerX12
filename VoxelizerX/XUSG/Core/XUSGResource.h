@@ -44,6 +44,8 @@ namespace XUSG
 		ResourceBase(const Device &device);
 		virtual ~ResourceBase();
 
+		void Barrier(const GraphicsCommandList& commandList, ResourceState dstState);
+
 		const Resource			&GetResource() const;
 		const DescriptorView	&GetSRV() const;
 
@@ -275,8 +277,8 @@ namespace XUSG
 		void Create(uint32_t numElements, uint32_t stride, Format format,
 			ResourceFlags resourceFlags = ResourceFlags(0), PoolType poolType = PoolType(1),
 			ResourceState state = ResourceState(0));
-		void CreateSRV(uint32_t numElements, uint32_t stride, Format format);
-		void CreateUAV(uint32_t numElements, uint32_t stride, Format format);
+		void CreateSRV(uint32_t numElements, Format format);
+		void CreateUAV(uint32_t numElements, Format format);
 	};
 
 	//--------------------------------------------------------------------------------------

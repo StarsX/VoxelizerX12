@@ -144,6 +144,7 @@
     <ClInclude Include="Common\DXFrameworkHelper.h" />
     <ClInclude Include="Common\Win32Application.h" />
     <ClInclude Include="Content\ObjLoader.h" />
+    <ClInclude Include="Content\SharedConst.h" />
     <ClInclude Include="Content\Voxelizer.h" />
     <ClInclude Include="VoxelizerX.h" />
     <ClInclude Include="stdafx.h" />

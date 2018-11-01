@@ -96,6 +96,9 @@
     <ClInclude Include="XUSG\Advanced\XUSGSharedConst.h">
       <Filter>XUSG\Advanced</Filter>
     </ClInclude>
+    <ClInclude Include="Content\SharedConst.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Common\DXFramework.cpp">

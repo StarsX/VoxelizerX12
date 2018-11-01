@@ -215,8 +215,9 @@ DescriptorTableLayout PipelineLayoutPool::createDescriptorTableLayout(const stri
 	{
 		const auto& range = pRanges[i];
 		ranges[i].Init(rangeTypes[range.DescriptorType], range.NumDescriptors, range.BaseRegister,
-			range.Space, range.DescriptorType == Descriptor::SAMPLER ?
-			D3D12_DESCRIPTOR_RANGE_FLAG_NONE : D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+			range.Space, D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
+		//	range.Space, range.DescriptorType == Descriptor::SAMPLER ?
+		//	D3D12_DESCRIPTOR_RANGE_FLAG_NONE : D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 	}
 
 	D3D12_SHADER_VISIBILITY visibilities[Shader::Stage::NUM];
