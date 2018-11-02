@@ -19,11 +19,6 @@ namespace XUSG
 
 	// Resources related
 	using Resource = ComPtr<ID3D12Resource>;
-	using ShaderResourceView = D3D12_SHADER_RESOURCE_VIEW_DESC;
-	using RenderTargetView = D3D12_RENDER_TARGET_VIEW_DESC;
-	using DepthStencilView = D3D12_DEPTH_STENCIL_VIEW_DESC;
-	using UnorderedAccessView = D3D12_UNORDERED_ACCESS_VIEW_DESC;
-	using ConstantBufferView = D3D12_CONSTANT_BUFFER_VIEW_DESC;
 	using VertexBufferView = D3D12_VERTEX_BUFFER_VIEW;
 	using IndexBufferView = D3D12_INDEX_BUFFER_VIEW;
 	using Sampler = D3D12_SAMPLER_DESC;
@@ -33,11 +28,10 @@ namespace XUSG
 
 	// Descriptors related
 	using DescriptorPool = ComPtr<ID3D12DescriptorHeap>;
-	using DescriptorHandleCPU = CD3DX12_CPU_DESCRIPTOR_HANDLE;
-	using DescriptorHandleGPU = CD3DX12_GPU_DESCRIPTOR_HANDLE;
-	using DescriptorTable = std::shared_ptr<DescriptorHandleGPU>;
-	using RenderTargetTable = std::shared_ptr<DescriptorHandleCPU>;
-	using DepthStencilHandle = std::shared_ptr<DescriptorHandleCPU>;
+	using Descriptor = CD3DX12_CPU_DESCRIPTOR_HANDLE;
+	using DescriptorView = CD3DX12_GPU_DESCRIPTOR_HANDLE;
+	using DescriptorTable = std::shared_ptr<DescriptorView>;
+	using RenderTargetTable = std::shared_ptr<Descriptor>;
 
 	// Pipeline layouts related
 	using PipelineLayout = ComPtr<ID3D12RootSignature>;

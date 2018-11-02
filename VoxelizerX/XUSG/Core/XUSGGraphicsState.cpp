@@ -26,7 +26,7 @@ State::~State()
 {
 }
 
-void State::SetPipelineLayout(const PipelineLayout& layout)
+void State::SetPipelineLayout(const PipelineLayout &layout)
 {
 	m_pKey->PipelineLayout = layout.Get();
 }
@@ -36,37 +36,37 @@ void State::SetShader(Shader::Stage::Type stage, Blob shader)
 	m_pKey->Shaders[stage] = shader.Get();
 }
 
-void State::OMSetBlendState(const Blend& blend)
+void State::OMSetBlendState(const Blend &blend)
 {
 	m_pKey->Blend = blend.get();
 }
 
-void State::RSSetState(const Rasterizer& rasterizer)
+void State::RSSetState(const Rasterizer &rasterizer)
 {
 	m_pKey->Rasterizer = rasterizer.get();
 }
 
-void State::DSSetState(const DepthStencil& depthStencil)
+void State::DSSetState(const DepthStencil &depthStencil)
 {
 	m_pKey->DepthStencil = depthStencil.get();
 }
 
-void State::OMSetBlendState(BlendPreset::Type preset, Pipeline::Pool& pipelinePool)
+void State::OMSetBlendState(BlendPreset::Type preset, Pipeline::Pool &pipelinePool)
 {
 	OMSetBlendState(pipelinePool.GetBlend(preset));
 }
 
-void State::RSSetState(RasterizerPreset::Type preset, Pipeline::Pool& pipelinePool)
+void State::RSSetState(RasterizerPreset::Type preset, Pipeline::Pool &pipelinePool)
 {
 	RSSetState(pipelinePool.GetRasterizer(preset));
 }
 
-void State::DSSetState(DepthStencilPreset::Type preset, Pipeline::Pool& pipelinePool)
+void State::DSSetState(DepthStencilPreset::Type preset, Pipeline::Pool &pipelinePool)
 {
 	DSSetState(pipelinePool.GetDepthStencil(preset));
 }
 
-void State::IASetInputLayout(const InputLayout& layout)
+void State::IASetInputLayout(const InputLayout &layout)
 {
 	m_pKey->InputLayout = layout.get();
 }
@@ -99,12 +99,12 @@ void State::OMSetDSVFormat(Format format)
 	m_pKey->DSVFormat = format;
 }
 
-PipelineState State::CreatePipeline(Pipeline::Pool& pipelinePool) const
+PipelineState State::CreatePipeline(Pipeline::Pool &pipelinePool) const
 {
 	return pipelinePool.createPipeline(m_pKey);
 }
 
-PipelineState State::GetPipeline(Pipeline::Pool& pipelinePool) const
+PipelineState State::GetPipeline(Pipeline::Pool &pipelinePool) const
 {
 	return pipelinePool.getPipeline(m_key);
 }
@@ -145,7 +145,7 @@ Pool::Pool() :
 	m_pfnDepthStencils[DepthStencilPreset::DEPTH_READ_EQUAL] = DepthReadEqual;
 }
 
-Pool::Pool(const Device& device) : Pool()
+Pool::Pool(const Device &device) : Pool()
 {
 	SetDevice(device);
 }
@@ -154,13 +154,13 @@ Pool::~Pool()
 {
 }
 
-void Pool::SetDevice(const Device& device)
+void Pool::SetDevice(const Device &device)
 {
 	m_device = device;
 	m_pipelineLayoutPool.SetDevice(device);
 }
 
-void Pool::SetInputLayout(uint32_t index, const InputElementTable& elementTable)
+void Pool::SetInputLayout(uint32_t index, const InputElementTable &elementTable)
 {
 	m_inputLayoutPool.SetLayout(index, elementTable);
 }
@@ -170,37 +170,37 @@ InputLayout Pool::GetInputLayout(uint32_t index) const
 	return m_inputLayoutPool.GetLayout(index);
 }
 
-InputLayout Pool::CreateInputLayout(const InputElementTable& elementTable)
+InputLayout Pool::CreateInputLayout(const InputElementTable &elementTable)
 {
 	return m_inputLayoutPool.CreateLayout(elementTable);;
 }
 
-PipelineLayout Pool::GetPipelineLayout(Util::PipelineLayout& util, uint8_t flags)
+PipelineLayout Pool::GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags)
 {
 	return m_pipelineLayoutPool.GetPipelineLayout(util, flags);
 }
 
-DescriptorTableLayout Pool::CreateDescriptorTableLayout(uint32_t index, const Util::PipelineLayout& util)
+DescriptorTableLayout Pool::CreateDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util)
 {
 	return m_pipelineLayoutPool.CreateDescriptorTableLayout(index, util);
 }
 
-DescriptorTableLayout Pool::GetDescriptorTableLayout(uint32_t index, const Util::PipelineLayout& util)
+DescriptorTableLayout Pool::GetDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util)
 {
 	return m_pipelineLayoutPool.GetDescriptorTableLayout(index, util);
 }
 
-PipelineLayoutPool& Pool::GetPipelineLayoutPool()
+PipelineLayoutPool &Pool::GetPipelineLayoutPool()
 {
 	return m_pipelineLayoutPool;
 }
 
-PipelineState Pool::GetPipeline(const State& state)
+PipelineState Pool::GetPipeline(const State &state)
 {
 	return getPipeline(state.m_key);
 }
 
-const Blend& Pool::GetBlend(BlendPreset::Type preset)
+const Blend &Pool::GetBlend(BlendPreset::Type preset)
 {
 	if (m_blends[preset] == nullptr)
 		m_blends[preset] = m_pfnBlends[preset]();
@@ -208,7 +208,7 @@ const Blend& Pool::GetBlend(BlendPreset::Type preset)
 	return m_blends[preset];
 }
 
-const Rasterizer& Pool::GetRasterizer(RasterizerPreset::Type preset)
+const Rasterizer &Pool::GetRasterizer(RasterizerPreset::Type preset)
 {
 	if (m_rasterizers[preset] == nullptr)
 		m_rasterizers[preset] = m_pfnRasterizers[preset]();
@@ -216,7 +216,7 @@ const Rasterizer& Pool::GetRasterizer(RasterizerPreset::Type preset)
 	return m_rasterizers[preset];
 }
 
-const DepthStencil& Pool::GetDepthStencil(DepthStencilPreset::Type preset)
+const DepthStencil &Pool::GetDepthStencil(DepthStencilPreset::Type preset)
 {
 	if (m_depthStencils[preset] == nullptr)
 		m_depthStencils[preset] = m_pfnDepthStencils[preset]();
@@ -267,7 +267,7 @@ PipelineState Pool::createPipeline(const State::Key *pKey)
 	return pipeline;
 }
 
-PipelineState Pool::getPipeline(const string& key)
+PipelineState Pool::getPipeline(const string &key)
 {
 	const auto pPipeline = m_pipelines.find(key);
 

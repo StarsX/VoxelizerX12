@@ -66,18 +66,18 @@ namespace XUSG
 			State();
 			virtual ~State();
 
-			void SetPipelineLayout(const PipelineLayout& layout);
+			void SetPipelineLayout(const PipelineLayout &layout);
 			void SetShader(Shader::Stage::Type stage, Blob shader);
 			
-			void OMSetBlendState(const Blend& blend);
-			void RSSetState(const Rasterizer& rasterizer);
-			void DSSetState(const DepthStencil& depthStencil);
+			void OMSetBlendState(const Blend &blend);
+			void RSSetState(const Rasterizer &rasterizer);
+			void DSSetState(const DepthStencil &depthStencil);
 
-			void OMSetBlendState(BlendPreset::Type preset, Pipeline::Pool& pipelinePool);
-			void RSSetState(RasterizerPreset::Type preset, Pipeline::Pool& pipelinePool);
-			void DSSetState(DepthStencilPreset::Type preset, Pipeline::Pool& pipelinePool);
+			void OMSetBlendState(BlendPreset::Type preset, Pipeline::Pool &pipelinePool);
+			void RSSetState(RasterizerPreset::Type preset, Pipeline::Pool &pipelinePool);
+			void DSSetState(DepthStencilPreset::Type preset, Pipeline::Pool &pipelinePool);
 
-			void IASetInputLayout(const InputLayout& layout);
+			void IASetInputLayout(const InputLayout &layout);
 			void IASetPrimitiveTopologyType(PrimitiveTopologyType type);
 
 			void OMSetNumRenderTargets(uint8_t n);
@@ -85,8 +85,8 @@ namespace XUSG
 			void OMSetRTVFormats(const Format *formats, uint8_t n);
 			void OMSetDSVFormat(Format format);
 
-			PipelineState CreatePipeline(Pipeline::Pool& pipelinePool) const;
-			PipelineState GetPipeline(Pipeline::Pool& pipelinePool) const;
+			PipelineState CreatePipeline(Pipeline::Pool &pipelinePool) const;
+			PipelineState GetPipeline(Pipeline::Pool &pipelinePool) const;
 
 		protected:
 			friend class Pipeline::Pool;
@@ -116,32 +116,32 @@ namespace XUSG
 			{
 			public:
 				Pool();
-				Pool(const Device& device);
+				Pool(const Device &device);
 				virtual ~Pool();
 
-				void SetDevice(const Device& device);
+				void SetDevice(const Device &device);
 
-				void SetInputLayout(uint32_t index, const InputElementTable& elementTable);
+				void SetInputLayout(uint32_t index, const InputElementTable &elementTable);
 				InputLayout GetInputLayout(uint32_t index) const;
-				InputLayout CreateInputLayout(const InputElementTable& elementTable);
+				InputLayout CreateInputLayout(const InputElementTable &elementTable);
 
-				PipelineLayout GetPipelineLayout(Util::PipelineLayout& util, uint8_t flags);
-				DescriptorTableLayout CreateDescriptorTableLayout(uint32_t index, const Util::PipelineLayout& util);
-				DescriptorTableLayout GetDescriptorTableLayout(uint32_t index, const Util::PipelineLayout& util);
+				PipelineLayout GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags);
+				DescriptorTableLayout CreateDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util);
+				DescriptorTableLayout GetDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util);
 				
-				PipelineLayoutPool& GetPipelineLayoutPool();
+				PipelineLayoutPool &GetPipelineLayoutPool();
 
-				PipelineState GetPipeline(const State& state);
+				PipelineState GetPipeline(const State &state);
 
-				const Blend&		GetBlend(BlendPreset::Type preset);
-				const Rasterizer&	GetRasterizer(RasterizerPreset::Type preset);
-				const DepthStencil&	GetDepthStencil(DepthStencilPreset::Type preset);
+				const Blend			&GetBlend(BlendPreset::Type preset);
+				const Rasterizer	&GetRasterizer(RasterizerPreset::Type preset);
+				const DepthStencil	&GetDepthStencil(DepthStencilPreset::Type preset);
 				
 			protected:
 				friend class State;
 
 				PipelineState createPipeline(const State::Key *pKey);
-				PipelineState getPipeline(const std::string& key);
+				PipelineState getPipeline(const std::string &key);
 
 				InputLayoutPool		m_inputLayoutPool;
 				PipelineLayoutPool	m_pipelineLayoutPool;

@@ -5,7 +5,7 @@ using namespace std;
 using namespace DirectX;
 using namespace XUSG;
 
-Voxelizer::Voxelizer(const Device& device, const GraphicsCommandList& commandList) :
+Voxelizer::Voxelizer(const Device &device, const GraphicsCommandList &commandList) :
 	m_device(device),
 	m_commandList(commandList),
 	m_vertexStride(0),
@@ -19,7 +19,7 @@ Voxelizer::~Voxelizer()
 {
 }
 
-void Voxelizer::Init(uint32_t width, uint32_t height, Resource& vbUpload, Resource& ibUpload,
+void Voxelizer::Init(uint32_t width, uint32_t height, Resource &vbUpload, Resource &ibUpload,
 	const char *fileName)
 {
 	m_viewport.x = static_cast<float>(width);
@@ -84,17 +84,17 @@ void Voxelizer::UpdateFrame(CXMVECTOR eyePt, CXMMATRIX viewProj)
 	XMStoreFloat4(&pCbPerFrame->eyePos, eyePt);
 }
 
-void Voxelizer::Render(const RenderTargetTable& rtvs, const DepthStencilHandle& dsv)
+void Voxelizer::Render(const RenderTargetTable &rtvs, const Descriptor &dsv)
 {
 	// Get SRV
 	Util::DescriptorTable utilSrvTable;
 	utilSrvTable.SetDescriptors(0, 1, &m_grid->GetSRV());
-	const auto srvTable = utilSrvTable.GetDescriptorTable(m_descriptorTablePool);
+	const auto srvTable = utilSrvTable.GetCbvSrvUavTable(m_descriptorTablePool);
 
 	// Get CBVs
 	Util::DescriptorTable utilCbvTable;
 	utilCbvTable.SetDescriptors(0, 1, &m_cbMatrices->GetCBV());
-	const auto cbvTable = utilCbvTable.GetDescriptorTable(m_descriptorTablePool);
+	const auto cbvTable = utilCbvTable.GetCbvSrvUavTable(m_descriptorTablePool);
 
 	voxelize();
 	renderBoxArray(rtvs, dsv);
@@ -123,7 +123,7 @@ void Voxelizer::createInputLayout()
 	m_inputLayout = m_pipelinePool.CreateInputLayout(inputElementDescs);
 }
 
-void Voxelizer::createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData, Resource& vbUpload)
+void Voxelizer::createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData, Resource &vbUpload)
 {
 	m_vertexStride = stride;
 	m_vertexBuffer = make_unique<RawBuffer>(m_device);
@@ -132,7 +132,7 @@ void Voxelizer::createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData
 	m_vertexBuffer->Upload(m_commandList, vbUpload, pData, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
 
-void Voxelizer::createIB(uint32_t numIndices, const uint32_t *pData, Resource& ibUpload)
+void Voxelizer::createIB(uint32_t numIndices, const uint32_t *pData, Resource &ibUpload)
 {
 	m_numIndices = numIndices;
 	m_indexbuffer = make_unique<RawBuffer>(m_device);
@@ -168,7 +168,7 @@ void Voxelizer::createCBs()
 	m_cbPerMipLevels.resize(m_numLevels);
 	for (auto i = 0u; i < m_numLevels; ++i)
 	{
-		auto& cb = m_cbPerMipLevels[i];
+		auto &cb = m_cbPerMipLevels[i];
 		const auto gridSize = static_cast<float>(GRID_SIZE >> i);
 		cb = make_unique<ConstantBuffer>(m_device);
 		cb->Create(256, sizeof(XMFLOAT4));
@@ -182,33 +182,33 @@ void Voxelizer::createCBs()
 void Voxelizer::voxelize(bool depthPeel, uint8_t mipLevel)
 {
 	// Get UAVs
-	const DescriptorView uavs[] = { m_grid->GetUAV() };// , m_KBufferDepth->GetUAV() };
+	const Descriptor uavs[] = { m_grid->GetUAV() };// , m_KBufferDepth->GetUAV() };
 	Util::DescriptorTable utilUavTable;
 	utilUavTable.SetDescriptors(0, _countof(uavs), uavs);
-	const auto uavTable = utilUavTable.GetDescriptorTable(m_descriptorTablePool);
+	const auto uavTable = utilUavTable.GetCbvSrvUavTable(m_descriptorTablePool);
 
 	// Get SRVs
-	const DescriptorView srvs[] = { m_vertexBuffer->GetSRV(), m_indexbuffer->GetSRV() };
+	const Descriptor srvs[] = { m_vertexBuffer->GetSRV(), m_indexbuffer->GetSRV() };
 	Util::DescriptorTable utilSrvTable;
 	utilSrvTable.SetDescriptors(0, _countof(srvs), srvs);
-	const auto srvTable = utilSrvTable.GetDescriptorTable(m_descriptorTablePool);
+	const auto srvTable = utilSrvTable.GetCbvSrvUavTable(m_descriptorTablePool);
 
 	// Get CBVs
 	Util::DescriptorTable utilCbvPerObjectTable;
 	utilCbvPerObjectTable.SetDescriptors(0, 1, &m_cbBound->GetCBV());
-	const auto cbvPerObjectTable = utilCbvPerObjectTable.GetDescriptorTable(m_descriptorTablePool);
+	const auto cbvPerObjectTable = utilCbvPerObjectTable.GetCbvSrvUavTable(m_descriptorTablePool);
 
 	Util::DescriptorTable utilCbvPerMipLevelTable;
 	utilCbvPerMipLevelTable.SetDescriptors(0, 1, &m_cbPerMipLevels[mipLevel]->GetCBV());
-	const auto cbvPerMipLevel = utilCbvPerMipLevelTable.GetDescriptorTable(m_descriptorTablePool);
+	const auto cbvPerMipLevel = utilCbvPerMipLevelTable.GetCbvSrvUavTable(m_descriptorTablePool);
 
 	// Get pipeline layout
 	Util::PipelineLayout utilPipelineLayout;
-	utilPipelineLayout.SetRange(0, Descriptor::UAV, _countof(uavs), 0);
-	utilPipelineLayout.SetRange(1, Descriptor::SRV, _countof(srvs), 0);
-	utilPipelineLayout.SetRange(2, Descriptor::CBV, 1, 0);
-	utilPipelineLayout.SetRange(3, Descriptor::CBV, 1, 1);
-	utilPipelineLayout.SetRange(4, Descriptor::CBV, 1, 0);
+	utilPipelineLayout.SetRange(0, DescriptorType::UAV, _countof(uavs), 0);
+	utilPipelineLayout.SetRange(1, DescriptorType::SRV, _countof(srvs), 0);
+	utilPipelineLayout.SetRange(2, DescriptorType::CBV, 1, 0);
+	utilPipelineLayout.SetRange(3, DescriptorType::CBV, 1, 1);
+	utilPipelineLayout.SetRange(4, DescriptorType::CBV, 1, 0);
 	utilPipelineLayout.SetShaderStage(0, Shader::Stage::PS);
 	utilPipelineLayout.SetShaderStage(1, Shader::Stage::VS);
 	utilPipelineLayout.SetShaderStage(2, Shader::Stage::VS);
@@ -238,7 +238,7 @@ void Voxelizer::voxelize(bool depthPeel, uint8_t mipLevel)
 
 		// Set descriptor tables
 		m_grid->Barrier(m_commandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-		m_commandList->SetDescriptorHeaps(1, m_descriptorTablePool.GetSrvUavCbvPool().GetAddressOf());
+		m_commandList->SetDescriptorHeaps(1, m_descriptorTablePool.GetCbvSrvUavPool().GetAddressOf());
 		m_commandList->SetGraphicsRootDescriptorTable(0, *uavTable);
 		m_commandList->SetGraphicsRootDescriptorTable(1, *srvTable);
 		m_commandList->SetGraphicsRootDescriptorTable(2, *cbvPerObjectTable);
@@ -262,22 +262,22 @@ void Voxelizer::voxelize(bool depthPeel, uint8_t mipLevel)
 	}
 }
 
-void Voxelizer::renderBoxArray(const RenderTargetTable& rtvs, const DepthStencilHandle& dsv)
+void Voxelizer::renderBoxArray(const RenderTargetTable &rtvs, const Descriptor &dsv)
 {
 	// Get SRV
 	Util::DescriptorTable utilSrvTable;
 	utilSrvTable.SetDescriptors(0, 1, &m_grid->GetSRV());
-	const auto srvTable = utilSrvTable.GetDescriptorTable(m_descriptorTablePool);
+	const auto srvTable = utilSrvTable.GetCbvSrvUavTable(m_descriptorTablePool);
 
 	// Get CBVs
 	Util::DescriptorTable utilCbvTable;
 	utilCbvTable.SetDescriptors(0, 1, &m_cbMatrices->GetCBV());
-	const auto cbvTable = utilCbvTable.GetDescriptorTable(m_descriptorTablePool);
+	const auto cbvTable = utilCbvTable.GetCbvSrvUavTable(m_descriptorTablePool);
 
 	// Get pipeline layout
 	Util::PipelineLayout utilPipelineLayout;
-	utilPipelineLayout.SetRange(0, Descriptor::SRV, 1, 0);
-	utilPipelineLayout.SetRange(1, Descriptor::CBV, 1, 0);
+	utilPipelineLayout.SetRange(0, DescriptorType::SRV, 1, 0);
+	utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0);
 	utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
 	utilPipelineLayout.SetShaderStage(1, Shader::Stage::VS);
 	const auto pipelineLayout = utilPipelineLayout.GetPipelineLayout(m_pipelinePool, D3D12_ROOT_SIGNATURE_FLAG_NONE);
@@ -303,7 +303,7 @@ void Voxelizer::renderBoxArray(const RenderTargetTable& rtvs, const DepthStencil
 
 		// Set descriptor tables
 		m_grid->Barrier(m_commandList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-		m_commandList->SetDescriptorHeaps(1, m_descriptorTablePool.GetSrvUavCbvPool().GetAddressOf());
+		m_commandList->SetDescriptorHeaps(1, m_descriptorTablePool.GetCbvSrvUavPool().GetAddressOf());
 		m_commandList->SetGraphicsRootDescriptorTable(0, *srvTable);
 		m_commandList->SetGraphicsRootDescriptorTable(1, *cbvTable);
 
@@ -314,7 +314,7 @@ void Voxelizer::renderBoxArray(const RenderTargetTable& rtvs, const DepthStencil
 		m_commandList->RSSetViewports(1, &viewport);
 		m_commandList->RSSetScissorRects(1, &scissorRect);
 
-		m_commandList->OMSetRenderTargets(1, rtvs.get(), FALSE, dsv.get());
+		m_commandList->OMSetRenderTargets(1, rtvs.get(), FALSE, &dsv);
 
 		// Record commands.
 		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);

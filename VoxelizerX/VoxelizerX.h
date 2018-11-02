@@ -62,16 +62,18 @@ private:
 	ComPtr<ID3D12CommandAllocator>	m_commandAllocator;
 	ComPtr<ID3D12CommandQueue>		m_commandQueue;
 
+	XUSG::DescriptorPool m_rtvPool;
+
 	XUSG::Device m_device;
 	XUSG::Resource m_renderTargets[FrameCount];
 	XUSG::Graphics::PipelineState m_pipelineState;
 	XUSG::GraphicsCommandList m_commandList;
 	
-	XUSG::RenderTargetTable		m_swapChainRtvTables[FrameCount];
-	XUSG::DepthStencilHandle	m_dsvHandle;
-	XUSG::DescriptorTable		m_cbvTable;
-	XUSG::DescriptorTable		m_srvTable;
-	XUSG::DescriptorTable		m_samplerTable;
+	XUSG::RenderTargetTable	m_rtvTables[FrameCount];
+	XUSG::Descriptor		m_dsv;
+	XUSG::DescriptorTable	m_cbvTable;
+	XUSG::DescriptorTable	m_srvTable;
+	XUSG::DescriptorTable	m_samplerTable;
 
 	// App resources.
 	std::unique_ptr<XUSG::DepthStencil>	m_depth;

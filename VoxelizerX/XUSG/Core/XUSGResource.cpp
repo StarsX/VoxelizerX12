@@ -56,7 +56,7 @@ Format MapToPackedFormat(Format &format)
 ConstantBuffer::ConstantBuffer(const Device &device) :
 	m_device(device),
 	m_resource(nullptr),
-	m_CBV(nullptr),
+	m_cbvPool(nullptr),
 	m_pDataBegin(nullptr)
 {
 }
@@ -75,12 +75,17 @@ void ConstantBuffer::Create(uint32_t byteWidth, uint32_t cbvSize)
 		nullptr,
 		IID_PPV_ARGS(&m_resource)));
 
+	// Allocate descriptor pool
+	allocateDescriptorPool(1);
+
 	// Describe and create a constant buffer view.
-	auto& descriptor = m_CBV;
-	descriptor = make_shared<Descriptor>();
-	descriptor->ResourceType = Descriptor::CBV;
-	descriptor->Cbv.BufferLocation = m_resource->GetGPUVirtualAddress();
-	descriptor->Cbv.SizeInBytes = (cbvSize + 255) & ~255;	// CB size is required to be 256-byte aligned.
+	D3D12_CONSTANT_BUFFER_VIEW_DESC desc;
+	desc.BufferLocation = m_resource->GetGPUVirtualAddress();
+	desc.SizeInBytes = (cbvSize + 255)  &~255;	// CB size is required to be 256-byte aligned.
+
+	// Create CBV
+	m_CBV = m_cbvPool->GetCPUDescriptorHandleForHeapStart();
+	m_device->CreateConstantBufferView(&desc, m_CBV);
 }
 
 void *ConstantBuffer::Map()
@@ -102,14 +107,22 @@ void ConstantBuffer::Unmap()
 	m_pDataBegin = nullptr;
 }
 
-const Resource& ConstantBuffer::GetResource() const
+const Resource &ConstantBuffer::GetResource() const
 {
 	return m_resource;
 }
 
-const DescriptorView& ConstantBuffer::GetCBV() const
+const Descriptor &ConstantBuffer::GetCBV() const
 {
 	return m_CBV;
+}
+
+void ConstantBuffer::allocateDescriptorPool(uint32_t numDescriptors)
+{
+	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+	desc.NumDescriptors = numDescriptors;
+	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvPool)));
 }
 
 //--------------------------------------------------------------------------------------
@@ -119,27 +132,29 @@ const DescriptorView& ConstantBuffer::GetCBV() const
 ResourceBase::ResourceBase(const Device &device) :
 	m_device(device),
 	m_resource(nullptr),
-	m_SRV(nullptr),
-	m_state(ResourceState(0))
+	m_state(ResourceState(0)),
+	m_srvUavPool(nullptr)
 {
+	if (m_device)
+		m_strideSrvUav = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
 ResourceBase::~ResourceBase()
 {
 }
 
-void ResourceBase::Barrier(const GraphicsCommandList& commandList, ResourceState dstState)
+void ResourceBase::Barrier(const GraphicsCommandList &commandList, ResourceState dstState)
 {
 	if (m_state != dstState)
 		commandList->ResourceBarrier(1, &Transition(dstState));
 }
 
-const Resource& ResourceBase::GetResource() const
+const Resource &ResourceBase::GetResource() const
 {
 	return m_resource;
 }
 
-const DescriptorView& ResourceBase::GetSRV() const
+const Descriptor &ResourceBase::GetSRV() const
 {
 	return m_SRV;
 }
@@ -152,25 +167,14 @@ ResourceBarrier ResourceBase::Transition(ResourceState dstState)
 	return CD3DX12_RESOURCE_BARRIER::Transition(m_resource.Get(), srcState, dstState);
 }
 
-DescriptorView ResourceBase::createSRV(Format format)
+void ResourceBase::allocateDescriptorPool(uint32_t numDescriptors)
 {
-	const auto descriptor = make_shared<Descriptor>();
-	descriptor->ResourceType = Descriptor::SRV;
-	descriptor->pResource = m_resource;
-	descriptor->Srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	descriptor->Srv.Format = format;
+	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+	desc.NumDescriptors = numDescriptors;
+	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_srvUavPool)));
 
-	return descriptor;
-}
-
-DescriptorView ResourceBase::createUAV(Format format)
-{
-	const auto descriptor = make_shared<Descriptor>();
-	descriptor->ResourceType = Descriptor::UAV;
-	descriptor->pResource = m_resource;
-	descriptor->Uav.Format = format;
-
-	return descriptor;
+	m_srvUavCurrent = m_srvUavPool->GetCPUDescriptorHandleForHeapStart();
 }
 
 //--------------------------------------------------------------------------------------
@@ -179,6 +183,7 @@ DescriptorView ResourceBase::createUAV(Format format)
 
 Texture2D::Texture2D(const Device &device) :
 	ResourceBase(device),
+	m_counter(nullptr),
 	m_UAVs(0),
 	m_SRVs(0),
 	m_subSRVs(0)
@@ -193,11 +198,11 @@ void Texture2D::Create(uint32_t width, uint32_t height, Format format, uint32_t 
 	ResourceFlags resourceFlags, uint8_t numMips, uint8_t sampleCount, PoolType poolType,
 	ResourceState state)
 {
-	const auto isPacked = static_cast<bool>(resourceFlags & BIND_PACKED_UAV);
+	const auto isPacked = static_cast<bool>(resourceFlags  &BIND_PACKED_UAV);
 	resourceFlags &= REMOVE_PACKED_UAV;
 
-	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
 	auto formatReousrce = format;
@@ -219,6 +224,12 @@ void Texture2D::Create(uint32_t width, uint32_t height, Format format, uint32_t 
 	ThrowIfFailed(m_device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(poolType),
 		D3D12_HEAP_FLAG_NONE, &desc, m_state, nullptr, IID_PPV_ARGS(&m_resource)));
 
+	// Allocate descriptor pool
+	auto numDescriptors = hasSRV ? 1 + (numMips > 1 ? numMips : 0) : 0;
+	numDescriptors += hasUAV ? numMips : 0;
+	numDescriptors += hasSRV ? max(numMips, 1) - 1 : 0;	// Sub SRVs
+	allocateDescriptorPool(numDescriptors);
+
 	// Create SRV
 	if (hasSRV)
 		CreateSRV(arraySize, format, numMips, sampleCount);
@@ -228,7 +239,7 @@ void Texture2D::Create(uint32_t width, uint32_t height, Format format, uint32_t 
 		CreateUAV(arraySize, formatUAV, numMips);
 }
 
-void Texture2D::Upload(const GraphicsCommandList& commandList, Resource& resourceUpload,
+void Texture2D::Upload(const GraphicsCommandList &commandList, Resource &resourceUpload,
 	const void *pData, uint8_t stride, ResourceState dstState)
 {
 	const auto desc = m_resource->GetDesc();
@@ -262,33 +273,40 @@ void Texture2D::CreateSRV(uint32_t arraySize, Format format, uint8_t numMips, ui
 	if (!format)
 		format = m_resource->GetDesc().Format;
 
-	auto& descriptor = m_SRV;
-	descriptor = createSRV(format);
+	// Setup the description of the shader resource view.
+	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+	desc.Format = format;
+	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
 	if (arraySize > 1)
 	{
 		if (sampleCount > 1)
 		{
-			descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY;
-			descriptor->Srv.Texture2DMSArray.ArraySize = arraySize;
+			desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY;
+			desc.Texture2DMSArray.ArraySize = arraySize;
 		}
 		else
 		{
-			descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-			descriptor->Srv.Texture2DArray.ArraySize = arraySize;
-			descriptor->Srv.Texture2DArray.MipLevels = numMips;
+			desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+			desc.Texture2DArray.ArraySize = arraySize;
+			desc.Texture2DArray.MipLevels = numMips;
 		}
 	}
 	else
 	{
 		if (sampleCount > 1)
-			descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
+			desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
 		else
 		{
-			descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			descriptor->Srv.Texture2D.MipLevels = numMips;
+			desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			desc.Texture2D.MipLevels = numMips;
 		}
 	}
+
+	// Create a shader resource view
+	m_SRV = m_srvUavCurrent;
+	m_device->CreateShaderResourceView(m_resource.Get(), &desc, m_SRV);
+	m_srvUavCurrent.Offset(m_strideSrvUav);
 
 	if (numMips > 1)
 	{
@@ -298,21 +316,20 @@ void Texture2D::CreateSRV(uint32_t arraySize, Format format, uint8_t numMips, ui
 		for (auto &descriptor : m_SRVs)
 		{
 			// Setup the description of the shader resource view.
-			descriptor = createSRV(format);
-
 			if (arraySize > 1)
 			{
-				descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-				descriptor->Srv.Texture2DArray.ArraySize = arraySize;
-				descriptor->Srv.Texture2DArray.MostDetailedMip = mipLevel++;
-				descriptor->Srv.Texture2DArray.MipLevels = 1;
+				desc.Texture2DArray.MostDetailedMip = mipLevel++;
+				desc.Texture2DArray.MipLevels = 1;
 			}
 			else
 			{
-				descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-				descriptor->Srv.Texture2D.MostDetailedMip = mipLevel++;
-				descriptor->Srv.Texture2D.MipLevels = 1;
+				desc.Texture2D.MostDetailedMip = mipLevel++;
+				desc.Texture2D.MipLevels = 1;
 			}
+
+			descriptor = m_srvUavCurrent;
+			m_device->CreateShaderResourceView(m_resource.Get(), &desc, descriptor);
+			m_srvUavCurrent.Offset(m_strideSrvUav);
 		}
 	}
 }
@@ -328,66 +345,83 @@ void Texture2D::CreateUAV(uint32_t arraySize, Format format, uint8_t numMips)
 	for (auto &descriptor : m_UAVs)
 	{
 		// Setup the description of the unordered access view.
-		descriptor = createUAV(format);
+		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+		desc.Format = format;
 
 		if (arraySize > 1)
 		{
-			descriptor->Uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-			descriptor->Uav.Texture2DArray.ArraySize = arraySize;
-			descriptor->Uav.Texture2DArray.MipSlice = mipLevel++;
+			desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+			desc.Texture2DArray.ArraySize = arraySize;
+			desc.Texture2DArray.MipSlice = mipLevel++;
 		}
 		else
 		{
-			descriptor->Uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-			descriptor->Uav.Texture2D.MipSlice = mipLevel++;
+			desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+			desc.Texture2D.MipSlice = mipLevel++;
 		}
+
+		// Create an unordered access view
+		descriptor = m_srvUavCurrent;
+		m_device->CreateUnorderedAccessView(m_resource.Get(), m_counter.Get(), &desc, descriptor);
+		m_srvUavCurrent.Offset(m_strideSrvUav);
 	}
 }
 
-void Texture2D::CreateSubSRVs()
+void Texture2D::CreateSubSRVs(Format format)
 {
-	const auto desc = m_resource->GetDesc();
+	if (!format)
+		format = m_resource->GetDesc().Format;
+
+	const auto txDesc = m_resource->GetDesc();
 
 	auto mipLevel = 1ui8;
-	m_subSRVs.resize(max(desc.MipLevels, 1) - 1);
+	const auto numLevels = max(txDesc.MipLevels, 1) - 1;
+	m_subSRVs.resize(numLevels);
 
 	for (auto &descriptor : m_subSRVs)
 	{
 		// Setup the description of the shader resource view.
-		descriptor = createSRV(m_SRV->Srv.Format);
-
-		if (desc.DepthOrArraySize > 1)
+		D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+		desc.Format = format;
+		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		
+		if (txDesc.DepthOrArraySize > 1)
 		{
-			descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-			descriptor->Srv.Texture2DArray.ArraySize = desc.DepthOrArraySize;
-			descriptor->Srv.Texture2DArray.MostDetailedMip = mipLevel;
-			descriptor->Srv.Texture2DArray.MipLevels = desc.MipLevels - mipLevel;
+			desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+			desc.Texture2DArray.ArraySize = txDesc.DepthOrArraySize;
+			desc.Texture2DArray.MostDetailedMip = mipLevel;
+			desc.Texture2DArray.MipLevels = txDesc.MipLevels - mipLevel;
 		}
 		else
 		{
-			descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			descriptor->Srv.Texture2D.MostDetailedMip = mipLevel;
-			descriptor->Srv.Texture2D.MipLevels = desc.MipLevels - mipLevel;
+			desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			desc.Texture2D.MostDetailedMip = mipLevel;
+			desc.Texture2D.MipLevels = txDesc.MipLevels - mipLevel;
 		}
 		++mipLevel;
+
+		// Create a shader resource view
+		descriptor = m_srvUavCurrent;
+		m_device->CreateShaderResourceView(m_resource.Get(), &desc, descriptor);
+		m_srvUavCurrent.Offset(m_strideSrvUav);
 	}
 }
 
-const DescriptorView& Texture2D::GetUAV(uint8_t i) const
+const Descriptor &Texture2D::GetUAV(uint8_t i) const
 {
 	assert(m_UAVs.size() > i);
 
 	return m_UAVs[i];
 }
 
-const DescriptorView& Texture2D::GetSRVLevel(uint8_t i) const
+const Descriptor &Texture2D::GetSRVLevel(uint8_t i) const
 {
 	assert(m_SRVs.size() > i);
 
 	return m_SRVs[i];
 }
 
-const DescriptorView& Texture2D::GetSubSRV(uint8_t i) const
+const Descriptor &Texture2D::GetSubSRV(uint8_t i) const
 {
 	assert(m_subSRVs.size() > i);
 
@@ -398,10 +432,13 @@ const DescriptorView& Texture2D::GetSubSRV(uint8_t i) const
 // Render target
 //--------------------------------------------------------------------------------------
 
-RenderTarget::RenderTarget(const Device& device) :
+RenderTarget::RenderTarget(const Device &device) :
 	Texture2D(device),
-	m_RTVs(0)
+	m_RTVs(0),
+	m_rtvPool(nullptr)
 {
+	if (m_device)
+		m_strideRtv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
 
 RenderTarget::~RenderTarget()
@@ -413,45 +450,52 @@ void RenderTarget::Create(uint32_t width, uint32_t height, Format format, uint32
 {
 	create(width, height, arraySize, format, numMips, sampleCount, resourceFlags, state);
 
+	numMips = max(numMips, 1);
+	allocateRtvPool(numMips * arraySize);
+
 	m_RTVs.resize(arraySize);
 	for (auto i = 0u; i < arraySize; ++i)
 	{
 		auto mipLevel = 0ui8;
-		m_RTVs[i].resize(max(mipLevel, 1));
+		m_RTVs[i].resize(numMips);
+
 		for (auto &descriptor : m_RTVs[i])
 		{
 			// Setup the description of the render target view.
-			descriptor = make_shared<Descriptor>();
-			descriptor->ResourceType = Descriptor::RTV;
-			descriptor->pResource = m_resource;
-			descriptor->Rtv.Format = format;
+			D3D12_RENDER_TARGET_VIEW_DESC desc = {};
+			desc.Format = format;
 
 			if (arraySize > 1)
 			{
 				if (sampleCount > 1)
 				{
-					descriptor->Rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY;
-					descriptor->Rtv.Texture2DMSArray.FirstArraySlice = i;
-					descriptor->Rtv.Texture2DMSArray.ArraySize = 1;
+					desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY;
+					desc.Texture2DMSArray.FirstArraySlice = i;
+					desc.Texture2DMSArray.ArraySize = 1;
 				}
 				else
 				{
-					descriptor->Rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
-					descriptor->Rtv.Texture2DArray.FirstArraySlice = i;
-					descriptor->Rtv.Texture2DArray.ArraySize = 1;
-					descriptor->Rtv.Texture2DArray.MipSlice = mipLevel++;
+					desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+					desc.Texture2DArray.FirstArraySlice = i;
+					desc.Texture2DArray.ArraySize = 1;
+					desc.Texture2DArray.MipSlice = mipLevel++;
 				}
 			}
 			else
 			{
 				if (sampleCount > 1)
-					descriptor->Rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
+					desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
 				else
 				{
-					descriptor->Rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-					descriptor->Rtv.Texture2D.MipSlice = mipLevel++;
+					desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+					desc.Texture2D.MipSlice = mipLevel++;
 				}
 			}
+
+			// Create a render target view
+			descriptor = m_rtvCurrent;
+			m_device->CreateRenderTargetView(m_resource.Get(), &desc, descriptor);
+			m_rtvCurrent.Offset(m_strideRtv);
 		}
 	}
 }
@@ -461,33 +505,39 @@ void RenderTarget::CreateArray(uint32_t width, uint32_t height, uint32_t arraySi
 {
 	create(width, height, arraySize, format, numMips, sampleCount, resourceFlags, state);
 
+	numMips = max(numMips, 1);
+	allocateRtvPool(numMips);
+
 	m_RTVs.resize(1);
-	m_RTVs[0].resize(max(numMips, 1));
+	m_RTVs[0].resize(numMips);
 
 	auto mipLevel = 0ui8;
 	for (auto &descriptor : m_RTVs[0])
 	{
-		descriptor = make_shared<Descriptor>();
-		descriptor->ResourceType = Descriptor::RTV;
-		descriptor->pResource = m_resource;
-		descriptor->Rtv.Format = format;
-
 		// Setup the description of the render target view.
+		D3D12_RENDER_TARGET_VIEW_DESC desc = {};
+		desc.Format = format;
+
 		if (sampleCount > 1)
 		{
-			descriptor->Rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY;
-			descriptor->Rtv.Texture2DMSArray.ArraySize = arraySize;
+			desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY;
+			desc.Texture2DMSArray.ArraySize = arraySize;
 		}
 		else
 		{
-			descriptor->Rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
-			descriptor->Rtv.Texture2DArray.ArraySize = arraySize;
-			descriptor->Rtv.Texture2DArray.MipSlice = mipLevel++;
+			desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+			desc.Texture2DArray.ArraySize = arraySize;
+			desc.Texture2DArray.MipSlice = mipLevel++;
 		}
+
+		// Create a render target view
+		descriptor = m_rtvCurrent;
+		m_device->CreateRenderTargetView(m_resource.Get(), &desc, descriptor);
+		m_rtvCurrent.Offset(m_strideRtv);
 	}
 }
 
-const DescriptorView& RenderTarget::GetRTV(uint32_t slice, uint8_t mipLevel) const
+const Descriptor &RenderTarget::GetRTV(uint32_t slice, uint8_t mipLevel) const
 {
 	assert(m_RTVs.size() > slice);
 	assert(m_RTVs[slice].size() > mipLevel);
@@ -510,11 +560,11 @@ uint8_t RenderTarget::GetNumMips(uint32_t slice) const
 void RenderTarget::create(uint32_t width, uint32_t height, uint32_t arraySize, Format format,
 	uint8_t numMips, uint8_t sampleCount, ResourceFlags resourceFlags, ResourceState state)
 {
-	const auto isPacked = static_cast<bool>(resourceFlags & BIND_PACKED_UAV);
+	const auto isPacked = static_cast<bool>(resourceFlags  &BIND_PACKED_UAV);
 	resourceFlags &= REMOVE_PACKED_UAV;
 
-	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
 	auto formatReousrce = format;
@@ -531,6 +581,12 @@ void RenderTarget::create(uint32_t width, uint32_t height, uint32_t arraySize, F
 	ThrowIfFailed(m_device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE, &desc, m_state, nullptr, IID_PPV_ARGS(&m_resource)));
 
+	// Allocate descriptor pool
+	auto numDescriptors = hasSRV ? 1 + (numMips > 1 ? numMips : 0) : 0;
+	numDescriptors += hasUAV ? numMips : 0;
+	numDescriptors += hasSRV ? max(numMips, 1) - 1 : 0;	// Sub SRVs
+	allocateDescriptorPool(numDescriptors);
+
 	// Create SRV
 	if (hasSRV)
 		CreateSRV(arraySize, format, numMips, sampleCount);
@@ -540,35 +596,39 @@ void RenderTarget::create(uint32_t width, uint32_t height, uint32_t arraySize, F
 		CreateUAV(arraySize, formatUAV, numMips);
 }
 
+void RenderTarget::allocateRtvPool(uint32_t numDescriptors)
+{
+	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+	desc.NumDescriptors = numDescriptors;
+	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvPool)));
+
+	m_rtvCurrent = m_rtvPool->GetCPUDescriptorHandleForHeapStart();
+}
+
 //--------------------------------------------------------------------------------------
 // Depth stencil
 //--------------------------------------------------------------------------------------
 
-DepthStencil::DepthStencil(const Device& device) :
+DepthStencil::DepthStencil(const Device &device) :
 	Texture2D(device),
 	m_DSVs(0),
 	m_DSVROs(0),
-	m_SRVStencil(0),
-	m_dsvHandles(0),
-	m_dsvROHandles(0),
-	m_pDescriptorTablePool(nullptr)
+	m_dsvPool(nullptr)
 {
+	if (m_device)
+		m_strideDsv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 }
 
 DepthStencil::~DepthStencil()
 {
 }
 
-void DepthStencil::SetDescriptorTablePool(DescriptorTablePool& descriptorTablePool)
-{
-	m_pDescriptorTablePool = &descriptorTablePool;
-}
-
 void DepthStencil::Create(uint32_t width, uint32_t height, Format format, ResourceFlags resourceFlags,
 	uint32_t arraySize, uint8_t numMips, uint8_t sampleCount, ResourceState state,
 	uint8_t clearStencil, float clearDepth)
 {
-	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
 
 	// Map formats
 	auto formatReousrce = format;
@@ -618,6 +678,12 @@ void DepthStencil::Create(uint32_t width, uint32_t height, Format format, Resour
 			D3D12_HEAP_FLAG_NONE, &desc, m_state, &clearValue, IID_PPV_ARGS(&m_resource)));
 	}
 
+	// Allocate descriptor pool
+	auto numDescriptors = hasSRV ? 1 + (numMips > 1 ? numMips : 0) : 0;
+	numDescriptors += formatStencil ? 1 : 0;			// Stencil SRV
+	numDescriptors += hasSRV ? max(numMips, 1) - 1 : 0;	// Sub SRVs
+	allocateDescriptorPool(numDescriptors);
+
 	if (hasSRV)
 	{
 		// Create SRV
@@ -627,140 +693,118 @@ void DepthStencil::Create(uint32_t width, uint32_t height, Format format, Resour
 		// Has stencil
 		if (formatStencil)
 		{
-			auto& descriptor = m_SRVStencil;
-			descriptor = createSRV(format);
+			// Setup the description of the shader resource view.
+			D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+			desc.Format = format;
+			desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
 			if (arraySize > 1)
 			{
 				if (sampleCount > 1)
 				{
-					descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY;
-					descriptor->Srv.Texture2DMSArray.ArraySize = arraySize;
+					desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY;
+					desc.Texture2DMSArray.ArraySize = arraySize;
 				}
 				else
 				{
-					descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-					descriptor->Srv.Texture2DArray.ArraySize = arraySize;
-					descriptor->Srv.Texture2DArray.MipLevels = numMips;
+					desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+					desc.Texture2DArray.ArraySize = arraySize;
+					desc.Texture2DArray.MipLevels = numMips;
 				}
 			}
 			else
 			{
 				if (sampleCount > 1)
-					descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
+					desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
 				else
 				{
-					descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-					descriptor->Srv.Texture2D.MipLevels = numMips;
+					desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+					desc.Texture2D.MipLevels = numMips;
 				}
 			}
+
+			// Create a shader resource view
+			m_SRVStencil = m_srvUavCurrent;
+			m_device->CreateShaderResourceView(m_resource.Get(), &desc, m_SRVStencil);
+			m_srvUavCurrent.Offset(m_strideSrvUav);
 		}
 	}
 
 	numMips = max(numMips, 1);
+	allocateDsvPool(hasSRV ? numMips * 2 : numMips);
+
 	m_DSVs.resize(numMips);
 	m_DSVROs.resize(numMips);
-
-	if (m_pDescriptorTablePool)
-	{
-		m_dsvHandles.resize(numMips);
-		m_dsvROHandles.resize(numMips);
-	}
 
 	for (auto i = 0ui8; i < numMips; ++i)
 	{
 		// Setup the description of the depth stencil view.
-		auto& descriptor = m_DSVs[i];
-		descriptor = make_shared<Descriptor>();
-		descriptor->ResourceType = Descriptor::DSV;
-		descriptor->pResource = m_resource;
-		descriptor->Dsv.Format = format;
+		D3D12_DEPTH_STENCIL_VIEW_DESC desc = {};
+		desc.Format = format;
 
 		if (arraySize > 1)
 		{
 			if (sampleCount > 1)
 			{
-				descriptor->Dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMSARRAY;
-				descriptor->Dsv.Texture2DMSArray.ArraySize = arraySize;
+				desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMSARRAY;
+				desc.Texture2DMSArray.ArraySize = arraySize;
 			}
 			else
 			{
-				descriptor->Dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
-				descriptor->Dsv.Texture2DArray.ArraySize = arraySize;
-				descriptor->Dsv.Texture2DArray.MipSlice = i;
+				desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+				desc.Texture2DArray.ArraySize = arraySize;
+				desc.Texture2DArray.MipSlice = i;
 			}
 		}
 		else
 		{
 			if (sampleCount > 1)
-				descriptor->Dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
+				desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
 			else
 			{
-				descriptor->Dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-				descriptor->Dsv.Texture2D.MipSlice = i;
+				desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+				desc.Texture2D.MipSlice = i;
 			}
 		}
 
-		if (m_pDescriptorTablePool)
-		{
-			Util::DescriptorTable dsvTable;
-			dsvTable.SetDepthStencil(descriptor);
-			m_dsvHandles[i] = dsvTable.GetDepthStencilHandle(*m_pDescriptorTablePool);
-		}
+		// Create a depth stencil view
+		m_DSVs[i] = m_dsvCurrent;
+		m_device->CreateDepthStencilView(m_resource.Get(), &desc, m_DSVs[i]);
+		m_dsvCurrent.Offset(m_strideDsv);
 
 		// Read-only depth stencil
 		if (hasSRV)
 		{
 			// Setup the description of the depth stencil view.
-			auto& descriptor = m_DSVROs[i];
-			descriptor = make_shared<Descriptor>();
-			*descriptor = *m_DSVs[i];
-
-			descriptor->Dsv.Flags = formatStencil ? D3D12_DSV_FLAG_READ_ONLY_DEPTH |
+			desc.Flags = formatStencil ? D3D12_DSV_FLAG_READ_ONLY_DEPTH |
 				D3D12_DSV_FLAG_READ_ONLY_STENCIL : D3D12_DSV_FLAG_READ_ONLY_DEPTH;
 
-			if (m_pDescriptorTablePool)
-			{
-				Util::DescriptorTable dsvTable;
-				dsvTable.SetDepthStencil(descriptor);
-				m_dsvROHandles[i] = dsvTable.GetDepthStencilHandle(*m_pDescriptorTablePool);
-			}
+			// Create a depth stencil view
+			m_DSVROs[i] = m_dsvCurrent;
+			m_device->CreateDepthStencilView(m_resource.Get(), &desc, m_DSVROs[i]);
+			m_dsvCurrent.Offset(m_strideDsv);
 		}
 		else m_DSVROs[i] = m_DSVs[i];
 	}
 }
 
-const DescriptorView& DepthStencil::GetDSV(uint8_t mipLevel) const
+const Descriptor &DepthStencil::GetDSV(uint8_t mipLevel) const
 {
 	assert(m_DSVs.size() > mipLevel);
 
 	return m_DSVs[mipLevel];
 }
 
-const DescriptorView& DepthStencil::GetDSVReadOnly(uint8_t mipLevel) const
+const Descriptor &DepthStencil::GetDSVReadOnly(uint8_t mipLevel) const
 {
 	assert(m_DSVROs.size() > mipLevel);
 
 	return m_DSVROs[mipLevel];
 }
 
-const DescriptorView& DepthStencil::GetSRVStencil() const
+const Descriptor &DepthStencil::GetSRVStencil() const
 {
 	return m_SRVStencil;
-}
-
-const DepthStencilHandle& DepthStencil::GetDsvHandle(uint8_t mipLevel) const
-{
-	assert(m_dsvHandles.size() > mipLevel);
-
-	return m_dsvHandles[mipLevel];
-}
-
-const DepthStencilHandle& DepthStencil::GetDsvHandleReadOnly(uint8_t mipLevel) const
-{
-	assert(m_dsvROHandles.size() > mipLevel);
-
-	return m_dsvROHandles[mipLevel];
 }
 
 const uint8_t DepthStencil::GetNumMips() const
@@ -768,12 +812,23 @@ const uint8_t DepthStencil::GetNumMips() const
 	return static_cast<uint8_t>(m_DSVs.size());
 }
 
+void DepthStencil::allocateDsvPool(uint32_t numDescriptors)
+{
+	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+	desc.NumDescriptors = numDescriptors;
+	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_dsvPool)));
+
+	m_dsvCurrent = m_dsvPool->GetCPUDescriptorHandleForHeapStart();
+}
+
 //--------------------------------------------------------------------------------------
 // 3D Texture
 //--------------------------------------------------------------------------------------
 
-Texture3D::Texture3D(const Device& device) :
+Texture3D::Texture3D(const Device &device) :
 	ResourceBase(device),
+	m_counter(nullptr),
 	m_UAVs(0),
 	m_SRVs(0),
 	m_subSRVs(0)
@@ -787,11 +842,11 @@ Texture3D::~Texture3D()
 void Texture3D::Create(uint32_t width, uint32_t height, uint32_t depth, Format format,
 	ResourceFlags resourceFlags, uint8_t numMips, PoolType poolType, ResourceState state)
 {
-	const auto isPacked = static_cast<bool>(resourceFlags & BIND_PACKED_UAV);
+	const auto isPacked = static_cast<bool>(resourceFlags  &BIND_PACKED_UAV);
 	resourceFlags &= REMOVE_PACKED_UAV;
 
-	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
 	auto formatReousrce = format;
@@ -813,6 +868,11 @@ void Texture3D::Create(uint32_t width, uint32_t height, uint32_t depth, Format f
 	ThrowIfFailed(m_device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(poolType),
 		D3D12_HEAP_FLAG_NONE, &desc, m_state, nullptr, IID_PPV_ARGS(&m_resource)));
 
+	// Allocate descriptor pool
+	auto numDescriptors = hasSRV ? 1 + (numMips > 1 ? numMips : 0) : 0;
+	numDescriptors += hasUAV ? numMips : 0;
+	allocateDescriptorPool(numDescriptors);
+
 	// Create SRV
 	if (hasSRV)
 		CreateSRV(format, numMips);
@@ -827,10 +887,16 @@ void Texture3D::CreateSRV(Format format, uint8_t numMips)
 	if (!format)
 		format = m_resource->GetDesc().Format;
 
-	auto& descriptor = m_SRV;
-	descriptor = createSRV(format);
-	descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
-	descriptor->Srv.Texture3D.MipLevels = numMips;
+	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+	desc.Format = format;
+	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+	desc.Texture3D.MipLevels = numMips;
+
+	// Create a shader resource view
+	m_SRV = m_srvUavCurrent;
+	m_device->CreateShaderResourceView(m_resource.Get(), &desc, m_SRV);
+	m_srvUavCurrent.Offset(m_strideSrvUav);
 
 	if (numMips > 1)
 	{
@@ -840,10 +906,13 @@ void Texture3D::CreateSRV(Format format, uint8_t numMips)
 		for (auto &descriptor : m_SRVs)
 		{
 			// Setup the description of the shader resource view.
-			descriptor = createSRV(format);
-			descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
-			descriptor->Srv.Texture3D.MostDetailedMip = mipLevel++;
-			descriptor->Srv.Texture3D.MipLevels = 1;
+			desc.Texture3D.MostDetailedMip = mipLevel++;
+			desc.Texture3D.MipLevels = 1;
+
+			// Create a shader resource view
+			descriptor = m_srvUavCurrent;
+			m_device->CreateShaderResourceView(m_resource.Get(), &desc, descriptor);
+			m_srvUavCurrent.Offset(m_strideSrvUav);
 		}
 	}
 }
@@ -859,46 +928,62 @@ void Texture3D::CreateUAV(Format format, uint8_t numMips)
 	for (auto &descriptor : m_UAVs)
 	{
 		// Setup the description of the unordered access view.
-		descriptor = createUAV(format);
-		descriptor->Uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
-		descriptor->Uav.Texture3D.MipSlice = mipLevel++;
-		descriptor->Uav.Texture3D.WSize = 1;
+		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+		desc.Format = format;
+		desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
+		desc.Texture3D.MipSlice = mipLevel++;
+		desc.Texture3D.WSize = 1;
+
+		// Create an unordered access view
+		descriptor = m_srvUavCurrent;
+		m_device->CreateUnorderedAccessView(m_resource.Get(), m_counter.Get(), &desc, descriptor);
+		m_srvUavCurrent.Offset(m_strideSrvUav);
 	}
 }
 
-void Texture3D::CreateSubSRVs()
+void Texture3D::CreateSubSRVs(Format format)
 {
-	const auto desc = m_resource->GetDesc();
+	if (!format)
+		format = m_resource->GetDesc().Format;
+
+	const auto txDesc = m_resource->GetDesc();
 
 	auto mipLevel = 1ui8;
-	m_subSRVs.resize(max(desc.MipLevels, 1) - 1);
+	m_subSRVs.resize(max(txDesc.MipLevels, 1) - 1);
 
 	for (auto &descriptor : m_subSRVs)
 	{
 		// Setup the description of the shader resource view.
-		descriptor = createSRV(m_SRV->Srv.Format);
-		descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
-		descriptor->Srv.Texture3D.MostDetailedMip = mipLevel;
-		descriptor->Srv.Texture3D.MipLevels = desc.MipLevels - mipLevel;
+		D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+		desc.Format = format;
+		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+		desc.Texture3D.MostDetailedMip = mipLevel;
+		desc.Texture3D.MipLevels = txDesc.MipLevels - mipLevel;
 		++mipLevel;
+
+		// Create a shader resource view
+		descriptor = m_srvUavCurrent;
+		m_device->CreateShaderResourceView(m_resource.Get(), &desc, descriptor);
+		m_srvUavCurrent.Offset(m_strideSrvUav);
 	}
 }
 
-const DescriptorView& Texture3D::GetUAV(uint8_t i) const
+const Descriptor &Texture3D::GetUAV(uint8_t i) const
 {
 	assert(m_UAVs.size() > i);
 
 	return m_UAVs[i];
 }
 
-const DescriptorView& Texture3D::GetSRVLevel(uint8_t i) const
+const Descriptor &Texture3D::GetSRVLevel(uint8_t i) const
 {
 	assert(m_SRVs.size() > i);
 
 	return m_SRVs[i];
 }
 
-const DescriptorView& Texture3D::GetSubSRV(uint8_t i) const
+const Descriptor &Texture3D::GetSubSRV(uint8_t i) const
 {
 	assert(m_subSRVs.size() > i);
 
@@ -909,7 +994,7 @@ const DescriptorView& Texture3D::GetSubSRV(uint8_t i) const
 // Buffer base
 //--------------------------------------------------------------------------------------
 
-BufferBase::BufferBase(const Device& device) :
+BufferBase::BufferBase(const Device &device) :
 	ResourceBase(device)
 {
 }
@@ -918,7 +1003,7 @@ BufferBase::~BufferBase()
 {
 }
 
-void BufferBase::Upload(const GraphicsCommandList& commandList, Resource& resourceUpload,
+void BufferBase::Upload(const GraphicsCommandList &commandList, Resource &resourceUpload,
 	const void *pData, ResourceState dstState)
 {
 	const auto desc = m_resource->GetDesc();
@@ -951,9 +1036,9 @@ void BufferBase::Upload(const GraphicsCommandList& commandList, Resource& resour
 // Raw buffer
 //--------------------------------------------------------------------------------------
 
-RawBuffer::RawBuffer(const Device& device) :
+RawBuffer::RawBuffer(const Device &device) :
 	BufferBase(device),
-	m_UAV(nullptr)
+	m_counter(nullptr)
 {
 }
 
@@ -963,8 +1048,8 @@ RawBuffer::~RawBuffer()
 
 void RawBuffer::Create(uint32_t byteWidth, ResourceFlags resourceFlags, PoolType poolType, ResourceState state)
 {
-	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Create buffer
 	create(byteWidth, resourceFlags, poolType, state, hasSRV, hasUAV);
@@ -980,26 +1065,34 @@ void RawBuffer::Create(uint32_t byteWidth, ResourceFlags resourceFlags, PoolType
 
 void RawBuffer::CreateSRV(uint32_t byteWidth)
 {
-	auto& descriptor = m_SRV;
-	descriptor = createSRV(DXGI_FORMAT_R32_TYPELESS);
+	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+	desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	desc.Buffer.NumElements = byteWidth / 4;
+	desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
 
-	descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	descriptor->Srv.Buffer.NumElements = byteWidth / 4;
-	descriptor->Srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+	// Create a shader resource view
+	m_SRV = m_srvUavCurrent;
+	m_device->CreateShaderResourceView(m_resource.Get(), &desc, m_SRV);
+	m_srvUavCurrent.Offset(m_strideSrvUav);
 }
 
 void RawBuffer::CreateUAV(uint32_t byteWidth)
 {
-	auto& descriptor = m_UAV;
-	descriptor = createUAV(DXGI_FORMAT_R32_TYPELESS);
+	D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+	desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	desc.Buffer.NumElements = byteWidth / 4;
+	desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 
-	const auto stride = 4u;
-	descriptor->Uav.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	descriptor->Uav.Buffer.NumElements = byteWidth / 4;
-	descriptor->Uav.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+	// Create an unordered access view
+	m_UAV = m_srvUavCurrent;
+	m_device->CreateUnorderedAccessView(m_resource.Get(), m_counter.Get(), &desc, m_UAV);
+	m_srvUavCurrent.Offset(m_strideSrvUav);
 }
 
-const DescriptorView& RawBuffer::GetUAV() const
+const Descriptor &RawBuffer::GetUAV() const
 {
 	return m_UAV;
 }
@@ -1021,13 +1114,18 @@ void RawBuffer::create(uint32_t byteWidth, ResourceFlags resourceFlags, PoolType
 
 	ThrowIfFailed(m_device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(poolType),
 		D3D12_HEAP_FLAG_NONE, &desc, m_state, nullptr, IID_PPV_ARGS(&m_resource)));
+
+	// Allocate descriptor pool
+	auto numDescriptors = hasSRV ? 1 : 0;
+	numDescriptors += hasUAV ? 1 : 0;
+	allocateDescriptorPool(numDescriptors);
 }
 
 //--------------------------------------------------------------------------------------
 // Vertex buffer
 //--------------------------------------------------------------------------------------
 
-VertexBuffer::VertexBuffer(const Device& device) :
+VertexBuffer::VertexBuffer(const Device &device) :
 	RawBuffer(device),
 	m_VBV()
 {
@@ -1040,8 +1138,8 @@ VertexBuffer::~VertexBuffer()
 void VertexBuffer::Create(uint32_t byteWidth, uint32_t stride, ResourceFlags resourceFlags,
 	PoolType poolType, ResourceState state)
 {
-	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Determine initial state
 	if (state == 0)
@@ -1060,7 +1158,7 @@ void VertexBuffer::Create(uint32_t byteWidth, uint32_t stride, ResourceFlags res
 	m_VBV.SizeInBytes = byteWidth;
 }
 
-const VertexBufferView& VertexBuffer::GetVBV() const
+const VertexBufferView &VertexBuffer::GetVBV() const
 {
 	return m_VBV;
 }
@@ -1069,7 +1167,7 @@ const VertexBufferView& VertexBuffer::GetVBV() const
 // Index buffer
 //--------------------------------------------------------------------------------------
 
-IndexBuffer::IndexBuffer(const Device& device) :
+IndexBuffer::IndexBuffer(const Device &device) :
 	BufferBase(device),
 	m_IBV()
 {
@@ -1082,7 +1180,7 @@ IndexBuffer::~IndexBuffer()
 void IndexBuffer::Create(uint32_t byteWidth, Format format, ResourceFlags resourceFlags,
 	PoolType poolType, ResourceState state)
 {
-	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
 
 	// Setup the buffer description.
 	const auto desc = CD3DX12_RESOURCE_DESC::Buffer(byteWidth, D3D12_RESOURCE_FLAGS(resourceFlags));
@@ -1105,7 +1203,7 @@ void IndexBuffer::Create(uint32_t byteWidth, Format format, ResourceFlags resour
 	m_IBV.Format = format;
 }
 
-const IndexBufferView& IndexBuffer::GetIBV() const
+const IndexBufferView &IndexBuffer::GetIBV() const
 {
 	return m_IBV;
 }
@@ -1114,7 +1212,7 @@ const IndexBufferView& IndexBuffer::GetIBV() const
 // Typed buffer
 //--------------------------------------------------------------------------------------
 
-TypedBuffer::TypedBuffer(const Device& device) :
+TypedBuffer::TypedBuffer(const Device &device) :
 	RawBuffer(device)
 {
 }
@@ -1126,11 +1224,11 @@ TypedBuffer::~TypedBuffer()
 void TypedBuffer::Create(uint32_t numElements, uint32_t stride, Format format,
 	ResourceFlags resourceFlags, PoolType poolType, ResourceState state)
 {
-	const auto isPacked = static_cast<bool>(resourceFlags & BIND_PACKED_UAV);
+	const auto isPacked = static_cast<bool>(resourceFlags  &BIND_PACKED_UAV);
 	resourceFlags &= REMOVE_PACKED_UAV;
 
-	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
 	auto formatReousrce = format;
@@ -1152,6 +1250,11 @@ void TypedBuffer::Create(uint32_t numElements, uint32_t stride, Format format,
 	ThrowIfFailed(m_device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(poolType),
 		D3D12_HEAP_FLAG_NONE, &desc, m_state, nullptr, IID_PPV_ARGS(&m_resource)));
 
+	// Allocate descriptor pool
+	auto numDescriptors = hasSRV ? 1 : 0;
+	numDescriptors += hasUAV ? 1 : 0;
+	allocateDescriptorPool(numDescriptors);
+
 	// Create SRV
 	if (hasSRV)
 		CreateSRV(numElements, format);
@@ -1166,10 +1269,16 @@ void TypedBuffer::CreateSRV(uint32_t numElements, Format format)
 	if (!format)
 		format = m_resource->GetDesc().Format;
 
-	auto& descriptor = m_SRV;
-	descriptor = createSRV(format);
-	descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	descriptor->Srv.Buffer.NumElements = numElements;
+	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+	desc.Format = format;
+	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	desc.Buffer.NumElements = numElements;
+	
+	// Create a shader resource view
+	m_SRV = m_srvUavCurrent;
+	m_device->CreateShaderResourceView(m_resource.Get(), &desc, m_SRV);
+	m_srvUavCurrent.Offset(m_strideSrvUav);
 }
 
 void TypedBuffer::CreateUAV(uint32_t numElements, Format format)
@@ -1177,17 +1286,22 @@ void TypedBuffer::CreateUAV(uint32_t numElements, Format format)
 	if (!format)
 		format = m_resource->GetDesc().Format;
 
-	auto& descriptor = m_UAV;
-	descriptor = createUAV(format);
-	descriptor->Uav.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	descriptor->Uav.Buffer.NumElements = numElements;
+	D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+	desc.Format = format;
+	desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	desc.Buffer.NumElements = numElements;
+
+	// Create an unordered access view
+	m_UAV = m_srvUavCurrent;
+	m_device->CreateUnorderedAccessView(m_resource.Get(), m_counter.Get(), &desc, m_UAV);
+	m_srvUavCurrent.Offset(m_strideSrvUav);
 }
 
 //--------------------------------------------------------------------------------------
 // Structured buffer
 //--------------------------------------------------------------------------------------
 
-StructuredBuffer::StructuredBuffer(const Device& device) :
+StructuredBuffer::StructuredBuffer(const Device &device) :
 	RawBuffer(device)
 {
 }
@@ -1199,8 +1313,8 @@ StructuredBuffer::~StructuredBuffer()
 void StructuredBuffer::Create(uint32_t numElements, uint32_t stride,
 	ResourceFlags resourceFlags, PoolType poolType, ResourceState state)
 {
-	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Create buffer
 	create(stride * numElements, resourceFlags, poolType, state, hasSRV, hasUAV);
@@ -1216,18 +1330,29 @@ void StructuredBuffer::Create(uint32_t numElements, uint32_t stride,
 
 void StructuredBuffer::CreateSRV(uint32_t numElements, uint32_t stride)
 {
-	auto& descriptor = m_SRV;
-	descriptor = createSRV(m_resource->GetDesc().Format);
-	descriptor->Srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	descriptor->Srv.Buffer.NumElements = numElements;
-	descriptor->Srv.Buffer.StructureByteStride = stride;
+	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+	desc.Format = m_resource->GetDesc().Format;
+	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	desc.Buffer.NumElements = numElements;
+	desc.Buffer.StructureByteStride = stride;
+
+	// Create a shader resource view
+	m_SRV = m_srvUavCurrent;
+	m_device->CreateShaderResourceView(m_resource.Get(), &desc, m_SRV);
+	m_srvUavCurrent.Offset(m_strideSrvUav);
 }
 
 void StructuredBuffer::CreateUAV(uint32_t numElements, uint32_t stride)
 {
-	auto& descriptor = m_UAV;
-	descriptor = createUAV(m_resource->GetDesc().Format);
-	descriptor->Uav.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	descriptor->Uav.Buffer.NumElements = numElements;
-	descriptor->Uav.Buffer.StructureByteStride = stride;
+	D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+	desc.Format = m_resource->GetDesc().Format;
+	desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	desc.Buffer.NumElements = numElements;
+	desc.Buffer.StructureByteStride = stride;
+
+	// Create an unordered access view
+	m_UAV = m_srvUavCurrent;
+	m_device->CreateUnorderedAccessView(m_resource.Get(), m_counter.Get(), &desc, m_UAV);
+	m_srvUavCurrent.Offset(m_strideSrvUav);
 }

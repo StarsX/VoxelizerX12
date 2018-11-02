@@ -6,198 +6,186 @@ using namespace std;
 
 namespace XUSG
 {
-	DescriptorView SamplerPointWrap()
+	Sampler SamplerPointWrap()
 	{
-		const auto sampler = make_shared<Descriptor>();
-		sampler->ResourceType = Descriptor::SAMPLER;
-		sampler->Samp.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		sampler->Samp.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler->Samp.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler->Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler->Samp.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler->Samp.MinLOD = 0.0f;
-		sampler->Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		Sampler sampler = {};
+		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 		return sampler;
 	}
 
-	DescriptorView SamplerPointClamp()
+	Sampler SamplerPointClamp()
 	{
-		const auto sampler = make_shared<Descriptor>();
-		sampler->ResourceType = Descriptor::SAMPLER;
-		sampler->Samp.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		sampler->Samp.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		sampler->Samp.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		sampler->Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		sampler->Samp.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler->Samp.MinLOD = 0.0f;
-		sampler->Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		Sampler sampler = {};
+		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 		return sampler;
 	}
 
-	DescriptorView SamplerPointBorder()
+	Sampler SamplerPointBorder()
 	{
-		const auto sampler = make_shared<Descriptor>();
-		sampler->ResourceType = Descriptor::SAMPLER;
-		sampler->Samp.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		sampler->Samp.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler->Samp.MinLOD = 0.0f;
-		sampler->Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		Sampler sampler = {};
+		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 		return sampler;
 	}
 
-	DescriptorView SamplerPointLessEqual()
+	Sampler SamplerPointLessEqual()
 	{
-		const auto sampler = make_shared<Descriptor>();
-		sampler->ResourceType = Descriptor::SAMPLER;
-		sampler->Samp.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		sampler->Samp.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.BorderColor[0] = 1.0f;
-		sampler->Samp.BorderColor[1] = 1.0f;
-		sampler->Samp.BorderColor[2] = 1.0f;
-		sampler->Samp.BorderColor[3] = 1.0f;
-		sampler->Samp.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-		sampler->Samp.MinLOD = 0.0f;
-		sampler->Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		Sampler sampler = {};
+		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.BorderColor[0] = 1.0f;
+		sampler.BorderColor[1] = 1.0f;
+		sampler.BorderColor[2] = 1.0f;
+		sampler.BorderColor[3] = 1.0f;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 		return sampler;
 	}
 
-	DescriptorView SamplerLinearWrap()
+	Sampler SamplerLinearWrap()
 	{
-		const auto sampler = make_shared<Descriptor>();
-		sampler->ResourceType = Descriptor::SAMPLER;
-		sampler->Samp.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		sampler->Samp.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler->Samp.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler->Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler->Samp.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler->Samp.MinLOD = 0.0f;
-		sampler->Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		Sampler sampler = {};
+		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 		return sampler;
 	}
 
-	DescriptorView SamplerLinearClamp()
+	Sampler SamplerLinearClamp()
 	{
-		const auto sampler = make_shared<Descriptor>();
-		sampler->ResourceType = Descriptor::SAMPLER;
-		sampler->Samp.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		sampler->Samp.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		sampler->Samp.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		sampler->Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		sampler->Samp.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler->Samp.MinLOD = 0.0f;
-		sampler->Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		Sampler sampler = {};
+		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 		return sampler;
 	}
 
-	DescriptorView SamplerLinearBorder()
+	Sampler SamplerLinearBorder()
 	{
-		const auto sampler = make_shared<Descriptor>();
-		sampler->ResourceType = Descriptor::SAMPLER;
-		sampler->Samp.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		sampler->Samp.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler->Samp.MinLOD = 0.0f;
-		sampler->Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		Sampler sampler = {};
+		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 		return sampler;
 	}
 
-	DescriptorView SamplerLinearLessEqual()
+	Sampler SamplerLinearLessEqual()
 	{
-		const auto sampler = make_shared<Descriptor>();
-		sampler->ResourceType = Descriptor::SAMPLER;
-		sampler->Samp.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		sampler->Samp.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.BorderColor[0] = 1.0f;
-		sampler->Samp.BorderColor[1] = 1.0f;
-		sampler->Samp.BorderColor[2] = 1.0f;
-		sampler->Samp.BorderColor[3] = 1.0f;
-		sampler->Samp.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-		sampler->Samp.MinLOD = 0.0f;
-		sampler->Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		Sampler sampler = {};
+		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.BorderColor[0] = 1.0f;
+		sampler.BorderColor[1] = 1.0f;
+		sampler.BorderColor[2] = 1.0f;
+		sampler.BorderColor[3] = 1.0f;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 		return sampler;
 	}
 
-	DescriptorView SamplerAnisotropicWrap()
+	Sampler SamplerAnisotropicWrap()
 	{
-		const auto sampler = make_shared<Descriptor>();
-		sampler->ResourceType = Descriptor::SAMPLER;
-		sampler->Samp.Filter = D3D12_FILTER_ANISOTROPIC;
-		sampler->Samp.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler->Samp.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler->Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler->Samp.MaxAnisotropy = 16;
-		sampler->Samp.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler->Samp.MinLOD = 0.0f;
-		sampler->Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		Sampler sampler = {};
+		sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.MaxAnisotropy = 16;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 		return sampler;
 	}
 
-	DescriptorView SamplerAnisotropicClamp()
+	Sampler SamplerAnisotropicClamp()
 	{
-		const auto sampler = make_shared<Descriptor>();
-		sampler->ResourceType = Descriptor::SAMPLER;
-		sampler->Samp.Filter = D3D12_FILTER_ANISOTROPIC;
-		sampler->Samp.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		sampler->Samp.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		sampler->Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		sampler->Samp.MaxAnisotropy = 16;
-		sampler->Samp.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler->Samp.MinLOD = 0.0f;
-		sampler->Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		Sampler sampler = {};
+		sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.MaxAnisotropy = 16;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 		return sampler;
 	}
 
-	DescriptorView SamplerAnisotropicBorder()
+	Sampler SamplerAnisotropicBorder()
 	{
-		const auto sampler = make_shared<Descriptor>();
-		sampler->ResourceType = Descriptor::SAMPLER;
-		sampler->Samp.Filter = D3D12_FILTER_ANISOTROPIC;
-		sampler->Samp.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.MaxAnisotropy = 16;
-		sampler->Samp.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler->Samp.MinLOD = 0.0f;
-		sampler->Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		Sampler sampler = {};
+		sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.MaxAnisotropy = 16;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 		return sampler;
 	}
 
-	DescriptorView SamplerAnisotropicLessEqual()
+	Sampler SamplerAnisotropicLessEqual()
 	{
-		const auto sampler = make_shared<Descriptor>();
-		sampler->ResourceType = Descriptor::SAMPLER;
-		sampler->Samp.Filter = D3D12_FILTER_ANISOTROPIC;
-		sampler->Samp.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler->Samp.BorderColor[0] = 1.0f;
-		sampler->Samp.BorderColor[1] = 1.0f;
-		sampler->Samp.BorderColor[2] = 1.0f;
-		sampler->Samp.BorderColor[3] = 1.0f;
-		sampler->Samp.MaxAnisotropy = 16;
-		sampler->Samp.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-		sampler->Samp.MinLOD = 0.0f;
-		sampler->Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		Sampler sampler = {};
+		sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.BorderColor[0] = 1.0f;
+		sampler.BorderColor[1] = 1.0f;
+		sampler.BorderColor[2] = 1.0f;
+		sampler.BorderColor[3] = 1.0f;
+		sampler.MaxAnisotropy = 16;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 
 		return sampler;
 	}

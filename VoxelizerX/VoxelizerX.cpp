@@ -125,30 +125,40 @@ void VoxelizerX::LoadPipeline()
 
 	m_descriptorTablePool.SetDevice(m_device);
 
+	// Create descriptor heaps.
+	{
+		// Describe and create a render target view (RTV) descriptor heap.
+		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+		rtvHeapDesc.NumDescriptors = FrameCount;
+		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvPool)));
+	}
+
 	// Create frame resources.
 	{
-		// Create a RTV for each frame.
-		DescriptorView rtvs[FrameCount];
+		const auto strideRtv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		Descriptor rtv(m_rtvPool->GetCPUDescriptorHandleForHeapStart());
+
+		// Create a RTV and a command allocator for each frame.
 		for (UINT n = 0; n < FrameCount; n++)
 		{
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtv);
 
-			rtvs[n] = make_shared<Descriptor>();
-			rtvs[n]->ResourceType = Descriptor::RTV;
-			rtvs[n]->pResource = m_renderTargets[n];
-			
 			Util::DescriptorTable rtvTable;
-			rtvTable.SetDescriptors(0, 1, &rtvs[n]);
-			m_swapChainRtvTables[n] = rtvTable.GetRenderTargetTable(m_descriptorTablePool);
-		}
+			rtvTable.SetDescriptors(0, 1, &rtv);
+			m_rtvTables[n] = rtvTable.GetRtvTable(m_descriptorTablePool);
 
-		// Create a DSV
-		{
-			m_depth = make_unique<DepthStencil>(m_device);
-			m_depth->SetDescriptorTablePool(m_descriptorTablePool);
-			m_depth->Create(m_width, m_height, DXGI_FORMAT_D24_UNORM_S8_UINT, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-			m_dsvHandle = m_depth->GetDsvHandle();
+			rtv.Offset(strideRtv);
 		}
+	}
+
+	// Create a DSV
+	{
+		m_depth = make_unique<DepthStencil>(m_device);
+		m_depth->Create(m_width, m_height, DXGI_FORMAT_D24_UNORM_S8_UINT, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+		m_dsv = m_depth->GetDSV();
 	}
 
 	ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
@@ -162,9 +172,9 @@ void VoxelizerX::LoadAssets()
 	// Create the root signature.
 	{
 		Util::PipelineLayout pipelineLayout;
-		pipelineLayout.SetRange(0, Descriptor::CBV, 1, 0);
-		pipelineLayout.SetRange(1, Descriptor::SRV, _countof(m_textures), 0);
-		pipelineLayout.SetRange(2, Descriptor::SAMPLER, 1, 0);
+		pipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0);
+		pipelineLayout.SetRange(1, DescriptorType::SRV, _countof(m_textures), 0);
+		pipelineLayout.SetRange(2, DescriptorType::SAMPLER, 1, 0);
 		pipelineLayout.SetShaderStage(0, Shader::Stage::VS);
 		pipelineLayout.SetShaderStage(1, Shader::Stage::PS);
 		pipelineLayout.SetShaderStage(2, Shader::Stage::PS);
@@ -249,14 +259,14 @@ void VoxelizerX::LoadAssets()
 
 		Util::DescriptorTable cbvTable;
 		cbvTable.SetDescriptors(0, 1, &m_constantBuffer->GetCBV());
-		m_cbvTable = cbvTable.GetDescriptorTable(m_descriptorTablePool);
+		m_cbvTable = cbvTable.GetCbvSrvUavTable(m_descriptorTablePool);
 	}
 
 	// Create the textures.
 	{
 		// Copy data to the intermediate upload heap and then schedule a copy 
 		// from the upload heap to the Texture2D.
-		vector<DescriptorView> srvs(_countof(m_textures));
+		vector<Descriptor> srvs(_countof(m_textures));
 		for (auto i = 0; i < _countof(m_textures); ++i)
 		{
 			const auto texture = GenerateTextureData(i);
@@ -269,7 +279,7 @@ void VoxelizerX::LoadAssets()
 		
 		Util::DescriptorTable srvTable;
 		srvTable.SetDescriptors(0, _countof(m_textures), srvs.data());
-		m_srvTable = srvTable.GetDescriptorTable(m_descriptorTablePool);
+		m_srvTable = srvTable.GetCbvSrvUavTable(m_descriptorTablePool);
 	}
 
 	// Create the sampler
@@ -277,7 +287,7 @@ void VoxelizerX::LoadAssets()
 		Util::DescriptorTable samplerTable;
 		const auto samplerAnisoWrap = SamplerPreset::ANISOTROPIC_WRAP;
 		samplerTable.SetSamplers(0, 1, &samplerAnisoWrap, m_descriptorTablePool);
-		m_samplerTable = samplerTable.GetDescriptorTable(m_descriptorTablePool);
+		m_samplerTable = samplerTable.GetSamplerTable(m_descriptorTablePool);
 	}
 	
 	// Close the command list and execute it to begin the initial GPU setup.
@@ -428,12 +438,12 @@ void VoxelizerX::PopulateCommandList()
 	// Indicate that the back buffer will be used as a render target.
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-	m_commandList->OMSetRenderTargets(1, m_swapChainRtvTables[m_frameIndex].get(), FALSE, m_dsvHandle.get());
+	m_commandList->OMSetRenderTargets(1, m_rtvTables[m_frameIndex].get(), FALSE, &m_dsv);
 	
 	// Record commands.
 	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-	m_commandList->ClearRenderTargetView(*m_swapChainRtvTables[m_frameIndex], clearColor, 0, nullptr);
-	m_commandList->ClearDepthStencilView(*m_dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	m_commandList->ClearRenderTargetView(*m_rtvTables[m_frameIndex], clearColor, 0, nullptr);
+	m_commandList->ClearDepthStencilView(m_dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 #if 0
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer->GetVBV());
@@ -441,7 +451,7 @@ void VoxelizerX::PopulateCommandList()
 	m_commandList->DrawIndexedInstanced(3, 2, 0, 0, 0);
 #endif
 
-	m_voxelizer->Render(m_swapChainRtvTables[m_frameIndex], m_dsvHandle);
+	m_voxelizer->Render(m_rtvTables[m_frameIndex], m_dsv);
 
 	// Indicate that the back buffer will now be used to present.
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));

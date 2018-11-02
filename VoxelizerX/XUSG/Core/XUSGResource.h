@@ -24,14 +24,19 @@ namespace XUSG
 		void *Map();
 		void Unmap();
 
-		const Resource			&GetResource() const;
-		const DescriptorView	&GetCBV() const;
+		const Resource		&GetResource() const;
+		const Descriptor	&GetCBV() const;
 
 	protected:
-		Resource		m_resource;
-		DescriptorView	m_CBV;
+		void allocateDescriptorPool(uint32_t numDescriptors);
+
 		void			*m_pDataBegin;
 
+		Resource		m_resource;
+		Descriptor		m_CBV;
+
+		DescriptorPool	m_cbvPool;
+		
 		Device			m_device;
 	};
 
@@ -44,23 +49,26 @@ namespace XUSG
 		ResourceBase(const Device &device);
 		virtual ~ResourceBase();
 
-		void Barrier(const GraphicsCommandList& commandList, ResourceState dstState);
+		void Barrier(const GraphicsCommandList &commandList, ResourceState dstState);
 
-		const Resource			&GetResource() const;
-		const DescriptorView	&GetSRV() const;
+		const Resource		&GetResource() const;
+		const Descriptor	&GetSRV() const;
 
-		ResourceBarrier Transition(ResourceState dstState);
+		ResourceBarrier		Transition(ResourceState dstState);
 
 		//static void CreateReadBuffer(const Device &device,
 			//CPDXBuffer &pDstBuffer, const CPDXBuffer &pSrcBuffer);
 	protected:
-		DescriptorView createSRV(Format format);
-		DescriptorView createUAV(Format format);
+		void allocateDescriptorPool(uint32_t numDescriptors);
 
 		Resource		m_resource;
-		DescriptorView	m_SRV;
+		Descriptor		m_SRV;
+		Descriptor		m_srvUavCurrent;
 
 		ResourceState	m_state;
+
+		DescriptorPool	m_srvUavPool;
+		uint32_t		m_strideSrvUav;
 
 		Device			m_device;
 	};
@@ -78,21 +86,22 @@ namespace XUSG
 		void Create(uint32_t width, uint32_t height, Format format, uint32_t arraySize = 1,
 			ResourceFlags resourceFlags = ResourceFlags(0), uint8_t numMips = 1, uint8_t sampleCount = 1,
 			PoolType poolType = PoolType(1), ResourceState state = ResourceState(0));
-		void Upload(const GraphicsCommandList& commandList, Resource& resourceUpload, const void *pData,
+		void Upload(const GraphicsCommandList &commandList, Resource &resourceUpload, const void *pData,
 			uint8_t stride = sizeof(float), ResourceState dstState = ResourceState(0));
 		void CreateSRV(uint32_t arraySize, Format format = Format(0),
 			uint8_t numMips = 1, uint8_t sampleCount = 1);
 		void CreateUAV(uint32_t arraySize, Format format = Format(0), uint8_t numMips = 1);
-		void CreateSubSRVs();
+		void CreateSubSRVs(Format format = Format(0));
 
-		const DescriptorView	&GetUAV(uint8_t i = 0) const;
-		const DescriptorView	&GetSRVLevel(uint8_t i) const;
-		const DescriptorView	&GetSubSRV(uint8_t i) const;
+		const Descriptor	&GetUAV(uint8_t i = 0) const;
+		const Descriptor	&GetSRVLevel(uint8_t i) const;
+		const Descriptor	&GetSubSRV(uint8_t i) const;
 
 	protected:
-		std::vector<DescriptorView>	m_UAVs;
-		std::vector<DescriptorView>	m_SRVs;
-		std::vector<DescriptorView>	m_subSRVs;
+		Resource m_counter;
+		std::vector<Descriptor>	m_UAVs;
+		std::vector<Descriptor>	m_SRVs;
+		std::vector<Descriptor>	m_subSRVs;
 	};
 
 	//--------------------------------------------------------------------------------------
@@ -114,15 +123,20 @@ namespace XUSG
 		//void Populate(const CPDXShaderResourceView &pSRVSrc, const spShader &pShader,
 			//const uint8_t uSRVSlot = 0, const uint8_t uSlice = 0, const uint8_t uMip = 0);
 
-		const DescriptorView	&GetRTV(uint32_t slice = 0, uint8_t mipLevel = 0) const;
-		uint32_t				GetArraySize() const;
-		uint8_t					GetNumMips(uint32_t slice = 0) const;
+		const Descriptor	&GetRTV(uint32_t slice = 0, uint8_t mipLevel = 0) const;
+		uint32_t			GetArraySize() const;
+		uint8_t				GetNumMips(uint32_t slice = 0) const;
 
 	protected:
 		void create(uint32_t width, uint32_t height, uint32_t arraySize, Format format,
 			uint8_t numMips, uint8_t sampleCount, ResourceFlags resourceFlags, ResourceState state);
+		void allocateRtvPool(uint32_t numDescriptors);
 
-		std::vector<std::vector<DescriptorView>> m_RTVs;
+		std::vector<std::vector<Descriptor>> m_RTVs;
+		Descriptor	m_rtvCurrent;
+
+		DescriptorPool	m_rtvPool;
+		uint32_t		m_strideRtv;
 	};
 
 	//--------------------------------------------------------------------------------------
@@ -135,30 +149,27 @@ namespace XUSG
 		DepthStencil(const Device &device);
 		virtual ~DepthStencil();
 
-		void SetDescriptorTablePool(DescriptorTablePool& descriptorTablePool);
 		void Create(uint32_t width, uint32_t height, Format format = DXGI_FORMAT_D24_UNORM_S8_UINT,
 			ResourceFlags resourceFlags = ResourceFlags(0), uint32_t arraySize = 1, uint8_t numMips = 1,
 			uint8_t sampleCount = 1, ResourceState state = ResourceState(0),
 			uint8_t clearStencil = 0, float clearDepth = 1.0f);
 
-		const DescriptorView		&GetDSV(uint8_t mipLevel = 0) const;
-		const DescriptorView		&GetDSVReadOnly(uint8_t mipLevel = 0) const;
-		const DescriptorView		&GetSRVStencil() const;
+		const Descriptor	&GetDSV(uint8_t mipLevel = 0) const;
+		const Descriptor	&GetDSVReadOnly(uint8_t mipLevel = 0) const;
+		const Descriptor	&GetSRVStencil() const;
 
-		const DepthStencilHandle	&GetDsvHandle(uint8_t mipLevel = 0) const;
-		const DepthStencilHandle	&GetDsvHandleReadOnly(uint8_t mipLevel = 0) const;
-
-		const uint8_t				GetNumMips() const;
+		const uint8_t		GetNumMips() const;
 
 	protected:
-		std::vector<DescriptorView> m_DSVs;
-		std::vector<DescriptorView> m_DSVROs;
-		DescriptorView m_SRVStencil;
+		void allocateDsvPool(uint32_t numDescriptors);
 
-		std::vector<DepthStencilHandle> m_dsvHandles;
-		std::vector<DepthStencilHandle> m_dsvROHandles;
+		std::vector<Descriptor> m_DSVs;
+		std::vector<Descriptor> m_DSVROs;
+		Descriptor	m_SRVStencil;
+		Descriptor	m_dsvCurrent;
 
-		DescriptorTablePool *m_pDescriptorTablePool;
+		DescriptorPool	m_dsvPool;
+		uint32_t		m_strideDsv;
 	};
 
 	//--------------------------------------------------------------------------------------
@@ -176,16 +187,17 @@ namespace XUSG
 			PoolType poolType = PoolType(1), ResourceState state = ResourceState(0));
 		void CreateSRV(Format format = Format(0), uint8_t numMips = 1);
 		void CreateUAV(Format format = Format(0), uint8_t numMips = 1);
-		void CreateSubSRVs();
+		void CreateSubSRVs(Format format = Format(0));
 
-		const DescriptorView	&GetUAV(uint8_t i = 0) const;
-		const DescriptorView	&GetSRVLevel(uint8_t i) const;
-		const DescriptorView	&GetSubSRV(uint8_t i) const;
+		const Descriptor	&GetUAV(uint8_t i = 0) const;
+		const Descriptor	&GetSRVLevel(uint8_t i) const;
+		const Descriptor	&GetSubSRV(uint8_t i) const;
 
 	protected:
-		std::vector<DescriptorView>	m_UAVs;
-		std::vector<DescriptorView>	m_SRVs;
-		std::vector<DescriptorView>	m_subSRVs;
+		Resource m_counter;
+		std::vector<Descriptor>	m_UAVs;
+		std::vector<Descriptor>	m_SRVs;
+		std::vector<Descriptor>	m_subSRVs;
 	};
 
 	//--------------------------------------------------------------------------------------
@@ -198,7 +210,7 @@ namespace XUSG
 		BufferBase(const Device &device);
 		virtual ~BufferBase();
 
-		void Upload(const GraphicsCommandList& commandList, Resource& resourceUpload,
+		void Upload(const GraphicsCommandList &commandList, Resource &resourceUpload,
 			const void *pData, ResourceState dstState = ResourceState(0));
 	};
 
@@ -217,13 +229,14 @@ namespace XUSG
 		void CreateSRV(uint32_t byteWidth);
 		void CreateUAV(uint32_t byteWidth);
 
-		const DescriptorView &GetUAV() const;
+		const Descriptor &GetUAV() const;
 
 	protected:
 		void create(uint32_t byteWidth, ResourceFlags resourceFlags, PoolType poolType,
 			ResourceState state, bool hasSRV, bool hasUAV);
 
-		DescriptorView m_UAV;
+		Resource m_counter;
+		Descriptor m_UAV;
 	};
 
 	//--------------------------------------------------------------------------------------
