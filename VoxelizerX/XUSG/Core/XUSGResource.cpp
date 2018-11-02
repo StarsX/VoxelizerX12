@@ -81,7 +81,7 @@ void ConstantBuffer::Create(uint32_t byteWidth, uint32_t cbvSize)
 	// Describe and create a constant buffer view.
 	D3D12_CONSTANT_BUFFER_VIEW_DESC desc;
 	desc.BufferLocation = m_resource->GetGPUVirtualAddress();
-	desc.SizeInBytes = (cbvSize + 255)  &~255;	// CB size is required to be 256-byte aligned.
+	desc.SizeInBytes = (cbvSize + 255) & ~255;	// CB size is required to be 256-byte aligned.
 
 	// Create CBV
 	m_CBV = m_cbvPool->GetCPUDescriptorHandleForHeapStart();
@@ -198,11 +198,11 @@ void Texture2D::Create(uint32_t width, uint32_t height, Format format, uint32_t 
 	ResourceFlags resourceFlags, uint8_t numMips, uint8_t sampleCount, PoolType poolType,
 	ResourceState state)
 {
-	const auto isPacked = static_cast<bool>(resourceFlags  &BIND_PACKED_UAV);
+	const auto isPacked = static_cast<bool>(resourceFlags & BIND_PACKED_UAV);
 	resourceFlags &= REMOVE_PACKED_UAV;
 
-	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
 	auto formatReousrce = format;
@@ -560,11 +560,11 @@ uint8_t RenderTarget::GetNumMips(uint32_t slice) const
 void RenderTarget::create(uint32_t width, uint32_t height, uint32_t arraySize, Format format,
 	uint8_t numMips, uint8_t sampleCount, ResourceFlags resourceFlags, ResourceState state)
 {
-	const auto isPacked = static_cast<bool>(resourceFlags  &BIND_PACKED_UAV);
+	const auto isPacked = static_cast<bool>(resourceFlags & BIND_PACKED_UAV);
 	resourceFlags &= REMOVE_PACKED_UAV;
 
-	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
 	auto formatReousrce = format;
@@ -628,7 +628,7 @@ void DepthStencil::Create(uint32_t width, uint32_t height, Format format, Resour
 	uint32_t arraySize, uint8_t numMips, uint8_t sampleCount, ResourceState state,
 	uint8_t clearStencil, float clearDepth)
 {
-	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
 
 	// Map formats
 	auto formatReousrce = format;
@@ -842,11 +842,11 @@ Texture3D::~Texture3D()
 void Texture3D::Create(uint32_t width, uint32_t height, uint32_t depth, Format format,
 	ResourceFlags resourceFlags, uint8_t numMips, PoolType poolType, ResourceState state)
 {
-	const auto isPacked = static_cast<bool>(resourceFlags  &BIND_PACKED_UAV);
+	const auto isPacked = static_cast<bool>(resourceFlags & BIND_PACKED_UAV);
 	resourceFlags &= REMOVE_PACKED_UAV;
 
-	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
 	auto formatReousrce = format;
@@ -1048,8 +1048,8 @@ RawBuffer::~RawBuffer()
 
 void RawBuffer::Create(uint32_t byteWidth, ResourceFlags resourceFlags, PoolType poolType, ResourceState state)
 {
-	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Create buffer
 	create(byteWidth, resourceFlags, poolType, state, hasSRV, hasUAV);
@@ -1138,8 +1138,8 @@ VertexBuffer::~VertexBuffer()
 void VertexBuffer::Create(uint32_t byteWidth, uint32_t stride, ResourceFlags resourceFlags,
 	PoolType poolType, ResourceState state)
 {
-	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Determine initial state
 	if (state == 0)
@@ -1180,7 +1180,7 @@ IndexBuffer::~IndexBuffer()
 void IndexBuffer::Create(uint32_t byteWidth, Format format, ResourceFlags resourceFlags,
 	PoolType poolType, ResourceState state)
 {
-	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
 
 	// Setup the buffer description.
 	const auto desc = CD3DX12_RESOURCE_DESC::Buffer(byteWidth, D3D12_RESOURCE_FLAGS(resourceFlags));
@@ -1224,11 +1224,11 @@ TypedBuffer::~TypedBuffer()
 void TypedBuffer::Create(uint32_t numElements, uint32_t stride, Format format,
 	ResourceFlags resourceFlags, PoolType poolType, ResourceState state)
 {
-	const auto isPacked = static_cast<bool>(resourceFlags  &BIND_PACKED_UAV);
+	const auto isPacked = static_cast<bool>(resourceFlags & BIND_PACKED_UAV);
 	resourceFlags &= REMOVE_PACKED_UAV;
 
-	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
 	auto formatReousrce = format;
@@ -1313,8 +1313,8 @@ StructuredBuffer::~StructuredBuffer()
 void StructuredBuffer::Create(uint32_t numElements, uint32_t stride,
 	ResourceFlags resourceFlags, PoolType poolType, ResourceState state)
 {
-	const auto hasSRV = !(resourceFlags  &D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags  &D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Create buffer
 	create(stride * numElements, resourceFlags, poolType, state, hasSRV, hasUAV);

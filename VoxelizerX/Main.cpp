@@ -14,7 +14,7 @@
 _Use_decl_annotations_
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
-	VoxelizerX dx12Test(1280, 720, L"DirectX 12 Test");
+	VoxelizerX dx12Test(1280, 960, L"DirectX 12 Voxelizer");
 
 	return Win32Application::Run(&dx12Test, hInstance, nCmdShow);
 }
