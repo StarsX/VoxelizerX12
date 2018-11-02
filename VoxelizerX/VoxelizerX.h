@@ -34,22 +34,8 @@ public:
 
 private:
 	static const uint32_t FrameCount = 2;
-	static const uint32_t TextureWidth = 1024;
-	static const uint32_t TextureHeight = 1024;
-	static const uint32_t TexturePixelSize = 4;	// The number of bytes used to represent a pixel in the texture.
 
-	struct Vertex
-	{
-		XMFLOAT3 position;
-		XMFLOAT2 uv;
-	};
-
-	XUSG::Shader::Pool				m_shaderPool;
-	XUSG::Graphics::Pipeline::Pool	m_pipelinePool;
 	XUSG::DescriptorTablePool		m_descriptorTablePool;
-
-	XUSG::PipelineLayout			m_pipelineLayout;
-	XUSG::InputLayout 				m_inputLayout;
 
 	std::unique_ptr<Voxelizer>		m_voxelizer;
 	DirectX::XMFLOAT4X4				m_proj;
@@ -71,17 +57,9 @@ private:
 	
 	XUSG::RenderTargetTable	m_rtvTables[FrameCount];
 	XUSG::Descriptor		m_dsv;
-	XUSG::DescriptorTable	m_cbvTable;
-	XUSG::DescriptorTable	m_srvTable;
-	XUSG::DescriptorTable	m_samplerTable;
-
+	
 	// App resources.
 	std::unique_ptr<XUSG::DepthStencil>	m_depth;
-	std::unique_ptr<XUSG::VertexBuffer>	m_vertexBuffer;
-	std::unique_ptr<XUSG::IndexBuffer>	m_indexBuffer;
-	std::unique_ptr<XUSG::ConstantBuffer> m_constantBuffer;
-	std::unique_ptr<XUSG::Texture2D>	m_textures[8];
-	XMFLOAT4 m_cbData_Offset;
 
 	// Synchronization objects.
 	uint32_t m_frameIndex;
@@ -91,7 +69,7 @@ private:
 
 	void LoadPipeline();
 	void LoadAssets();
-	std::vector<uint8_t> GenerateTextureData(uint32_t subDivLevel);
+
 	void PopulateCommandList();
 	void WaitForPreviousFrame();
 };

@@ -270,12 +270,9 @@ void Texture2D::Upload(const GraphicsCommandList &commandList, Resource &resourc
 
 void Texture2D::CreateSRV(uint32_t arraySize, Format format, uint8_t numMips, uint8_t sampleCount)
 {
-	if (!format)
-		format = m_resource->GetDesc().Format;
-
 	// Setup the description of the shader resource view.
 	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-	desc.Format = format;
+	desc.Format = format ? format : m_resource->GetDesc().Format;
 	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
 	if (arraySize > 1)
@@ -336,8 +333,7 @@ void Texture2D::CreateSRV(uint32_t arraySize, Format format, uint8_t numMips, ui
 
 void Texture2D::CreateUAV(uint32_t arraySize, Format format, uint8_t numMips)
 {
-	if (!format)
-		format = m_resource->GetDesc().Format;
+	format = format ? format : m_resource->GetDesc().Format;
 
 	auto mipLevel = 0ui8;
 	m_UAVs.resize(numMips);
@@ -369,10 +365,8 @@ void Texture2D::CreateUAV(uint32_t arraySize, Format format, uint8_t numMips)
 
 void Texture2D::CreateSubSRVs(Format format)
 {
-	if (!format)
-		format = m_resource->GetDesc().Format;
-
 	const auto txDesc = m_resource->GetDesc();
+	format = format ? format : txDesc.Format;
 
 	auto mipLevel = 1ui8;
 	const auto numLevels = max(txDesc.MipLevels, 1) - 1;
@@ -884,11 +878,8 @@ void Texture3D::Create(uint32_t width, uint32_t height, uint32_t depth, Format f
 
 void Texture3D::CreateSRV(Format format, uint8_t numMips)
 {
-	if (!format)
-		format = m_resource->GetDesc().Format;
-
 	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-	desc.Format = format;
+	desc.Format = format ? format : m_resource->GetDesc().Format;
 	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
 	desc.Texture3D.MipLevels = numMips;
@@ -919,8 +910,8 @@ void Texture3D::CreateSRV(Format format, uint8_t numMips)
 
 void Texture3D::CreateUAV(Format format, uint8_t numMips)
 {
-	if (!format)
-		format = m_resource->GetDesc().Format;
+	const auto txDesc = m_resource->GetDesc();
+	format = format ? format : txDesc.Format;
 
 	auto mipLevel = 0ui8;
 	m_UAVs.resize(numMips);
@@ -931,8 +922,8 @@ void Texture3D::CreateUAV(Format format, uint8_t numMips)
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
 		desc.Format = format;
 		desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
+		desc.Texture3D.WSize = txDesc.DepthOrArraySize >> mipLevel;
 		desc.Texture3D.MipSlice = mipLevel++;
-		desc.Texture3D.WSize = 1;
 
 		// Create an unordered access view
 		descriptor = m_srvUavCurrent;
@@ -943,10 +934,8 @@ void Texture3D::CreateUAV(Format format, uint8_t numMips)
 
 void Texture3D::CreateSubSRVs(Format format)
 {
-	if (!format)
-		format = m_resource->GetDesc().Format;
-
 	const auto txDesc = m_resource->GetDesc();
+	format = format ? format : txDesc.Format;
 
 	auto mipLevel = 1ui8;
 	m_subSRVs.resize(max(txDesc.MipLevels, 1) - 1);
@@ -1266,11 +1255,8 @@ void TypedBuffer::Create(uint32_t numElements, uint32_t stride, Format format,
 
 void TypedBuffer::CreateSRV(uint32_t numElements, Format format)
 {
-	if (!format)
-		format = m_resource->GetDesc().Format;
-
 	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-	desc.Format = format;
+	desc.Format = format ? format : m_resource->GetDesc().Format;
 	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	desc.Buffer.NumElements = numElements;
@@ -1283,11 +1269,8 @@ void TypedBuffer::CreateSRV(uint32_t numElements, Format format)
 
 void TypedBuffer::CreateUAV(uint32_t numElements, Format format)
 {
-	if (!format)
-		format = m_resource->GetDesc().Format;
-
 	D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-	desc.Format = format;
+	desc.Format = format ? format : m_resource->GetDesc().Format;;
 	desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 	desc.Buffer.NumElements = numElements;
 

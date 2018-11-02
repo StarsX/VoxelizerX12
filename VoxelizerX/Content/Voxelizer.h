@@ -34,7 +34,8 @@ public:
 	void Init(uint32_t width, uint32_t height, XUSG::Resource &vbUpload, XUSG::Resource &ibUpload,
 		const char *fileName = "Media\\bunny.obj");
 	void UpdateFrame(DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
-	void Render(const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
+	void Render(const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv,
+		XUSG::Format rtFormat, XUSG::Format dsFormat);
 
 protected:
 	struct CBMatrices
@@ -62,7 +63,8 @@ protected:
 	void createIB(uint32_t numIndices, const uint32_t *pData, XUSG::Resource &ibUpload);
 	void createCBs();
 	void voxelize(bool depthPeel = false, uint8_t mipLevel = 0);
-	void renderBoxArray(const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
+	void renderBoxArray(const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv,
+		XUSG::Format rtFormat, XUSG::Format dsFormat);
 
 	uint32_t	m_vertexStride;
 	uint32_t	m_numIndices;

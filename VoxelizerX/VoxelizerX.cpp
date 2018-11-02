@@ -167,48 +167,6 @@ void VoxelizerX::LoadPipeline()
 // Load the sample assets.
 void VoxelizerX::LoadAssets()
 {
-	m_pipelinePool.SetDevice(m_device);
-	
-	// Create the root signature.
-	{
-		Util::PipelineLayout pipelineLayout;
-		pipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0);
-		pipelineLayout.SetRange(1, DescriptorType::SRV, _countof(m_textures), 0);
-		pipelineLayout.SetRange(2, DescriptorType::SAMPLER, 1, 0);
-		pipelineLayout.SetShaderStage(0, Shader::Stage::VS);
-		pipelineLayout.SetShaderStage(1, Shader::Stage::PS);
-		pipelineLayout.SetShaderStage(2, Shader::Stage::PS);
-		m_pipelineLayout = pipelineLayout.GetPipelineLayout(m_pipelinePool, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-	}
-
-	// Create the pipeline state, which includes compiling and loading shaders.
-	{
-		m_shaderPool.CreateShader(Shader::Stage::VS, VS_TRIANGLE, L"VertexShader.cso");
-		m_shaderPool.CreateShader(Shader::Stage::PS, PS_TRIANGLE, L"PixelShader.cso");
-
-		// Define the vertex input layout.
-		InputElementTable inputElementDescs =
-		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-		};
-
-		m_inputLayout = m_pipelinePool.CreateInputLayout(inputElementDescs);
-
-		// Describe and create the graphics pipeline state object (PSO).
-		Graphics::State state;
-		state.IASetInputLayout(m_inputLayout);
-		state.SetPipelineLayout(m_pipelineLayout);
-		state.SetShader(Shader::Stage::VS, m_shaderPool.GetShader(Shader::Stage::VS, VS_TRIANGLE));
-		state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_TRIANGLE));
-		//state.DSSetState(Graphics::DepthStencilPreset::DEPTH_STENCIL_NONE, m_pipelinePool);
-		state.IASetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-		state.OMSetNumRenderTargets(1);
-		state.OMSetRTVFormat(0, DXGI_FORMAT_R8G8B8A8_UNORM);
-		state.OMSetDSVFormat(DXGI_FORMAT_D24_UNORM_S8_UINT);
-		m_pipelineState = state.GetPipeline(m_pipelinePool);
-	}
-
 	// Create the command list.
 	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 
@@ -217,79 +175,6 @@ void VoxelizerX::LoadAssets()
 	Resource vbUpload, ibUpload;
 	m_voxelizer->Init(m_width, m_height, vbUpload, ibUpload);
 
-	// Create the vertex buffer.
-	Resource vertexUpload;
-	{
-		// Define the geometry for a triangle.
-		Vertex triangleVertices[] =
-		{
-			{ { 0.0f, 0.25f * m_aspectRatio, 0.0f }, { 0.5f, 0.0f } },
-			{ { 0.25f, -0.25f * m_aspectRatio, 0.0f }, { 1.0f, 1.0f } },
-			{ { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 1.0f } }
-		};
-		const uint32_t vertexBufferSize = sizeof(triangleVertices);
-
-		m_vertexBuffer = make_unique<VertexBuffer>(m_device);
-		m_vertexBuffer->Create(vertexBufferSize, sizeof(Vertex), D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-		m_vertexBuffer->Upload(m_commandList, vertexUpload, triangleVertices);
-	}
-
-	// Create the index buffer.
-	Resource indexUpload;
-	{
-		// Define the geometry for a triangle.
-		uint16_t triangleIndices[] = { 0, 1, 2 };
-		const uint32_t indexBufferSize = sizeof(triangleIndices);
-
-		m_indexBuffer = make_unique<IndexBuffer>(m_device);
-		m_indexBuffer->Create(indexBufferSize, DXGI_FORMAT_R16_UINT);
-		m_indexBuffer->Upload(m_commandList, indexUpload, triangleIndices);
-	}
-
-	// Note: ComPtr's are CPU objects but this resource needs to stay in scope until
-	// the command list that references it has finished executing on the GPU.
-	// We will flush the GPU at the end of this method to ensure the resource is not
-	// prematurely destroyed.
-	Resource textureUploads[_countof(m_textures)];
-
-	// Create the constant buffer.
-	{
-		m_constantBuffer = make_unique<ConstantBuffer>(m_device);
-		m_constantBuffer->Create(1024 * 64, sizeof(XMFLOAT4));
-
-		Util::DescriptorTable cbvTable;
-		cbvTable.SetDescriptors(0, 1, &m_constantBuffer->GetCBV());
-		m_cbvTable = cbvTable.GetCbvSrvUavTable(m_descriptorTablePool);
-	}
-
-	// Create the textures.
-	{
-		// Copy data to the intermediate upload heap and then schedule a copy 
-		// from the upload heap to the Texture2D.
-		vector<Descriptor> srvs(_countof(m_textures));
-		for (auto i = 0; i < _countof(m_textures); ++i)
-		{
-			const auto texture = GenerateTextureData(i);
-
-			m_textures[i] = make_unique<Texture2D>(m_device);
-			m_textures[i]->Create(TextureWidth, TextureHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
-			m_textures[i]->Upload(m_commandList, textureUploads[i], texture.data(), TexturePixelSize);
-			srvs[i] = m_textures[i]->GetSRV();
-		}
-		
-		Util::DescriptorTable srvTable;
-		srvTable.SetDescriptors(0, _countof(m_textures), srvs.data());
-		m_srvTable = srvTable.GetCbvSrvUavTable(m_descriptorTablePool);
-	}
-
-	// Create the sampler
-	{
-		Util::DescriptorTable samplerTable;
-		const auto samplerAnisoWrap = SamplerPreset::ANISOTROPIC_WRAP;
-		samplerTable.SetSamplers(0, 1, &samplerAnisoWrap, m_descriptorTablePool);
-		m_samplerTable = samplerTable.GetSamplerTable(m_descriptorTablePool);
-	}
-	
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
@@ -319,58 +204,9 @@ void VoxelizerX::LoadAssets()
 	XMStoreFloat4x4(&m_proj, proj);
 }
 
-// Generate a simple black and white checkerboard texture.
-vector<uint8_t> VoxelizerX::GenerateTextureData(uint32_t subDivLevel)
-{
-	const auto rowPitch = TextureWidth * TexturePixelSize;
-	const auto cellPitch = rowPitch >> subDivLevel;			// The width of a cell in the checkboard texture.
-	const auto cellHeight = TextureWidth >> subDivLevel;	// The height of a cell in the checkerboard texture.
-	const auto textureSize = rowPitch * TextureHeight;
-
-	vector<uint8_t> data(textureSize);
-	uint8_t* pData = &data[0];
-
-	for (auto n = 0u; n < textureSize; n += TexturePixelSize)
-	{
-		auto x = n % rowPitch;
-		auto y = n / rowPitch;
-		auto i = x / cellPitch;
-		auto j = y / cellHeight;
-
-		if (i % 2 == j % 2)
-		{
-			pData[n] = 0x00;		// R
-			pData[n + 1] = 0x00;	// G
-			pData[n + 2] = 0x00;	// B
-			pData[n + 3] = 0xff;	// A
-		}
-		else
-		{
-			pData[n] = 0xff;		// R
-			pData[n + 1] = 0xff;	// G
-			pData[n + 2] = 0xff;	// B
-			pData[n + 3] = 0xff;	// A
-		}
-	}
-
-	return data;
-}
-
 // Update frame-based values.
 void VoxelizerX::OnUpdate()
 {
-	const float translationSpeed = 0.005f;
-	const float offsetBounds = 1.25f;
-
-	m_cbData_Offset.x += translationSpeed;
-	if (m_cbData_Offset.x > offsetBounds)
-		m_cbData_Offset.x = -offsetBounds;
-
-	// Map and initialize the constant buffer. We don't unmap this until the
-		// app closes. Keeping things mapped for the lifetime of the resource is okay.
-	const auto pCbData = reinterpret_cast<XMFLOAT4*>(m_constantBuffer->Map());
-	*pCbData = m_cbData_Offset;
-
 	// View
 	const auto focusPt = XMVectorSet(0.0f, 4.0f, 0.0f, 1.0f);
 	const auto eyePt = XMVectorSet(-8.0f, 12.0f, 14.0f, 1.0f);
@@ -416,45 +252,23 @@ void VoxelizerX::PopulateCommandList()
 	// re-recording.
 	ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
-#if 0
-	// Set necessary state.
-	m_commandList->SetPipelineState(m_pipelineState.Get());
-	m_commandList->SetGraphicsRootSignature(m_pipelineLayout.Get());
-
-	DescriptorPool::InterfaceType* ppHeaps[] =
-	{
-		m_descriptorTablePool.GetSrvUavCbvPool().Get(),
-		m_descriptorTablePool.GetSamplerPool().Get()
-	};
-	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
-	m_commandList->SetGraphicsRootDescriptorTable(0, *m_cbvTable);
-	m_commandList->SetGraphicsRootDescriptorTable(1, *m_srvTable);
-	m_commandList->SetGraphicsRootDescriptorTable(2, *m_samplerTable);
-	m_commandList->RSSetViewports(1, &m_viewport);
-	m_commandList->RSSetScissorRects(1, &m_scissorRect);
-#endif
-
 	// Indicate that the back buffer will be used as a render target.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(),
+		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-	m_commandList->OMSetRenderTargets(1, m_rtvTables[m_frameIndex].get(), FALSE, &m_dsv);
-	
 	// Record commands.
 	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 	m_commandList->ClearRenderTargetView(*m_rtvTables[m_frameIndex], clearColor, 0, nullptr);
 	m_commandList->ClearDepthStencilView(m_dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-#if 0
-	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer->GetVBV());
-	m_commandList->IASetIndexBuffer(&m_indexBuffer->GetIBV());
-	m_commandList->DrawIndexedInstanced(3, 2, 0, 0, 0);
-#endif
 
-	m_voxelizer->Render(m_rtvTables[m_frameIndex], m_dsv);
+	// Voxelizer rendering
+	m_voxelizer->Render(m_rtvTables[m_frameIndex], m_dsv,
+		m_renderTargets[m_frameIndex]->GetDesc().Format,
+		m_depth->GetResource()->GetDesc().Format);
 
 	// Indicate that the back buffer will now be used to present.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 	ThrowIfFailed(m_commandList->Close());
 }

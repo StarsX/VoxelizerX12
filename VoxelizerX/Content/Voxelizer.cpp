@@ -84,10 +84,10 @@ void Voxelizer::UpdateFrame(CXMVECTOR eyePt, CXMMATRIX viewProj)
 	XMStoreFloat4(&pCbPerFrame->eyePos, eyePt);
 }
 
-void Voxelizer::Render(const RenderTargetTable &rtvs, const Descriptor &dsv)
+void Voxelizer::Render(const RenderTargetTable &rtvs, const Descriptor &dsv, Format rtFormat, Format dsFormat)
 {
 	voxelize();
-	renderBoxArray(rtvs, dsv);
+	renderBoxArray(rtvs, dsv, rtFormat, dsFormat);
 }
 
 void Voxelizer::createShaders()
@@ -187,9 +187,10 @@ void Voxelizer::voxelize(bool depthPeel, uint8_t mipLevel)
 	const auto srvTable = utilSrvTable.GetCbvSrvUavTable(m_descriptorTablePool);
 
 	// Get CBVs
-	Util::DescriptorTable utilCbvPerObjectTable;
-	utilCbvPerObjectTable.SetDescriptors(0, 1, &m_cbBound->GetCBV());
-	const auto cbvPerObjectTable = utilCbvPerObjectTable.GetCbvSrvUavTable(m_descriptorTablePool);
+	Util::DescriptorTable utilCbvTable;
+	utilCbvTable.SetDescriptors(0, 1, &m_cbBound->GetCBV());
+	utilCbvTable.SetDescriptors(1, 1, &m_cbPerMipLevels[mipLevel]->GetCBV());
+	const auto cbvTable = utilCbvTable.GetCbvSrvUavTable(m_descriptorTablePool);
 
 	Util::DescriptorTable utilCbvPerMipLevelTable;
 	utilCbvPerMipLevelTable.SetDescriptors(0, 1, &m_cbPerMipLevels[mipLevel]->GetCBV());
@@ -199,14 +200,12 @@ void Voxelizer::voxelize(bool depthPeel, uint8_t mipLevel)
 	Util::PipelineLayout utilPipelineLayout;
 	utilPipelineLayout.SetRange(0, DescriptorType::UAV, depthPeel ? 2 : 1, 0);
 	utilPipelineLayout.SetRange(1, DescriptorType::SRV, _countof(srvs), 0);
-	utilPipelineLayout.SetRange(2, DescriptorType::CBV, 1, 0);
-	utilPipelineLayout.SetRange(3, DescriptorType::CBV, 1, 1);
-	utilPipelineLayout.SetRange(4, DescriptorType::CBV, 1, 0);
+	utilPipelineLayout.SetRange(2, DescriptorType::CBV, 2, 0);
+	utilPipelineLayout.SetRange(3, DescriptorType::CBV, 1, 0);
 	utilPipelineLayout.SetShaderStage(0, Shader::Stage::PS);
 	utilPipelineLayout.SetShaderStage(1, Shader::Stage::VS);
 	utilPipelineLayout.SetShaderStage(2, Shader::Stage::VS);
-	utilPipelineLayout.SetShaderStage(3, Shader::Stage::VS);
-	utilPipelineLayout.SetShaderStage(4, Shader::Stage::PS);
+	utilPipelineLayout.SetShaderStage(3, Shader::Stage::PS);
 	const auto pipelineLayout = utilPipelineLayout.GetPipelineLayout(m_pipelinePool, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 
 	// Get pipeline
@@ -234,9 +233,8 @@ void Voxelizer::voxelize(bool depthPeel, uint8_t mipLevel)
 		m_commandList->SetDescriptorHeaps(1, m_descriptorTablePool.GetCbvSrvUavPool().GetAddressOf());
 		m_commandList->SetGraphicsRootDescriptorTable(0, *uavGridTable);
 		m_commandList->SetGraphicsRootDescriptorTable(1, *srvTable);
-		m_commandList->SetGraphicsRootDescriptorTable(2, *cbvPerObjectTable);
+		m_commandList->SetGraphicsRootDescriptorTable(2, *cbvTable);
 		m_commandList->SetGraphicsRootDescriptorTable(3, *cbvPerMipLevel);
-		m_commandList->SetGraphicsRootDescriptorTable(4, *cbvPerMipLevel);
 
 		// Set viewport
 		const auto gridSize = GRID_SIZE >> mipLevel;
@@ -256,7 +254,7 @@ void Voxelizer::voxelize(bool depthPeel, uint8_t mipLevel)
 	}
 }
 
-void Voxelizer::renderBoxArray(const RenderTargetTable &rtvs, const Descriptor &dsv)
+void Voxelizer::renderBoxArray(const RenderTargetTable &rtvs, const Descriptor &dsv, Format rtFormat, Format dsFormat)
 {
 	// Get SRV
 	Util::DescriptorTable utilSrvTable;
@@ -283,8 +281,8 @@ void Voxelizer::renderBoxArray(const RenderTargetTable &rtvs, const Descriptor &
 	state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_SIMPLE));
 	state.IASetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 	state.OMSetNumRenderTargets(1);
-	state.OMSetRTVFormat(0, DXGI_FORMAT_R8G8B8A8_UNORM);
-	state.OMSetDSVFormat(DXGI_FORMAT_D24_UNORM_S8_UINT);
+	state.OMSetRTVFormat(0, rtFormat);
+	state.OMSetDSVFormat(dsFormat);
 	const auto pipelineState = state.GetPipeline(m_pipelinePool);
 
 	static auto warmUp = true;

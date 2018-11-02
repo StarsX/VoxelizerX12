@@ -162,12 +162,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="PixelShader.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="VertexShader.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
     <FxCompile Include="Content\Shaders\PSSimple.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
