@@ -9,6 +9,16 @@
 class Voxelizer
 {
 public:
+	Voxelizer(const XUSG::Device &device, const XUSG::GraphicsCommandList &commandList);
+	virtual ~Voxelizer();
+
+	void Init(uint32_t width, uint32_t height, XUSG::Resource &vbUpload, XUSG::Resource &ibUpload,
+		const char *fileName = "Media\\bunny.obj");
+	void UpdateFrame(DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
+	void Render(const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv,
+		XUSG::Format rtFormat, XUSG::Format dsFormat);
+
+protected:
 	enum VertexShaderID : uint32_t
 	{
 		VS_TRI_PROJ,
@@ -28,16 +38,6 @@ public:
 		CS_RAY_CAST
 	};
 
-	Voxelizer(const XUSG::Device &device, const XUSG::GraphicsCommandList &commandList);
-	virtual ~Voxelizer();
-
-	void Init(uint32_t width, uint32_t height, XUSG::Resource &vbUpload, XUSG::Resource &ibUpload,
-		const char *fileName = "Media\\bunny.obj");
-	void UpdateFrame(DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
-	void Render(const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv,
-		XUSG::Format rtFormat, XUSG::Format dsFormat);
-
-protected:
 	struct CBMatrices
 	{
 		DirectX::XMMATRIX worldViewProj;

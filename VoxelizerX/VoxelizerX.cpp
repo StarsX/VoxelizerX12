@@ -15,20 +15,6 @@
 using namespace std;
 using namespace XUSG;
 
-enum VertexShader
-{
-	VS_TRIANGLE,
-
-	NUM_VS
-};
-
-enum PixelShader
-{
-	PS_TRIANGLE,
-
-	NUM_PS
-};
-
 VoxelizerX::VoxelizerX(uint32_t width, uint32_t height, std::wstring name) :
 	DXFramework(width, height, name),
 	m_frameIndex(0),
@@ -207,6 +193,9 @@ void VoxelizerX::LoadAssets()
 // Update frame-based values.
 void VoxelizerX::OnUpdate()
 {
+	m_timer.Tick();
+	CalculateFrameStats();
+
 	// View
 	const auto focusPt = XMVectorSet(0.0f, 4.0f, 0.0f, 1.0f);
 	const auto eyePt = XMVectorSet(-8.0f, 12.0f, 14.0f, 1.0f);
@@ -226,7 +215,7 @@ void VoxelizerX::OnRender()
 	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	// Present the frame.
-	ThrowIfFailed(m_swapChain->Present(1, 0));
+	ThrowIfFailed(m_swapChain->Present(0, 0));
 
 	WaitForPreviousFrame();
 }
@@ -281,7 +270,7 @@ void VoxelizerX::WaitForPreviousFrame()
 	// maximize GPU utilization.
 
 	// Signal and increment the fence value.
-	const UINT64 fence = m_fenceValue;
+	const auto fence = m_fenceValue;
 	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
 	m_fenceValue++;
 
@@ -293,4 +282,28 @@ void VoxelizerX::WaitForPreviousFrame()
 	}
 
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+}
+
+void VoxelizerX::CalculateFrameStats()
+{
+	static int frameCnt = 0;
+	static double elapsedTime = 0.0;
+	double totalTime = m_timer.GetTotalSeconds();
+	frameCnt++;
+
+	// Compute averages over one second period.
+	if ((totalTime - elapsedTime) >= 1.0f)
+	{
+		float diff = static_cast<float>(totalTime - elapsedTime);
+		float fps = static_cast<float>(frameCnt) / diff; // Normalize to an exact second.
+
+		frameCnt = 0;
+		elapsedTime = totalTime;
+
+		float MRaysPerSecond = (m_width * m_height * fps) / static_cast<float>(1e6);
+
+		wstringstream windowText;
+		windowText << setprecision(2) << fixed << L"    fps: " << fps;
+		SetCustomWindowText(windowText.str().c_str());
+	}
 }

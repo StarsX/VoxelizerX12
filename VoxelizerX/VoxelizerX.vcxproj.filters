@@ -46,6 +46,9 @@
     <Filter Include="XUSG\Advanced">
       <UniqueIdentifier>{e02eb163-b419-4362-90fe-77044bf6b63f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Common\Shaders">
+      <UniqueIdentifier>{6dd91738-67f0-4f61-b496-ce52037c557a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common\d3dx12.h">
@@ -98,6 +101,9 @@
     </ClInclude>
     <ClInclude Include="Content\SharedConst.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\StepTimer.h">
+      <Filter>Common\Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -154,11 +160,11 @@
     <None Include="XUSG\Core\XUSGSampler.inl">
       <Filter>XUSG\Core\Source Files\Inc</Filter>
     </None>
-    <None Include="Common\d3dx_dxgiformatconvert.inl">
-      <Filter>Common</Filter>
-    </None>
     <None Include="XUSG\Shaders\CHDataSize.hlsli">
       <Filter>XUSG\Shaders</Filter>
+    </None>
+    <None Include="Common\d3dx_dxgiformatconvert.inl">
+      <Filter>Common\Shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

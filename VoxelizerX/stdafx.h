@@ -27,6 +27,10 @@
 #include <DirectXMath.h>
 #include "d3dx12.h"
 
+// C RunTime Header Files
+#include <sstream>
+#include <iomanip>
+
 #include <string>
 #include <vector>
 #include <unordered_map>

@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include "StepTimer.h"
 #include "Voxelizer.h"
 
 using namespace DirectX;
@@ -67,9 +68,13 @@ private:
 	ComPtr<ID3D12Fence> m_fence;
 	uint64_t m_fenceValue;
 
+	// Application state
+	StepTimer m_timer;
+
 	void LoadPipeline();
 	void LoadAssets();
 
 	void PopulateCommandList();
 	void WaitForPreviousFrame();
+	void CalculateFrameStats();
 };

@@ -158,6 +158,7 @@ COPY /Y "$(OutDir)*.exe" "$(ProjectDir)..\Bin\"</Command>
     <ClInclude Include="Common\d3dx12.h" />
     <ClInclude Include="Common\DXFramework.h" />
     <ClInclude Include="Common\DXFrameworkHelper.h" />
+    <ClInclude Include="Common\StepTimer.h" />
     <ClInclude Include="Common\Win32Application.h" />
     <ClInclude Include="Content\ObjLoader.h" />
     <ClInclude Include="Content\SharedConst.h" />
