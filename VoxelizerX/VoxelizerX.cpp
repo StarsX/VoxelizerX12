@@ -82,7 +82,7 @@ void VoxelizerX::LoadPipeline()
 
 	// Describe and create the swap chain.
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-	swapChainDesc.BufferCount = FrameCount;
+	swapChainDesc.BufferCount = Voxelizer::FrameCount;
 	swapChainDesc.Width = m_width;
 	swapChainDesc.Height = m_height;
 	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -112,7 +112,7 @@ void VoxelizerX::LoadPipeline()
 	{
 		// Describe and create a render target view (RTV) descriptor heap.
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = FrameCount;
+		rtvHeapDesc.NumDescriptors = Voxelizer::FrameCount;
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvPool)));
@@ -124,7 +124,7 @@ void VoxelizerX::LoadPipeline()
 		Descriptor rtv(m_rtvPool->GetCPUDescriptorHandleForHeapStart());
 
 		// Create a RTV and a command allocator for each frame.
-		for (UINT n = 0; n < FrameCount; n++)
+		for (UINT n = 0; n < Voxelizer::FrameCount; n++)
 		{
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
 			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtv);
@@ -249,7 +249,7 @@ void VoxelizerX::PopulateCommandList()
 	m_commandList->ClearDepthStencilView(m_dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	// Voxelizer rendering
-	m_voxelizer->Render(m_rtvTables[m_frameIndex], m_dsv);
+	m_voxelizer->Render(m_frameIndex, m_rtvTables[m_frameIndex], m_dsv);
 
 	// Indicate that the back buffer will now be used to present.
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(),

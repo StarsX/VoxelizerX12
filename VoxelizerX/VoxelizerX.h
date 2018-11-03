@@ -34,24 +34,22 @@ public:
 	virtual void OnDestroy();
 
 private:
-	static const uint32_t FrameCount = 2;
-
 	XUSG::DescriptorTablePool		m_descriptorTablePool;
 
 	std::unique_ptr<Voxelizer>		m_voxelizer;
 	DirectX::XMFLOAT4X4				m_proj;
 
 	ComPtr<IDXGISwapChain3>			m_swapChain;
-	ComPtr<ID3D12CommandAllocator>	m_commandAllocators[FrameCount];
+	ComPtr<ID3D12CommandAllocator>	m_commandAllocators[Voxelizer::FrameCount];
 	ComPtr<ID3D12CommandQueue>		m_commandQueue;
 
 	XUSG::DescriptorPool m_rtvPool;
 
 	XUSG::Device m_device;
-	XUSG::Resource m_renderTargets[FrameCount];
+	XUSG::Resource m_renderTargets[Voxelizer::FrameCount];
 	XUSG::GraphicsCommandList m_commandList;
 	
-	XUSG::RenderTargetTable	m_rtvTables[FrameCount];
+	XUSG::RenderTargetTable	m_rtvTables[Voxelizer::FrameCount];
 	XUSG::Descriptor		m_dsv;
 	
 	// App resources.
@@ -61,7 +59,7 @@ private:
 	uint32_t m_frameIndex;
 	HANDLE m_fenceEvent;
 	ComPtr<ID3D12Fence> m_fence;
-	uint64_t m_fenceValues[FrameCount];
+	uint64_t m_fenceValues[Voxelizer::FrameCount];
 
 	// Application state
 	StepTimer m_timer;

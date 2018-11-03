@@ -16,7 +16,9 @@ public:
 		XUSG::Resource &vbUpload, XUSG::Resource &ibUpload,
 		const char *fileName = "Media\\bunny.obj");
 	void UpdateFrame(DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
-	void Render(const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
+	void Render(uint32_t frameIndex, const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
+
+	static const uint32_t FrameCount = 3;
 
 protected:
 	enum RenderPass : uint8_t
@@ -41,7 +43,7 @@ protected:
 		SRV_TABLE_VB_IB,
 		SRV_TABLE_GRID,
 
-		NUM_SRV_TABLE
+		NUM_SRV_TABLE = SRV_TABLE_GRID + FrameCount
 	};
 
 	enum UAVTable
@@ -97,8 +99,8 @@ protected:
 	void createCBs();
 	void prevoxelize(uint8_t mipLevel = 0);
 	void prerenderBoxArray(XUSG::Format rtFormat, XUSG::Format dsFormat);
-	void voxelize(bool depthPeel = false, uint8_t mipLevel = 0);
-	void renderBoxArray(const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
+	void voxelize(uint32_t frameIndex, bool depthPeel = false, uint8_t mipLevel = 0);
+	void renderBoxArray(uint32_t frameIndex, const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
 
 	uint32_t	m_vertexStride;
 	uint32_t	m_numIndices;
@@ -114,7 +116,7 @@ protected:
 
 	XUSG::DescriptorTable m_cbvTables[NUM_CBV_TABLE];
 	XUSG::DescriptorTable m_srvTables[NUM_SRV_TABLE];
-	XUSG::DescriptorTable m_uavTables[NUM_UAV_TABLE];
+	XUSG::DescriptorTable m_uavTables[NUM_UAV_TABLE][FrameCount];
 
 	std::unique_ptr<XUSG::RawBuffer> m_vertexBuffer;
 	std::unique_ptr<XUSG::RawBuffer> m_indexbuffer;
@@ -125,8 +127,8 @@ protected:
 	std::unique_ptr<XUSG::ConstantBuffer> m_cbBound;
 	std::vector<std::unique_ptr<XUSG::ConstantBuffer>> m_cbPerMipLevels;
 
-	std::unique_ptr<XUSG::Texture3D> m_grid;
-	std::unique_ptr<XUSG::Texture2D> m_KBufferDepth;
+	std::unique_ptr<XUSG::Texture3D> m_grids[FrameCount];
+	std::unique_ptr<XUSG::Texture2D> m_KBufferDepths[FrameCount];
 
 	XUSG::Shader::Pool				m_shaderPool;
 	XUSG::Graphics::Pipeline::Pool	m_pipelinePool;
