@@ -41,10 +41,6 @@ private:
 	std::unique_ptr<Voxelizer>		m_voxelizer;
 	DirectX::XMFLOAT4X4				m_proj;
 
-	// Pipeline objects.
-	CD3DX12_VIEWPORT	m_viewport;
-	CD3DX12_RECT		m_scissorRect;
-
 	ComPtr<IDXGISwapChain3>			m_swapChain;
 	ComPtr<ID3D12CommandAllocator>	m_commandAllocator;
 	ComPtr<ID3D12CommandQueue>		m_commandQueue;
@@ -53,7 +49,6 @@ private:
 
 	XUSG::Device m_device;
 	XUSG::Resource m_renderTargets[FrameCount];
-	XUSG::Graphics::PipelineState m_pipelineState;
 	XUSG::GraphicsCommandList m_commandList;
 	
 	XUSG::RenderTargetTable	m_rtvTables[FrameCount];

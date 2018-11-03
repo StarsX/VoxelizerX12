@@ -17,10 +17,7 @@ using namespace XUSG;
 
 VoxelizerX::VoxelizerX(uint32_t width, uint32_t height, std::wstring name) :
 	DXFramework(width, height, name),
-	m_frameIndex(0),
-	m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
-	m_scissorRect(0, 0, static_cast<long>(width), static_cast<long>(height))//,
-	//m_rtvDescriptorSize(0)
+	m_frameIndex(0)
 {
 }
 
@@ -159,7 +156,8 @@ void VoxelizerX::LoadAssets()
 	m_voxelizer = make_unique<Voxelizer>(m_device, m_commandList);
 
 	Resource vbUpload, ibUpload;
-	m_voxelizer->Init(m_width, m_height, vbUpload, ibUpload);
+	m_voxelizer->Init(m_width, m_height, m_renderTargets[0]->GetDesc().Format,
+		m_depth->GetResource()->GetDesc().Format, vbUpload, ibUpload);
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
@@ -251,9 +249,7 @@ void VoxelizerX::PopulateCommandList()
 	m_commandList->ClearDepthStencilView(m_dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	// Voxelizer rendering
-	m_voxelizer->Render(m_rtvTables[m_frameIndex], m_dsv,
-		m_renderTargets[m_frameIndex]->GetDesc().Format,
-		m_depth->GetResource()->GetDesc().Format);
+	m_voxelizer->Render(m_rtvTables[m_frameIndex], m_dsv);
 
 	// Indicate that the back buffer will now be used to present.
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(),
