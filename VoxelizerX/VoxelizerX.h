@@ -42,7 +42,7 @@ private:
 	DirectX::XMFLOAT4X4				m_proj;
 
 	ComPtr<IDXGISwapChain3>			m_swapChain;
-	ComPtr<ID3D12CommandAllocator>	m_commandAllocator;
+	ComPtr<ID3D12CommandAllocator>	m_commandAllocators[FrameCount];
 	ComPtr<ID3D12CommandQueue>		m_commandQueue;
 
 	XUSG::DescriptorPool m_rtvPool;
@@ -61,7 +61,7 @@ private:
 	uint32_t m_frameIndex;
 	HANDLE m_fenceEvent;
 	ComPtr<ID3D12Fence> m_fence;
-	uint64_t m_fenceValue;
+	uint64_t m_fenceValues[FrameCount];
 
 	// Application state
 	StepTimer m_timer;
@@ -70,6 +70,7 @@ private:
 	void LoadAssets();
 
 	void PopulateCommandList();
-	void WaitForPreviousFrame();
+	void MoveToNextFrame();
+	void WaitForGpu();
 	void CalculateFrameStats();
 };
