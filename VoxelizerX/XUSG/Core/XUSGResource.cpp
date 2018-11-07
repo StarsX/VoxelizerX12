@@ -56,6 +56,7 @@ Format MapToPackedFormat(Format &format)
 ConstantBuffer::ConstantBuffer(const Device &device) :
 	m_device(device),
 	m_resource(nullptr),
+	m_CBV(D3D12_DEFAULT),
 	m_cbvPool(nullptr),
 	m_pDataBegin(nullptr)
 {
@@ -132,6 +133,8 @@ void ConstantBuffer::allocateDescriptorPool(uint32_t numDescriptors)
 ResourceBase::ResourceBase(const Device &device) :
 	m_device(device),
 	m_resource(nullptr),
+	m_SRV(D3D12_DEFAULT),
+	m_srvUavCurrent(D3D12_DEFAULT),
 	m_state(ResourceState(0)),
 	m_srvUavPool(nullptr)
 {
@@ -225,18 +228,23 @@ void Texture2D::Create(uint32_t width, uint32_t height, Format format, uint32_t 
 		D3D12_HEAP_FLAG_NONE, &desc, m_state, nullptr, IID_PPV_ARGS(&m_resource)));
 
 	// Allocate descriptor pool
-	auto numDescriptors = hasSRV ? 1 + (numMips > 1 ? numMips : 0) : 0;
+	auto numDescriptors = hasSRV ? 1 : 0;
 	numDescriptors += hasUAV ? numMips : 0;
-	numDescriptors += hasSRV ? max(numMips, 1) - 1 : 0;	// Sub SRVs
+	numDescriptors += hasSRV && hasUAV && numMips > 1 ? numMips : 0;
+	numDescriptors += hasSRV && hasUAV ? max(numMips, 1) - 1 : 0;	// Sub SRVs
 	allocateDescriptorPool(numDescriptors);
 
 	// Create SRV
 	if (hasSRV)
 		CreateSRV(arraySize, format, numMips, sampleCount);
 
-	// Create UAV
+	// Create UAVs
 	if (hasUAV)
-		CreateUAV(arraySize, formatUAV, numMips);
+		CreateUAVs(arraySize, formatUAV, numMips);
+
+	// Create SRV for each level
+	if (hasSRV && hasUAV)
+		CreateSRVs(arraySize, numMips, format, sampleCount);
 }
 
 void Texture2D::Upload(const GraphicsCommandList &commandList, Resource &resourceUpload,
@@ -304,9 +312,17 @@ void Texture2D::CreateSRV(uint32_t arraySize, Format format, uint8_t numMips, ui
 	m_SRV = m_srvUavCurrent;
 	m_device->CreateShaderResourceView(m_resource.Get(), &desc, m_SRV);
 	m_srvUavCurrent.Offset(m_strideSrvUav);
+}
 
+void Texture2D::CreateSRVs(uint32_t arraySize, uint8_t numMips, Format format, uint8_t sampleCount)
+{
 	if (numMips > 1)
 	{
+		// Setup the description of the shader resource view.
+		D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+		desc.Format = format ? format : m_resource->GetDesc().Format;
+		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
 		auto mipLevel = 0ui8;
 		m_SRVs.resize(numMips);
 
@@ -331,7 +347,7 @@ void Texture2D::CreateSRV(uint32_t arraySize, Format format, uint8_t numMips, ui
 	}
 }
 
-void Texture2D::CreateUAV(uint32_t arraySize, Format format, uint8_t numMips)
+void Texture2D::CreateUAVs(uint32_t arraySize, Format format, uint8_t numMips)
 {
 	format = format ? format : m_resource->GetDesc().Format;
 
@@ -401,25 +417,19 @@ void Texture2D::CreateSubSRVs(Format format)
 	}
 }
 
-const Descriptor &Texture2D::GetUAV(uint8_t i) const
+Descriptor Texture2D::GetUAV(uint8_t i) const
 {
-	assert(m_UAVs.size() > i);
-
-	return m_UAVs[i];
+	return m_UAVs.size() > i ? m_UAVs[i] : Descriptor(D3D12_DEFAULT);
 }
 
-const Descriptor &Texture2D::GetSRVLevel(uint8_t i) const
+Descriptor Texture2D::GetSRVAtLevel(uint8_t i) const
 {
-	assert(m_SRVs.size() > i);
-
-	return m_SRVs[i];
+	return m_SRVs.size() > i ? m_SRVs[i] : Descriptor(D3D12_DEFAULT);
 }
 
-const Descriptor &Texture2D::GetSubSRV(uint8_t i) const
+Descriptor Texture2D::GetSubSRV(uint8_t i) const
 {
-	assert(m_subSRVs.size() > i);
-
-	return m_subSRVs[i];
+	return m_subSRVs.size() > i ? m_subSRVs[i] : Descriptor(D3D12_DEFAULT);
 }
 
 //--------------------------------------------------------------------------------------
@@ -429,6 +439,7 @@ const Descriptor &Texture2D::GetSubSRV(uint8_t i) const
 RenderTarget::RenderTarget(const Device &device) :
 	Texture2D(device),
 	m_RTVs(0),
+	m_rtvCurrent(D3D12_DEFAULT),
 	m_rtvPool(nullptr)
 {
 	if (m_device)
@@ -531,12 +542,10 @@ void RenderTarget::CreateArray(uint32_t width, uint32_t height, uint32_t arraySi
 	}
 }
 
-const Descriptor &RenderTarget::GetRTV(uint32_t slice, uint8_t mipLevel) const
+Descriptor RenderTarget::GetRTV(uint32_t slice, uint8_t mipLevel) const
 {
-	assert(m_RTVs.size() > slice);
-	assert(m_RTVs[slice].size() > mipLevel);
-
-	return m_RTVs[slice][mipLevel];
+	return m_RTVs.size() > slice && m_RTVs[slice].size() > mipLevel ?
+		m_RTVs[slice][mipLevel] : Descriptor(D3D12_DEFAULT);
 }
 
 uint32_t RenderTarget::GetArraySize() const
@@ -546,9 +555,7 @@ uint32_t RenderTarget::GetArraySize() const
 
 uint8_t RenderTarget::GetNumMips(uint32_t slice) const
 {
-	assert(m_RTVs.size() > slice);
-
-	return static_cast<uint8_t>(m_RTVs[slice].size());
+	return m_RTVs.size() > slice ? static_cast<uint8_t>(m_RTVs[slice].size()) : 0;
 }
 
 void RenderTarget::create(uint32_t width, uint32_t height, uint32_t arraySize, Format format,
@@ -561,11 +568,11 @@ void RenderTarget::create(uint32_t width, uint32_t height, uint32_t arraySize, F
 	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
-	auto formatReousrce = format;
-	const auto formatUAV = isPacked ? MapToPackedFormat(formatReousrce) : format;
+	auto formatResource = format;
+	const auto formatUAV = isPacked ? MapToPackedFormat(formatResource) : format;
 
 	// Setup the texture description.
-	const auto desc = CD3DX12_RESOURCE_DESC::Tex2D(formatReousrce, width, height, arraySize,
+	const auto desc = CD3DX12_RESOURCE_DESC::Tex2D(formatResource, width, height, arraySize,
 		numMips, sampleCount, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | resourceFlags);
 
 	// Determine initial state
@@ -587,7 +594,7 @@ void RenderTarget::create(uint32_t width, uint32_t height, uint32_t arraySize, F
 
 	// Create UAV
 	if (hasUAV)
-		CreateUAV(arraySize, formatUAV, numMips);
+		CreateUAVs(arraySize, formatUAV, numMips);
 }
 
 void RenderTarget::allocateRtvPool(uint32_t numDescriptors)
@@ -608,6 +615,8 @@ DepthStencil::DepthStencil(const Device &device) :
 	Texture2D(device),
 	m_DSVs(0),
 	m_DSVROs(0),
+	m_SRVStencil(D3D12_DEFAULT),
+	m_dsvCurrent(D3D12_DEFAULT),
 	m_dsvPool(nullptr)
 {
 	if (m_device)
@@ -625,7 +634,7 @@ void DepthStencil::Create(uint32_t width, uint32_t height, Format format, Resour
 	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
 
 	// Map formats
-	auto formatReousrce = format;
+	auto formatResource = format;
 	auto formatDepth = DXGI_FORMAT_UNKNOWN;
 	auto formatStencil = DXGI_FORMAT_UNKNOWN;
 
@@ -634,28 +643,31 @@ void DepthStencil::Create(uint32_t width, uint32_t height, Format format, Resour
 		switch (format)
 		{
 		case DXGI_FORMAT_D24_UNORM_S8_UINT:
-			formatReousrce = DXGI_FORMAT_R24G8_TYPELESS;
+			formatResource = DXGI_FORMAT_R24G8_TYPELESS;
 			formatDepth = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 			formatStencil = DXGI_FORMAT_X24_TYPELESS_G8_UINT;
 			break;
 		case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
-			formatReousrce = DXGI_FORMAT_R32G8X24_TYPELESS;
+			formatResource = DXGI_FORMAT_R32G8X24_TYPELESS;
 			formatDepth = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 			formatStencil = DXGI_FORMAT_X32_TYPELESS_G8X24_UINT;
 			break;
 		case DXGI_FORMAT_D16_UNORM:
-			formatReousrce = DXGI_FORMAT_R16_TYPELESS;
+			formatResource = DXGI_FORMAT_R16_TYPELESS;
 			formatDepth = DXGI_FORMAT_R16_UNORM;
 			break;
-		default:
-			formatReousrce = DXGI_FORMAT_R32_TYPELESS;
+		case DXGI_FORMAT_D32_FLOAT:
+			formatResource = DXGI_FORMAT_R32_TYPELESS;
 			formatDepth = DXGI_FORMAT_R32_FLOAT;
+		default:
+			formatResource = DXGI_FORMAT_R24G8_TYPELESS;
+			formatDepth = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 		}
 	}
 
 	// Setup the render depth stencil description.
 	{
-		const auto desc = CD3DX12_RESOURCE_DESC::Tex2D(formatReousrce, width, height, arraySize,
+		const auto desc = CD3DX12_RESOURCE_DESC::Tex2D(formatResource, width, height, arraySize,
 			numMips, sampleCount, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL | resourceFlags);
 
 		// Determine initial state
@@ -782,18 +794,14 @@ void DepthStencil::Create(uint32_t width, uint32_t height, Format format, Resour
 	}
 }
 
-const Descriptor &DepthStencil::GetDSV(uint8_t mipLevel) const
+Descriptor DepthStencil::GetDSV(uint8_t mipLevel) const
 {
-	assert(m_DSVs.size() > mipLevel);
-
-	return m_DSVs[mipLevel];
+	return m_DSVs.size() > mipLevel ? m_DSVs[mipLevel] : Descriptor(D3D12_DEFAULT);
 }
 
-const Descriptor &DepthStencil::GetDSVReadOnly(uint8_t mipLevel) const
+Descriptor DepthStencil::GetDSVReadOnly(uint8_t mipLevel) const
 {
-	assert(m_DSVROs.size() > mipLevel);
-
-	return m_DSVROs[mipLevel];
+	return m_DSVROs.size() > mipLevel ? m_DSVROs[mipLevel] : Descriptor(D3D12_DEFAULT);
 }
 
 const Descriptor &DepthStencil::GetSRVStencil() const
@@ -863,8 +871,10 @@ void Texture3D::Create(uint32_t width, uint32_t height, uint32_t depth, Format f
 		D3D12_HEAP_FLAG_NONE, &desc, m_state, nullptr, IID_PPV_ARGS(&m_resource)));
 
 	// Allocate descriptor pool
-	auto numDescriptors = hasSRV ? 1 + (numMips > 1 ? numMips : 0) : 0;
+	auto numDescriptors = hasSRV ? 1 : 0;
 	numDescriptors += hasUAV ? numMips : 0;
+	numDescriptors += hasSRV && hasUAV && numMips > 1 ? numMips : 0;
+	numDescriptors += hasSRV && hasUAV ? max(numMips, 1) - 1 : 0;	// Sub SRVs
 	allocateDescriptorPool(numDescriptors);
 
 	// Create SRV
@@ -873,7 +883,11 @@ void Texture3D::Create(uint32_t width, uint32_t height, uint32_t depth, Format f
 
 	// Create UAV
 	if (hasUAV)
-		CreateUAV(formatUAV, numMips);
+		CreateUAVs(formatUAV, numMips);
+
+	// Create SRV for each level
+	if (hasSRV && hasUAV)
+		CreateSRVs(numMips, format);
 }
 
 void Texture3D::CreateSRV(Format format, uint8_t numMips)
@@ -888,9 +902,17 @@ void Texture3D::CreateSRV(Format format, uint8_t numMips)
 	m_SRV = m_srvUavCurrent;
 	m_device->CreateShaderResourceView(m_resource.Get(), &desc, m_SRV);
 	m_srvUavCurrent.Offset(m_strideSrvUav);
+}
 
+void Texture3D::CreateSRVs(uint8_t numMips, Format format)
+{
 	if (numMips > 1)
 	{
+		D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+		desc.Format = format ? format : m_resource->GetDesc().Format;
+		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+
 		auto mipLevel = 0ui8;
 		m_SRVs.resize(numMips);
 
@@ -908,7 +930,7 @@ void Texture3D::CreateSRV(Format format, uint8_t numMips)
 	}
 }
 
-void Texture3D::CreateUAV(Format format, uint8_t numMips)
+void Texture3D::CreateUAVs(Format format, uint8_t numMips)
 {
 	const auto txDesc = m_resource->GetDesc();
 	format = format ? format : txDesc.Format;
@@ -958,25 +980,19 @@ void Texture3D::CreateSubSRVs(Format format)
 	}
 }
 
-const Descriptor &Texture3D::GetUAV(uint8_t i) const
+Descriptor Texture3D::GetUAV(uint8_t i) const
 {
-	assert(m_UAVs.size() > i);
-
-	return m_UAVs[i];
+	return m_UAVs.size() > i ? m_UAVs[i] : Descriptor(D3D12_DEFAULT);
 }
 
-const Descriptor &Texture3D::GetSRVLevel(uint8_t i) const
+Descriptor Texture3D::GetSRVLevel(uint8_t i) const
 {
-	assert(m_SRVs.size() > i);
-
-	return m_SRVs[i];
+	return m_SRVs.size() > i ? m_SRVs[i] : Descriptor(D3D12_DEFAULT);
 }
 
-const Descriptor &Texture3D::GetSubSRV(uint8_t i) const
+Descriptor Texture3D::GetSubSRV(uint8_t i) const
 {
-	assert(m_subSRVs.size() > i);
-
-	return m_subSRVs[i];
+	return m_subSRVs.size() > i ? m_subSRVs[i] : Descriptor(D3D12_DEFAULT);
 }
 
 //--------------------------------------------------------------------------------------
@@ -1027,7 +1043,8 @@ void BufferBase::Upload(const GraphicsCommandList &commandList, Resource &resour
 
 RawBuffer::RawBuffer(const Device &device) :
 	BufferBase(device),
-	m_counter(nullptr)
+	m_counter(nullptr),
+	m_UAV(D3D12_DEFAULT)
 {
 }
 

@@ -90,12 +90,13 @@ namespace XUSG
 			uint8_t stride = sizeof(float), ResourceState dstState = ResourceState(0));
 		void CreateSRV(uint32_t arraySize, Format format = Format(0),
 			uint8_t numMips = 1, uint8_t sampleCount = 1);
-		void CreateUAV(uint32_t arraySize, Format format = Format(0), uint8_t numMips = 1);
+		void CreateSRVs(uint32_t arraySize, uint8_t numMips, Format format = Format(0), uint8_t sampleCount = 1);
+		void CreateUAVs(uint32_t arraySize, Format format = Format(0), uint8_t numMips = 1);
 		void CreateSubSRVs(Format format = Format(0));
 
-		const Descriptor	&GetUAV(uint8_t i = 0) const;
-		const Descriptor	&GetSRVLevel(uint8_t i) const;
-		const Descriptor	&GetSubSRV(uint8_t i) const;
+		Descriptor GetUAV(uint8_t i = 0) const;
+		Descriptor GetSRVAtLevel(uint8_t i) const;
+		Descriptor GetSubSRV(uint8_t i) const;
 
 	protected:
 		Resource m_counter;
@@ -123,9 +124,9 @@ namespace XUSG
 		//void Populate(const CPDXShaderResourceView &pSRVSrc, const spShader &pShader,
 			//const uint8_t uSRVSlot = 0, const uint8_t uSlice = 0, const uint8_t uMip = 0);
 
-		const Descriptor	&GetRTV(uint32_t slice = 0, uint8_t mipLevel = 0) const;
-		uint32_t			GetArraySize() const;
-		uint8_t				GetNumMips(uint32_t slice = 0) const;
+		Descriptor	GetRTV(uint32_t slice = 0, uint8_t mipLevel = 0) const;
+		uint32_t	GetArraySize() const;
+		uint8_t		GetNumMips(uint32_t slice = 0) const;
 
 	protected:
 		void create(uint32_t width, uint32_t height, uint32_t arraySize, Format format,
@@ -154,9 +155,9 @@ namespace XUSG
 			uint8_t sampleCount = 1, ResourceState state = ResourceState(0),
 			uint8_t clearStencil = 0, float clearDepth = 1.0f);
 
-		const Descriptor	&GetDSV(uint8_t mipLevel = 0) const;
-		const Descriptor	&GetDSVReadOnly(uint8_t mipLevel = 0) const;
-		const Descriptor	&GetSRVStencil() const;
+		Descriptor GetDSV(uint8_t mipLevel = 0) const;
+		Descriptor GetDSVReadOnly(uint8_t mipLevel = 0) const;
+		const Descriptor &GetSRVStencil() const;
 
 		const uint8_t		GetNumMips() const;
 
@@ -186,12 +187,13 @@ namespace XUSG
 			ResourceFlags resourceFlags = ResourceFlags(0), uint8_t numMips = 1,
 			PoolType poolType = PoolType(1), ResourceState state = ResourceState(0));
 		void CreateSRV(Format format = Format(0), uint8_t numMips = 1);
-		void CreateUAV(Format format = Format(0), uint8_t numMips = 1);
+		void CreateSRVs(uint8_t numMips, Format format = Format(0));
+		void CreateUAVs(Format format = Format(0), uint8_t numMips = 1);
 		void CreateSubSRVs(Format format = Format(0));
 
-		const Descriptor	&GetUAV(uint8_t i = 0) const;
-		const Descriptor	&GetSRVLevel(uint8_t i) const;
-		const Descriptor	&GetSubSRV(uint8_t i) const;
+		Descriptor GetUAV(uint8_t i = 0) const;
+		Descriptor GetSRVLevel(uint8_t i) const;
+		Descriptor GetSubSRV(uint8_t i) const;
 
 	protected:
 		Resource m_counter;
