@@ -49,11 +49,9 @@ private:
 	XUSG::Resource m_renderTargets[Voxelizer::FrameCount];
 	XUSG::GraphicsCommandList m_commandList;
 	
-	XUSG::RenderTargetTable	m_rtvTables[Voxelizer::FrameCount];
-	XUSG::Descriptor		m_dsv;
-	
 	// App resources.
-	std::unique_ptr<XUSG::DepthStencil>	m_depth;
+	XUSG::RenderTargetTable	m_rtvTables[Voxelizer::FrameCount];
+	XUSG::DepthStencil		m_depth;
 
 	// Synchronization objects.
 	uint32_t m_frameIndex;

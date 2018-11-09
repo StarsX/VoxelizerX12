@@ -107,28 +107,28 @@ protected:
 
 	uint32_t	m_numLevels;
 
-	DirectX::XMFLOAT4	m_bound;
-	DirectX::XMFLOAT2	m_viewport;
+	DirectX::XMFLOAT4		m_bound;
+	DirectX::XMFLOAT2		m_viewport;
 
-	XUSG::InputLayout m_inputLayout;
-	XUSG::PipelineLayout m_pipelineLayouts[NUM_PASS];
-	XUSG::Graphics::PipelineState m_pipelines[NUM_PASS];
+	XUSG::InputLayout		m_inputLayout;
+	XUSG::PipelineLayout	m_pipelineLayouts[NUM_PASS];
+	XUSG::PipelineState		m_pipelines[NUM_PASS];
 
-	XUSG::DescriptorTable m_cbvTables[NUM_CBV_TABLE];
-	XUSG::DescriptorTable m_srvTables[NUM_SRV_TABLE];
-	XUSG::DescriptorTable m_uavTables[NUM_UAV_TABLE][FrameCount];
+	XUSG::DescriptorTable	m_cbvTables[NUM_CBV_TABLE];
+	XUSG::DescriptorTable	m_srvTables[NUM_SRV_TABLE];
+	XUSG::DescriptorTable	m_uavTables[NUM_UAV_TABLE][FrameCount];
 
-	std::unique_ptr<XUSG::RawBuffer> m_vertexBuffer;
-	std::unique_ptr<XUSG::RawBuffer> m_indexbuffer;
+	XUSG::RawBuffer			m_vertexBuffer;
+	XUSG::RawBuffer			m_indexbuffer;
 
-	std::unique_ptr<XUSG::ConstantBuffer> m_cbMatrices;
-	std::unique_ptr<XUSG::ConstantBuffer> m_cbPerFrame;
-	std::unique_ptr<XUSG::ConstantBuffer> m_cbPerObject;
-	std::unique_ptr<XUSG::ConstantBuffer> m_cbBound;
-	std::vector<std::unique_ptr<XUSG::ConstantBuffer>> m_cbPerMipLevels;
+	XUSG::ConstantBuffer	m_cbMatrices;
+	XUSG::ConstantBuffer	m_cbPerFrame;
+	XUSG::ConstantBuffer	m_cbPerObject;
+	XUSG::ConstantBuffer	m_cbBound;
+	std::vector<XUSG::ConstantBuffer> m_cbPerMipLevels;
 
-	std::unique_ptr<XUSG::Texture3D> m_grids[FrameCount];
-	std::unique_ptr<XUSG::Texture2D> m_KBufferDepths[FrameCount];
+	XUSG::Texture3D			m_grids[FrameCount];
+	XUSG::Texture2D			m_KBufferDepths[FrameCount];
 
 	XUSG::Shader::Pool				m_shaderPool;
 	XUSG::Graphics::Pipeline::Pool	m_pipelinePool;

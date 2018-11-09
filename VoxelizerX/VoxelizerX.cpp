@@ -140,11 +140,7 @@ void VoxelizerX::LoadPipeline()
 	}
 
 	// Create a DSV
-	{
-		m_depth = make_unique<DepthStencil>(m_device);
-		m_depth->Create(m_width, m_height, DXGI_FORMAT_D24_UNORM_S8_UINT, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-		m_dsv = m_depth->GetDSV();
-	}
+	m_depth.Create(m_device, m_width, m_height, DXGI_FORMAT_D24_UNORM_S8_UINT, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
 }
 
 // Load the sample assets.
@@ -157,7 +153,7 @@ void VoxelizerX::LoadAssets()
 
 	Resource vbUpload, ibUpload;
 	m_voxelizer->Init(m_width, m_height, m_renderTargets[0]->GetDesc().Format,
-		m_depth->GetResource()->GetDesc().Format, vbUpload, ibUpload);
+		m_depth.GetResource()->GetDesc().Format, vbUpload, ibUpload);
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
@@ -246,10 +242,10 @@ void VoxelizerX::PopulateCommandList()
 	// Record commands.
 	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 	m_commandList->ClearRenderTargetView(*m_rtvTables[m_frameIndex], clearColor, 0, nullptr);
-	m_commandList->ClearDepthStencilView(m_dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	m_commandList->ClearDepthStencilView(m_depth.GetDSV(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	// Voxelizer rendering
-	m_voxelizer->Render(m_frameIndex, m_rtvTables[m_frameIndex], m_dsv);
+	m_voxelizer->Render(m_frameIndex, m_rtvTables[m_frameIndex], m_depth.GetDSV());
 
 	// Indicate that the back buffer will now be used to present.
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(),

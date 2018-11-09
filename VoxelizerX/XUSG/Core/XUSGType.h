@@ -61,6 +61,8 @@ namespace XUSG
 	};
 	using DescriptorTableLayout = std::shared_ptr<RootParameter>;
 
+	using PipelineState = ComPtr<ID3D12PipelineState>;
+
 	// Shaders related
 	namespace Shader
 	{
@@ -71,11 +73,16 @@ namespace XUSG
 	// Graphics pipelines related
 	namespace Graphics
 	{
-		using PipelineState = ComPtr<ID3D12PipelineState>;
 		using PipelineDesc = D3D12_GRAPHICS_PIPELINE_STATE_DESC;
 
 		using Blend = std::shared_ptr<D3D12_BLEND_DESC>;
 		using Rasterizer = std::shared_ptr < D3D12_RASTERIZER_DESC>;
 		using DepthStencil = std::shared_ptr < D3D12_DEPTH_STENCIL_DESC>;
+	}
+
+	// Compute pipelines related
+	namespace Compute
+	{
+		using PipelineDesc = D3D12_COMPUTE_PIPELINE_STATE_DESC;
 	}
 }
