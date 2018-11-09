@@ -122,15 +122,15 @@ void Voxelizer::createInputLayout()
 void Voxelizer::createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData, Resource &vbUpload)
 {
 	m_vertexStride = stride;
-	m_vertexBuffer.Create(m_device, stride * numVert, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT,
-		D3D12_RESOURCE_STATE_COPY_DEST);
+	m_vertexBuffer.Create(m_device, stride * numVert, stride, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST);
 	m_vertexBuffer.Upload(m_commandList, vbUpload, pData, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
 
 void Voxelizer::createIB(uint32_t numIndices, const uint32_t *pData, Resource &ibUpload)
 {
 	m_numIndices = numIndices;
-	m_indexbuffer.Create(m_device, sizeof(uint32_t) * numIndices, D3D12_RESOURCE_FLAG_NONE,
+	m_indexbuffer.Create(m_device, sizeof(uint32_t) * numIndices, DXGI_FORMAT_R32_UINT, D3D12_RESOURCE_FLAG_NONE,
 		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST);
 	m_indexbuffer.Upload(m_commandList, ibUpload, pData, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }

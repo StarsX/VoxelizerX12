@@ -118,8 +118,8 @@ protected:
 	XUSG::DescriptorTable	m_srvTables[NUM_SRV_TABLE];
 	XUSG::DescriptorTable	m_uavTables[NUM_UAV_TABLE][FrameCount];
 
-	XUSG::RawBuffer			m_vertexBuffer;
-	XUSG::RawBuffer			m_indexbuffer;
+	XUSG::VertexBuffer		m_vertexBuffer;
+	XUSG::IndexBuffer		m_indexbuffer;
 
 	XUSG::ConstantBuffer	m_cbMatrices;
 	XUSG::ConstantBuffer	m_cbPerFrame;

@@ -1204,23 +1204,17 @@ void IndexBuffer::Create(const Device &device, uint32_t byteWidth, Format format
 	setDevice(device);
 
 	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	assert(format == DXGI_FORMAT_R32_UINT || format == DXGI_FORMAT_R16_UINT);
-	byteWidth += byteWidth % 4;
-
-	// Setup the buffer description.
-	const auto desc = CD3DX12_RESOURCE_DESC::Buffer(byteWidth, D3D12_RESOURCE_FLAGS(resourceFlags));
+	if (hasSRV || hasUAV) byteWidth += byteWidth % 4;
 
 	// Determine initial state
 	if (state) m_state = state;
 	else m_state = hasSRV ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE |
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_INDEX_BUFFER;
 	
-	ThrowIfFailed(m_device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(poolType),
-		D3D12_HEAP_FLAG_NONE, &desc, m_state, nullptr, IID_PPV_ARGS(&m_resource)));
-
-	// Create SRV
-	if (hasSRV) CreateSRV(byteWidth);
+	RawBuffer::Create(device, byteWidth, resourceFlags, poolType, state);
 
 	// Create index buffer view
 	m_IBV.BufferLocation = m_resource->GetGPUVirtualAddress();
