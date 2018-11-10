@@ -27,7 +27,7 @@ namespace XUSG
 			desc.BlendOp = D3D12_BLEND_OP_ADD;
 			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
 			desc.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
+			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -51,7 +51,7 @@ namespace XUSG
 			desc.BlendOp = D3D12_BLEND_OP_ADD;
 			desc.SrcBlendAlpha = D3D12_BLEND_SRC_ALPHA;
 			desc.DestBlendAlpha = D3D12_BLEND_ONE;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
+			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -75,7 +75,7 @@ namespace XUSG
 			desc.BlendOp = D3D12_BLEND_OP_ADD;
 			desc.SrcBlendAlpha = D3D12_BLEND_SRC_ALPHA;
 			desc.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
+			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -99,7 +99,7 @@ namespace XUSG
 			desc.BlendOp = D3D12_BLEND_OP_ADD;
 			desc.SrcBlendAlpha = D3D12_BLEND_SRC_ALPHA;
 			desc.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
+			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -111,7 +111,7 @@ namespace XUSG
 			descDefault.BlendOp = D3D12_BLEND_OP_ADD;
 			descDefault.SrcBlendAlpha = D3D12_BLEND_ONE;
 			descDefault.DestBlendAlpha = D3D12_BLEND_ZERO;
-			descDefault.BlendOp = D3D12_BLEND_OP_ADD;
+			descDefault.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			descDefault.LogicOp = D3D12_LOGIC_OP_NOOP;
 			descDefault.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -135,7 +135,7 @@ namespace XUSG
 			desc.BlendOp = D3D12_BLEND_OP_ADD;
 			desc.SrcBlendAlpha = D3D12_BLEND_SRC_ALPHA;
 			desc.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
+			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -159,7 +159,7 @@ namespace XUSG
 			desc.BlendOp = D3D12_BLEND_OP_ADD;
 			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
 			desc.DestBlendAlpha = D3D12_BLEND_ONE;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
+			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -183,7 +183,7 @@ namespace XUSG
 			desc.BlendOp = D3D12_BLEND_OP_ADD;
 			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
 			desc.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
+			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -207,7 +207,7 @@ namespace XUSG
 			desc.BlendOp = D3D12_BLEND_OP_ADD;
 			desc.SrcBlendAlpha = D3D12_BLEND_ZERO;
 			desc.DestBlendAlpha = D3D12_BLEND_ZERO;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
+			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -231,7 +231,7 @@ namespace XUSG
 			desc.BlendOp = D3D12_BLEND_OP_ADD;
 			desc.SrcBlendAlpha = D3D12_BLEND_ZERO;
 			desc.DestBlendAlpha = D3D12_BLEND_SRC_ALPHA;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
+			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -256,7 +256,7 @@ namespace XUSG
 			desc0.BlendOp = D3D12_BLEND_OP_ADD;
 			desc0.SrcBlendAlpha = D3D12_BLEND_ONE;
 			desc0.DestBlendAlpha = D3D12_BLEND_ONE;
-			desc0.BlendOp = D3D12_BLEND_OP_ADD;
+			desc0.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			desc0.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc0.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -269,7 +269,7 @@ namespace XUSG
 			desc1.BlendOp = D3D12_BLEND_OP_ADD;
 			desc1.SrcBlendAlpha = D3D12_BLEND_ZERO;
 			desc1.DestBlendAlpha = D3D12_BLEND_SRC_ALPHA;
-			desc1.BlendOp = D3D12_BLEND_OP_ADD;
+			desc1.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			desc1.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc1.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -282,7 +282,7 @@ namespace XUSG
 			descDefault.BlendOp = D3D12_BLEND_OP_ADD;
 			descDefault.SrcBlendAlpha = D3D12_BLEND_ONE;
 			descDefault.DestBlendAlpha = D3D12_BLEND_ZERO;
-			descDefault.BlendOp = D3D12_BLEND_OP_ADD;
+			descDefault.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			descDefault.LogicOp = D3D12_LOGIC_OP_NOOP;
 			descDefault.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -306,7 +306,7 @@ namespace XUSG
 			desc.BlendOp = D3D12_BLEND_OP_MIN;
 			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
 			desc.DestBlendAlpha = D3D12_BLEND_ONE;
-			desc.BlendOp = D3D12_BLEND_OP_MIN;
+			desc.BlendOpAlpha = D3D12_BLEND_OP_MIN;
 			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -330,7 +330,7 @@ namespace XUSG
 			desc.BlendOp = D3D12_BLEND_OP_MAX;
 			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
 			desc.DestBlendAlpha = D3D12_BLEND_ONE;
-			desc.BlendOp = D3D12_BLEND_OP_MAX;
+			desc.BlendOpAlpha = D3D12_BLEND_OP_MAX;
 			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
 			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 

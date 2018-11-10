@@ -145,7 +145,8 @@ Pool::Pool() :
 	m_pfnDepthStencils[DepthStencilPreset::DEPTH_READ_EQUAL] = DepthReadEqual;
 }
 
-Pool::Pool(const Device &device) : Pool()
+Pool::Pool(const Device &device) :
+	Pool()
 {
 	SetDevice(device);
 }

@@ -76,8 +76,13 @@ RenderTargetTable Util::DescriptorTable::GetRtvTable(DescriptorTablePool &descri
 DescriptorTablePool::DescriptorTablePool() :
 	m_cbvSrvUavTables(0),
 	m_samplerTables(0),
+	m_rtvTables(0),
+	m_cbvSrvUavPool(nullptr),
+	m_samplerPool(nullptr),
+	m_rtvPool(nullptr),
 	m_numCbvSrvUavs(0),
-	m_numSamplers(0)
+	m_numSamplers(0),
+	m_numRtvs(0)
 {
 	// Sampler presets
 	m_pfnSamplers[SamplerPreset::POINT_WRAP] = SamplerPointWrap;

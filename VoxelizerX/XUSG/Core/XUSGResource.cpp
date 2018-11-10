@@ -277,10 +277,9 @@ void Texture2D::Upload(const GraphicsCommandList &commandList, Resource &resourc
 	subresourceData.SlicePitch = subresourceData.RowPitch * desc.Height;
 
 	dstState = dstState ? dstState : m_state;
-	if (m_state != D3D12_RESOURCE_STATE_COPY_DEST)
-		commandList->ResourceBarrier(1, &Transition(D3D12_RESOURCE_STATE_COPY_DEST));
+	if (m_state != D3D12_RESOURCE_STATE_COPY_DEST) Barrier(commandList, D3D12_RESOURCE_STATE_COPY_DEST);
 	UpdateSubresources(commandList.Get(), m_resource.Get(), resourceUpload.Get(), 0, 0, 1, &subresourceData);
-	commandList->ResourceBarrier(1, &Transition(dstState));
+	Barrier(commandList, dstState);
 }
 
 void Texture2D::CreateSRV(uint32_t arraySize, Format format, uint8_t numMips, uint8_t sampleCount)
@@ -1045,10 +1044,9 @@ void BufferBase::Upload(const GraphicsCommandList &commandList, Resource &resour
 	subresourceData.SlicePitch = subresourceData.RowPitch;
 
 	dstState = dstState ? dstState : m_state;
-	if (m_state != D3D12_RESOURCE_STATE_COPY_DEST)
-		commandList->ResourceBarrier(1, &Transition(D3D12_RESOURCE_STATE_COPY_DEST));
+	if (m_state != D3D12_RESOURCE_STATE_COPY_DEST) Barrier(commandList, D3D12_RESOURCE_STATE_COPY_DEST);
 	UpdateSubresources(commandList.Get(), m_resource.Get(), resourceUpload.Get(), 0, 0, 1, &subresourceData);
-	commandList->ResourceBarrier(1, &Transition(dstState));
+	Barrier(commandList, dstState);
 }
 
 //--------------------------------------------------------------------------------------
@@ -1165,8 +1163,7 @@ void VertexBuffer::Create(const Device &device, uint32_t byteWidth, uint32_t str
 	// Determine initial state
 	if (state == 0)
 	{
-		state = hasSRV ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE |
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE :
+		state = hasSRV ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE :
 			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 		state = hasUAV ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS : state;
 	}
@@ -1211,8 +1208,8 @@ void IndexBuffer::Create(const Device &device, uint32_t byteWidth, Format format
 
 	// Determine initial state
 	if (state) m_state = state;
-	else m_state = hasSRV ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE |
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_INDEX_BUFFER;
+	else m_state = hasSRV ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE :
+		D3D12_RESOURCE_STATE_INDEX_BUFFER;
 	
 	RawBuffer::Create(device, byteWidth, resourceFlags, poolType, state);
 
