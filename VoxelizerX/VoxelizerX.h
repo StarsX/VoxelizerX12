@@ -36,22 +36,20 @@ public:
 private:
 	XUSG::DescriptorTablePool		m_descriptorTablePool;
 
-	std::unique_ptr<Voxelizer>		m_voxelizer;
-	DirectX::XMFLOAT4X4				m_proj;
-
 	ComPtr<IDXGISwapChain3>			m_swapChain;
 	ComPtr<ID3D12CommandAllocator>	m_commandAllocators[Voxelizer::FrameCount];
 	ComPtr<ID3D12CommandQueue>		m_commandQueue;
-
-	XUSG::DescriptorPool m_rtvPool;
 
 	XUSG::Device m_device;
 	XUSG::Resource m_renderTargets[Voxelizer::FrameCount];
 	XUSG::GraphicsCommandList m_commandList;
 	
 	// App resources.
+	std::unique_ptr<Voxelizer> m_voxelizer;
+	XUSG::DescriptorPool	m_rtvPool;
 	XUSG::RenderTargetTable	m_rtvTables[Voxelizer::FrameCount];
 	XUSG::DepthStencil		m_depth;
+	DirectX::XMFLOAT4X4		m_proj;
 
 	// Synchronization objects.
 	uint32_t m_frameIndex;
@@ -66,7 +64,7 @@ private:
 	void LoadAssets();
 
 	void PopulateCommandList();
-	void MoveToNextFrame();
 	void WaitForGpu();
-	void CalculateFrameStats();
+	void MoveToNextFrame();
+	double CalculateFrameStats(float *fTimeStep = nullptr);
 };

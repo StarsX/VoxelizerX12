@@ -162,9 +162,8 @@ void VoxelizerX::LoadAssets()
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
-		ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-		m_fenceValues[m_frameIndex]++;
-
+		ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex]++, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+		
 		// Create an event handle to use for frame synchronization.
 		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 		if (m_fenceEvent == nullptr)
@@ -289,26 +288,29 @@ void VoxelizerX::MoveToNextFrame()
 	m_fenceValues[m_frameIndex] = currentFenceValue + 1;
 }
 
-void VoxelizerX::CalculateFrameStats()
+double VoxelizerX::CalculateFrameStats(float *fTimeStep)
 {
 	static int frameCnt = 0;
 	static double elapsedTime = 0.0;
-	double totalTime = m_timer.GetTotalSeconds();
-	frameCnt++;
+	const auto totalTime = m_timer.GetTotalSeconds();
+	++frameCnt;
+
+	const auto timeStep = static_cast<float>(totalTime - elapsedTime);
 
 	// Compute averages over one second period.
 	if ((totalTime - elapsedTime) >= 1.0f)
 	{
-		float diff = static_cast<float>(totalTime - elapsedTime);
-		float fps = static_cast<float>(frameCnt) / diff; // Normalize to an exact second.
+		float fps = static_cast<float>(frameCnt) / timeStep;	// Normalize to an exact second.
 
 		frameCnt = 0;
 		elapsedTime = totalTime;
-
-		float MRaysPerSecond = (m_width * m_height * fps) / static_cast<float>(1e6);
 
 		wstringstream windowText;
 		windowText << setprecision(2) << fixed << L"    fps: " << fps;
 		SetCustomWindowText(windowText.str().c_str());
 	}
+
+	if (fTimeStep) *fTimeStep = timeStep;
+
+	return totalTime;
 }
