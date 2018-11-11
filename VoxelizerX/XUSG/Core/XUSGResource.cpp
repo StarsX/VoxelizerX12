@@ -56,8 +56,8 @@ Format MapToPackedFormat(Format &format)
 ConstantBuffer::ConstantBuffer() :
 	m_device(nullptr),
 	m_resource(nullptr),
-	m_CBV(D3D12_DEFAULT),
 	m_cbvPool(nullptr),
+	m_CBV(D3D12_DEFAULT),
 	m_pDataBegin(nullptr)
 {
 }
@@ -135,10 +135,10 @@ void ConstantBuffer::allocateDescriptorPool(uint32_t numDescriptors)
 ResourceBase::ResourceBase() :
 	m_device(nullptr),
 	m_resource(nullptr),
+	m_srvUavPool(nullptr),
 	m_SRV(D3D12_DEFAULT),
 	m_srvUavCurrent(D3D12_DEFAULT),
-	m_state(ResourceState(0)),
-	m_srvUavPool(nullptr)
+	m_state(ResourceState(0))
 {
 }
 
@@ -444,9 +444,9 @@ Descriptor Texture2D::GetSubSRV(uint8_t i) const
 
 RenderTarget::RenderTarget() :
 	Texture2D(),
+	m_rtvPool(nullptr),
 	m_RTVs(0),
-	m_rtvCurrent(D3D12_DEFAULT),
-	m_rtvPool(nullptr)
+	m_rtvCurrent(D3D12_DEFAULT)
 {
 }
 
@@ -623,11 +623,11 @@ void RenderTarget::allocateRtvPool(uint32_t numDescriptors)
 
 DepthStencil::DepthStencil() :
 	Texture2D(),
+	m_dsvPool(nullptr),
 	m_DSVs(0),
 	m_DSVROs(0),
 	m_SRVStencil(D3D12_DEFAULT),
-	m_dsvCurrent(D3D12_DEFAULT),
-	m_dsvPool(nullptr)
+	m_dsvCurrent(D3D12_DEFAULT)
 {
 }
 

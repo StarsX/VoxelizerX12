@@ -143,6 +143,8 @@ namespace XUSG
 				PipelineState createPipeline(const State::Key *pKey);
 				PipelineState getPipeline(const std::string &key);
 
+				Device m_device;
+
 				InputLayoutPool		m_inputLayoutPool;
 				PipelineLayoutPool	m_pipelineLayoutPool;
 				
@@ -154,8 +156,6 @@ namespace XUSG
 				std::function<Blend()>			m_pfnBlends[BlendPreset::NUM];
 				std::function<Rasterizer()>		m_pfnRasterizers[RasterizerPreset::NUM];
 				std::function<DepthStencil()>	m_pfnDepthStencils[DepthStencilPreset::NUM];
-
-				Device m_device;
 			};
 		}
 	}

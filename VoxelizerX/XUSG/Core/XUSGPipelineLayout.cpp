@@ -110,6 +110,7 @@ string &Util::PipelineLayout::checkKeySpace(uint32_t index)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 PipelineLayoutPool::PipelineLayoutPool() :
+	m_device(nullptr),
 	m_pipelineLayouts(0),
 	m_descriptorTableLayouts(0)
 {

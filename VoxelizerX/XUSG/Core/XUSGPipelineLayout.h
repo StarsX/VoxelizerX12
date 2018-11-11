@@ -93,9 +93,9 @@ namespace XUSG
 		DescriptorTableLayout createDescriptorTableLayout(const std::string &key);
 		DescriptorTableLayout getDescriptorTableLayout(const std::string &key);
 
+		Device m_device;
+
 		std::unordered_map<std::string, PipelineLayout> m_pipelineLayouts;
 		std::unordered_map<std::string, DescriptorTableLayout> m_descriptorTableLayouts;
-
-		Device m_device;
 	};
 }

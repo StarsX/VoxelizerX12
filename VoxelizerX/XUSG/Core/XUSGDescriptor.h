@@ -108,6 +108,8 @@ namespace XUSG
 		RenderTargetTable createRtvTable(const std::string &key);
 		RenderTargetTable getRtvTable(const std::string &key);
 
+		Device m_device;
+
 		std::unordered_map<std::string, DescriptorTable> m_cbvSrvUavTables;
 		std::unordered_map<std::string, DescriptorTable> m_samplerTables;
 		std::unordered_map<std::string, RenderTargetTable> m_rtvTables;
@@ -127,7 +129,5 @@ namespace XUSG
 
 		std::shared_ptr<Sampler> m_samplerPresets[SamplerPreset::NUM];
 		std::function<Sampler()> m_pfnSamplers[SamplerPreset::NUM];
-
-		Device m_device;
 	};
 }

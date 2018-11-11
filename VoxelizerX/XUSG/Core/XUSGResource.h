@@ -30,14 +30,13 @@ namespace XUSG
 	protected:
 		void allocateDescriptorPool(uint32_t numDescriptors);
 
-		void			*m_pDataBegin;
+		Device			m_device;
 
 		Resource		m_resource;
+		DescriptorPool	m_cbvPool;
 		Descriptor		m_CBV;
 
-		DescriptorPool	m_cbvPool;
-		
-		Device			m_device;
+		void			*m_pDataBegin;
 	};
 
 	//--------------------------------------------------------------------------------------
@@ -62,16 +61,15 @@ namespace XUSG
 		void setDevice(const Device &device);
 		void allocateDescriptorPool(uint32_t numDescriptors);
 
+		Device			m_device;
+
 		Resource		m_resource;
+		DescriptorPool	m_srvUavPool;
 		Descriptor		m_SRV;
 		Descriptor		m_srvUavCurrent;
 
 		ResourceState	m_state;
-
-		DescriptorPool	m_srvUavPool;
 		uint32_t		m_strideSrvUav;
-
-		Device			m_device;
 	};
 
 	//--------------------------------------------------------------------------------------
@@ -136,10 +134,10 @@ namespace XUSG
 			ResourceFlags resourceFlags, ResourceState state);
 		void allocateRtvPool(uint32_t numDescriptors);
 
-		std::vector<std::vector<Descriptor>> m_RTVs;
-		Descriptor	m_rtvCurrent;
-
 		DescriptorPool	m_rtvPool;
+		std::vector<std::vector<Descriptor>> m_RTVs;
+		Descriptor		m_rtvCurrent;
+
 		uint32_t		m_strideRtv;
 	};
 
@@ -168,12 +166,12 @@ namespace XUSG
 	protected:
 		void allocateDsvPool(uint32_t numDescriptors);
 
+		DescriptorPool m_dsvPool;
 		std::vector<Descriptor> m_DSVs;
 		std::vector<Descriptor> m_DSVROs;
 		Descriptor	m_SRVStencil;
 		Descriptor	m_dsvCurrent;
 
-		DescriptorPool	m_dsvPool;
 		uint32_t		m_strideDsv;
 	};
 
