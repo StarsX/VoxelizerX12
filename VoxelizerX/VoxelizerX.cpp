@@ -30,7 +30,7 @@ void VoxelizerX::OnInit()
 // Load the rendering pipeline dependencies.
 void VoxelizerX::LoadPipeline()
 {
-	UINT dxgiFactoryFlags = 0;
+	auto dxgiFactoryFlags = 0u;
 
 #if defined(_DEBUG)
 	// Enable the debug layer (requires the Graphics Tools "optional feature").
@@ -124,7 +124,7 @@ void VoxelizerX::LoadPipeline()
 		Descriptor rtv(m_rtvPool->GetCPUDescriptorHandleForHeapStart());
 
 		// Create a RTV and a command allocator for each frame.
-		for (UINT n = 0; n < Voxelizer::FrameCount; n++)
+		for (auto n = 0u; n < Voxelizer::FrameCount; n++)
 		{
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
 			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtv);
@@ -150,10 +150,12 @@ void VoxelizerX::LoadAssets()
 	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[m_frameIndex].Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 
 	m_voxelizer = make_unique<Voxelizer>(m_device, m_commandList);
+	if (!m_voxelizer) ThrowIfFailed(E_FAIL);
 
 	Resource vbUpload, ibUpload;
-	m_voxelizer->Init(m_width, m_height, m_renderTargets[0]->GetDesc().Format,
-		m_depth.GetResource()->GetDesc().Format, vbUpload, ibUpload);
+	if (!m_voxelizer->Init(m_width, m_height, m_renderTargets[0]->GetDesc().Format,
+		m_depth.GetResource()->GetDesc().Format, vbUpload, ibUpload))
+		ThrowIfFailed(E_FAIL);
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
@@ -271,7 +273,7 @@ void VoxelizerX::WaitForGpu()
 void VoxelizerX::MoveToNextFrame()
 {
 	// Schedule a Signal command in the queue.
-	const UINT64 currentFenceValue = m_fenceValues[m_frameIndex];
+	const auto currentFenceValue = m_fenceValues[m_frameIndex];
 	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), currentFenceValue));
 
 	// Update the frame index.

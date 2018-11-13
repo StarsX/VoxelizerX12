@@ -4,6 +4,15 @@
 
 #pragma once
 
+#define H_RETURN(x, o, m, r)	{ const auto hr = x; if (FAILED(hr)) { o << m << endl; return r; } }
+#define V_RETURN(x, o, r)		H_RETURN(x, o, HrToString(hr), r)
+
+#define M_RETURN(x, o, m, r)	if (x) { o << m << endl; return r; }
+#define F_RETURN(x, o, h, r)	M_RETURN(x, o, HrToString(h), r)
+
+#define C_RETURN(x, r)			if (x) return r;
+#define N_RETURN(x, r)			C_RETURN(!(x), r)
+
 namespace XUSG
 {
 	using Microsoft::WRL::ComPtr;
@@ -53,6 +62,7 @@ namespace XUSG
 	using Format = DXGI_FORMAT;
 	using PoolType = D3D12_HEAP_TYPE;
 	using ResourceFlags = D3D12_RESOURCE_FLAGS;
+	using SubresourceData = D3D12_SUBRESOURCE_DATA;
 
 	// Pipeline layouts related
 	struct RootParameter : CD3DX12_ROOT_PARAMETER1

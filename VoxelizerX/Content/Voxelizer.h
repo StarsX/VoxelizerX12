@@ -12,7 +12,7 @@ public:
 	Voxelizer(const XUSG::Device &device, const XUSG::GraphicsCommandList &commandList);
 	virtual ~Voxelizer();
 
-	void Init(uint32_t width, uint32_t height, XUSG::Format rtFormat, XUSG::Format dsFormat,
+	bool Init(uint32_t width, uint32_t height, XUSG::Format rtFormat, XUSG::Format dsFormat,
 		XUSG::Resource &vbUpload, XUSG::Resource &ibUpload,
 		const char *fileName = "Media\\bunny.obj");
 	void UpdateFrame(DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
@@ -92,11 +92,11 @@ protected:
 		DirectX::XMMATRIX screenToLocal;
 	};
 
-	void createShaders();
+	bool createShaders();
+	bool createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData, XUSG::Resource &vbUpload);
+	bool createIB(uint32_t numIndices, const uint32_t *pData, XUSG::Resource &ibUpload);
+	bool createCBs();
 	void createInputLayout();
-	void createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData, XUSG::Resource &vbUpload);
-	void createIB(uint32_t numIndices, const uint32_t *pData, XUSG::Resource &ibUpload);
-	void createCBs();
 	void prevoxelize(uint8_t mipLevel = 0);
 	void prerenderBoxArray(XUSG::Format rtFormat, XUSG::Format dsFormat);
 	void voxelize(uint32_t frameIndex, bool depthPeel = false, uint8_t mipLevel = 0);

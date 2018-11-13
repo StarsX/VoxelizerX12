@@ -37,7 +37,7 @@ namespace XUSG
 			void SetShader(Stage::Type stage, uint32_t index, const Blob &shader, const Reflector &reflector);
 			void SetReflector(Stage::Type stage, uint32_t index, const Reflector &reflector);
 
-			const Blob &CreateShader(Stage::Type stage, uint32_t index, const std::wstring &fileName);
+			Blob		CreateShader(Stage::Type stage, uint32_t index, const std::wstring &fileName);
 			Blob		GetShader(Stage::Type stage, uint32_t index) const;
 			Reflector	GetReflector(Stage::Type stage, uint32_t index) const;
 

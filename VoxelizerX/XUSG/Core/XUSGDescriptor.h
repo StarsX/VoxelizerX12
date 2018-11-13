@@ -91,13 +91,13 @@ namespace XUSG
 	protected:
 		friend class Util::DescriptorTable;
 
-		void allocateCbvSrvUavPool(uint32_t numDescriptors);
-		void allocateSamplerPool(uint32_t numDescriptors);
-		void allocateRtvPool(uint32_t numDescriptors);
+		bool allocateCbvSrvUavPool(uint32_t numDescriptors);
+		bool allocateSamplerPool(uint32_t numDescriptors);
+		bool allocateRtvPool(uint32_t numDescriptors);
 		
-		void reallocateCbvSrvUavPool(const std::string &key);
-		void reallocateSamplerPool(const std::string &key);
-		void reallocateRtvPool(const std::string &key);
+		bool reallocateCbvSrvUavPool(const std::string &key);
+		bool reallocateSamplerPool(const std::string &key);
+		bool reallocateRtvPool(const std::string &key);
 		
 		DescriptorTable createCbvSrvUavTable(const std::string &key);
 		DescriptorTable getCbvSrvUavTable(const std::string &key);

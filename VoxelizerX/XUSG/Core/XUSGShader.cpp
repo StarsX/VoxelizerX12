@@ -35,14 +35,14 @@ void Pool::SetReflector(Stage::Type stage, uint32_t index, const Reflector &refl
 	checkReflectorStorage(stage, index) = reflector;
 }
 
-const Blob &Pool::CreateShader(Stage::Type stage, uint32_t index, const wstring &fileName)
+Blob Pool::CreateShader(Stage::Type stage, uint32_t index, const wstring &fileName)
 {
 	auto &shader = checkShaderStorage(stage, index);
-	ThrowIfFailed(D3DReadFileToBlob(fileName.c_str(), &shader));
+	V_RETURN(D3DReadFileToBlob(fileName.c_str(), &shader), cerr, nullptr);
 
 	auto &reflector = checkReflectorStorage(stage, index);
-	ThrowIfFailed(D3DReflect(shader->GetBufferPointer(), shader->GetBufferSize(),
-		IID_ID3D12ShaderReflection, &reflector));
+	V_RETURN(D3DReflect(shader->GetBufferPointer(), shader->GetBufferSize(),
+		IID_ID3D12ShaderReflection, &reflector), cerr, nullptr);
 
 	return shader;
 }

@@ -71,7 +71,7 @@ RenderTargetTable Util::DescriptorTable::GetRtvTable(DescriptorTablePool &descri
 	return descriptorTablePool.getRtvTable(m_key);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------
 
 DescriptorTablePool::DescriptorTablePool() :
 	m_device(nullptr),
@@ -185,39 +185,45 @@ const shared_ptr<Sampler> &DescriptorTablePool::GetSampler(SamplerPreset::Type p
 	return m_samplerPresets[preset];
 }
 
-void DescriptorTablePool::allocateCbvSrvUavPool(uint32_t numDescriptors)
+bool DescriptorTablePool::allocateCbvSrvUavPool(uint32_t numDescriptors)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 	desc.NumDescriptors = numDescriptors;
 	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvSrvUavPool)));
+	V_RETURN(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvSrvUavPool)), cerr, false);
 
 	m_numCbvSrvUavs = 0;
+
+	return true;
 }
 
-void DescriptorTablePool::allocateSamplerPool(uint32_t numDescriptors)
+bool DescriptorTablePool::allocateSamplerPool(uint32_t numDescriptors)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 	desc.NumDescriptors = numDescriptors;
 	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_samplerPool)));
+	V_RETURN(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_samplerPool)), cerr, false);
 
 	m_numSamplers = 0;
+
+	return true;
 }
 
-void DescriptorTablePool::allocateRtvPool(uint32_t numDescriptors)
+bool DescriptorTablePool::allocateRtvPool(uint32_t numDescriptors)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 	desc.NumDescriptors = numDescriptors;
 	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvPool)));
-
+	V_RETURN(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvPool)), cerr, false);
+	
 	m_numRtvs = 0;
+
+	return true;
 }
 
-void DescriptorTablePool::reallocateCbvSrvUavPool(const string &key)
+bool DescriptorTablePool::reallocateCbvSrvUavPool(const string &key)
 {
 	assert(key.size() > 0);
 	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(size_t));
@@ -239,7 +245,7 @@ void DescriptorTablePool::reallocateCbvSrvUavPool(const string &key)
 
 	// Allocate a new pool
 	m_numCbvSrvUavs += numDescriptors;
-	allocateCbvSrvUavPool(m_numCbvSrvUavs);
+	N_RETURN(allocateCbvSrvUavPool(m_numCbvSrvUavs), false);
 
 	// Recreate descriptor tables
 	for (auto &tableIter : m_cbvSrvUavTables)
@@ -247,16 +253,18 @@ void DescriptorTablePool::reallocateCbvSrvUavPool(const string &key)
 		const auto table = createCbvSrvUavTable(tableIter.first);
 		*tableIter.second = *table;
 	}
+
+	return true;
 }
 
-void DescriptorTablePool::reallocateSamplerPool(const string &key)
+bool DescriptorTablePool::reallocateSamplerPool(const string &key)
 {
 	assert(key.size() > 0);
 	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(size_t));
 
 	// Allocate a new pool
 	m_numSamplers += numDescriptors;
-	allocateSamplerPool(m_numSamplers);
+	N_RETURN(allocateSamplerPool(m_numSamplers), false);
 
 	// Recreate descriptor tables
 	for (auto &tableIter : m_samplerTables)
@@ -264,16 +272,18 @@ void DescriptorTablePool::reallocateSamplerPool(const string &key)
 		const auto table = createSamplerTable(tableIter.first);
 		*tableIter.second = *table;
 	}
+
+	return true;
 }
 
-void DescriptorTablePool::reallocateRtvPool(const string &key)
+bool DescriptorTablePool::reallocateRtvPool(const string &key)
 {
 	assert(key.size() > 0);
 	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(size_t));
 
 	// Allocate a new pool
 	m_numRtvs += numDescriptors;
-	allocateRtvPool(m_numRtvs);
+	N_RETURN(allocateRtvPool(m_numRtvs), false);
 
 	// Recreate descriptor tables
 	for (auto &tableIter : m_rtvTables)
@@ -281,6 +291,8 @@ void DescriptorTablePool::reallocateRtvPool(const string &key)
 		const auto table = createRtvTable(tableIter.first);
 		*tableIter.second = *table;
 	}
+
+	return true;
 }
 
 DescriptorTable DescriptorTablePool::createCbvSrvUavTable(const string &key)
@@ -317,10 +329,8 @@ DescriptorTable DescriptorTablePool::getCbvSrvUavTable(const string &key)
 		const auto tableIter = m_cbvSrvUavTables.find(key);
 
 		// Create one, if it does not exist
-		if (tableIter == m_cbvSrvUavTables.end())
+		if (tableIter == m_cbvSrvUavTables.end() && reallocateCbvSrvUavPool(key))
 		{
-			reallocateCbvSrvUavPool(key);
-
 			const auto table = createCbvSrvUavTable(key);
 			m_cbvSrvUavTables[key] = table;
 
@@ -367,10 +377,8 @@ DescriptorTable DescriptorTablePool::getSamplerTable(const string &key)
 		const auto tableIter = m_samplerTables.find(key);
 
 		// Create one, if it does not exist
-		if (tableIter == m_samplerTables.end())
+		if (tableIter == m_samplerTables.end() && reallocateSamplerPool(key))
 		{
-			reallocateSamplerPool(key);
-
 			const auto table = createSamplerTable(key);
 			m_samplerTables[key] = table;
 
@@ -417,10 +425,8 @@ RenderTargetTable DescriptorTablePool::getRtvTable(const string &key)
 		const auto tableIter = m_rtvTables.find(key);
 
 		// Create one, if it does not exist
-		if (tableIter == m_rtvTables.end())
+		if (tableIter == m_rtvTables.end() && reallocateRtvPool(key))
 		{
-			reallocateRtvPool(key);
-
 			const auto table = createRtvTable(key);
 			m_rtvTables[key] = table;
 

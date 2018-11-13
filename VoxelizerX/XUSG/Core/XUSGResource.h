@@ -19,7 +19,7 @@ namespace XUSG
 		ConstantBuffer();
 		virtual ~ConstantBuffer();
 
-		void Create(const Device &device, uint32_t byteWidth, uint32_t cbvSize);
+		bool Create(const Device &device, uint32_t byteWidth, uint32_t cbvSize);
 
 		void *Map();
 		void Unmap();
@@ -28,7 +28,7 @@ namespace XUSG
 		const Descriptor	&GetCBV() const;
 
 	protected:
-		void allocateDescriptorPool(uint32_t numDescriptors);
+		bool allocateDescriptorPool(uint32_t numDescriptors);
 
 		Device			m_device;
 
@@ -59,7 +59,7 @@ namespace XUSG
 			//CPDXBuffer &pDstBuffer, const CPDXBuffer &pSrcBuffer);
 	protected:
 		void setDevice(const Device &device);
-		void allocateDescriptorPool(uint32_t numDescriptors);
+		bool allocateDescriptorPool(uint32_t numDescriptors);
 
 		Device			m_device;
 
@@ -82,11 +82,14 @@ namespace XUSG
 		Texture2D();
 		virtual ~Texture2D();
 
-		void Create(const Device &device, uint32_t width, uint32_t height, Format format,
+		bool Create(const Device &device, uint32_t width, uint32_t height, Format format,
 			uint32_t arraySize = 1, ResourceFlags resourceFlags = ResourceFlags(0),
 			uint8_t numMips = 1, uint8_t sampleCount = 1, PoolType poolType = PoolType(1),
 			ResourceState state = ResourceState(0));
-		void Upload(const GraphicsCommandList &commandList, Resource &resourceUpload, const void *pData,
+		bool Upload(const GraphicsCommandList &commandList, Resource &resourceUpload,
+			SubresourceData *pSubresourceData, uint32_t numSubresources = 1,
+			ResourceState dstState = ResourceState(0));
+		bool Upload(const GraphicsCommandList &commandList, Resource &resourceUpload, const uint8_t *pData,
 			uint8_t stride = sizeof(float), ResourceState dstState = ResourceState(0));
 		void CreateSRV(uint32_t arraySize, Format format = Format(0),
 			uint8_t numMips = 1, uint8_t sampleCount = 1);
@@ -115,10 +118,10 @@ namespace XUSG
 		RenderTarget();
 		virtual ~RenderTarget();
 
-		void Create(const Device &device, uint32_t width, uint32_t height, Format format,
+		bool Create(const Device &device, uint32_t width, uint32_t height, Format format,
 			uint32_t arraySize = 1, ResourceFlags resourceFlags = ResourceFlags(0),
 			uint8_t numMips = 1, uint8_t sampleCount = 1, ResourceState state = ResourceState(0));
-		void CreateArray(const Device &device, uint32_t width, uint32_t height, uint32_t arraySize,
+		bool CreateArray(const Device &device, uint32_t width, uint32_t height, uint32_t arraySize,
 			Format format, ResourceFlags resourceFlags = ResourceFlags(0), uint8_t numMips = 1,
 			uint8_t sampleCount = 1, ResourceState state = ResourceState(0));
 		//void Populate(const CPDXShaderResourceView &pSRVSrc, const spShader &pShader,
@@ -129,10 +132,10 @@ namespace XUSG
 		uint8_t		GetNumMips(uint32_t slice = 0) const;
 
 	protected:
-		void create(const Device &device, uint32_t width, uint32_t height,
+		bool create(const Device &device, uint32_t width, uint32_t height,
 			uint32_t arraySize, Format format, uint8_t numMips, uint8_t sampleCount,
 			ResourceFlags resourceFlags, ResourceState state);
-		void allocateRtvPool(uint32_t numDescriptors);
+		bool allocateRtvPool(uint32_t numDescriptors);
 
 		DescriptorPool	m_rtvPool;
 		std::vector<std::vector<Descriptor>> m_RTVs;
@@ -151,7 +154,7 @@ namespace XUSG
 		DepthStencil();
 		virtual ~DepthStencil();
 
-		void Create(const Device &device, uint32_t width, uint32_t height, Format format =
+		bool Create(const Device &device, uint32_t width, uint32_t height, Format format =
 			DXGI_FORMAT_D24_UNORM_S8_UINT, ResourceFlags resourceFlags = ResourceFlags(0),
 			uint32_t arraySize = 1, uint8_t numMips = 1, uint8_t sampleCount = 1,
 			ResourceState state = ResourceState(0), uint8_t clearStencil = 0,
@@ -164,7 +167,7 @@ namespace XUSG
 		const uint8_t		GetNumMips() const;
 
 	protected:
-		void allocateDsvPool(uint32_t numDescriptors);
+		bool allocateDsvPool(uint32_t numDescriptors);
 
 		DescriptorPool m_dsvPool;
 		std::vector<Descriptor> m_DSVs;
@@ -185,7 +188,7 @@ namespace XUSG
 		Texture3D();
 		virtual ~Texture3D();
 
-		void Create(const Device &device, uint32_t width, uint32_t height, uint32_t depth,
+		bool Create(const Device &device, uint32_t width, uint32_t height, uint32_t depth,
 			Format format, ResourceFlags resourceFlags = ResourceFlags(0), uint8_t numMips = 1,
 			PoolType poolType = PoolType(1), ResourceState state = ResourceState(0));
 		void CreateSRV(Format format = Format(0), uint8_t numMips = 1);
@@ -214,7 +217,7 @@ namespace XUSG
 		BufferBase();
 		virtual ~BufferBase();
 
-		void Upload(const GraphicsCommandList &commandList, Resource &resourceUpload,
+		bool Upload(const GraphicsCommandList &commandList, Resource &resourceUpload,
 			const void *pData, ResourceState dstState = ResourceState(0));
 	};
 
@@ -228,7 +231,7 @@ namespace XUSG
 		RawBuffer();
 		virtual ~RawBuffer();
 
-		void Create(const Device &device, uint32_t byteWidth, ResourceFlags resourceFlags = ResourceFlags(0),
+		bool Create(const Device &device, uint32_t byteWidth, ResourceFlags resourceFlags = ResourceFlags(0),
 			PoolType poolType = PoolType(1), ResourceState state = ResourceState(0));
 		void CreateSRV(uint32_t byteWidth);
 		void CreateUAV(uint32_t byteWidth);
@@ -236,7 +239,7 @@ namespace XUSG
 		const Descriptor &GetUAV() const;
 
 	protected:
-		void create(const Device &device, uint32_t byteWidth, ResourceFlags resourceFlags,
+		bool create(const Device &device, uint32_t byteWidth, ResourceFlags resourceFlags,
 			PoolType poolType, ResourceState state, bool hasSRV, bool hasUAV);
 
 		Resource m_counter;
@@ -253,7 +256,7 @@ namespace XUSG
 		VertexBuffer();
 		virtual ~VertexBuffer();
 
-		void Create(const Device &device, uint32_t byteWidth, uint32_t stride,
+		bool Create(const Device &device, uint32_t byteWidth, uint32_t stride,
 			ResourceFlags resourceFlags = ResourceFlags(0), PoolType poolType = PoolType(1),
 			ResourceState state = ResourceState(0));
 
@@ -273,7 +276,7 @@ namespace XUSG
 		IndexBuffer();
 		virtual ~IndexBuffer();
 
-		void Create(const Device &device, uint32_t byteWidth, Format format = Format(42),
+		bool Create(const Device &device, uint32_t byteWidth, Format format = Format(42),
 			ResourceFlags resourceFlags = ResourceFlags(0x8), PoolType poolType = PoolType(1),
 			ResourceState state = ResourceState(0));
 		
@@ -293,7 +296,7 @@ namespace XUSG
 		TypedBuffer();
 		virtual ~TypedBuffer();
 
-		void Create(const Device &device, uint32_t numElements, uint32_t stride, Format format,
+		bool Create(const Device &device, uint32_t numElements, uint32_t stride, Format format,
 			ResourceFlags resourceFlags = ResourceFlags(0), PoolType poolType = PoolType(1),
 			ResourceState state = ResourceState(0));
 		void CreateSRV(uint32_t numElements, Format format);
@@ -310,7 +313,7 @@ namespace XUSG
 		StructuredBuffer();
 		virtual ~StructuredBuffer();
 
-		void Create(const Device &device, uint32_t numElements, uint32_t stride,
+		bool Create(const Device &device, uint32_t numElements, uint32_t stride,
 			ResourceFlags resourceFlags = ResourceFlags(0), PoolType poolType = PoolType(1),
 			ResourceState state = ResourceState(0));
 		void CreateSRV(uint32_t numElements, uint32_t stride);

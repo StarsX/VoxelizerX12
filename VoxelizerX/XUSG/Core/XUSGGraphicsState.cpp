@@ -109,7 +109,7 @@ PipelineState State::GetPipeline(Pipeline::Pool &pipelinePool) const
 	return pipelinePool.getPipeline(m_key);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------------------------
 
 Pool::Pool() :
 	m_device(nullptr),
@@ -264,7 +264,7 @@ PipelineState Pool::createPipeline(const State::Key *pKey)
 
 	// Create pipeline
 	PipelineState pipeline;
-	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipeline)));
+	V_RETURN(m_device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipeline)), cerr, nullptr);
 
 	return pipeline;
 }

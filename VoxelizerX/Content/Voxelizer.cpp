@@ -19,40 +19,42 @@ Voxelizer::~Voxelizer()
 {
 }
 
-void Voxelizer::Init(uint32_t width, uint32_t height, Format rtFormat, Format dsFormat,
+bool Voxelizer::Init(uint32_t width, uint32_t height, Format rtFormat, Format dsFormat,
 	Resource &vbUpload, Resource &ibUpload, const char *fileName)
 {
 	m_viewport.x = static_cast<float>(width);
 	m_viewport.y = static_cast<float>(height);
 
 	// Create shaders
-	createShaders();
+	N_RETURN(createShaders(), false);
 
 	// Load inputs
 	ObjLoader objLoader;
-	if (!objLoader.Import(fileName, true, true)) return;
+	if (!objLoader.Import(fileName, true, true)) return false;
 
 	//createInputLayout();
-	createVB(objLoader.GetNumVertices(), objLoader.GetVertexStride(), objLoader.GetVertices(), vbUpload);
-	createIB(objLoader.GetNumIndices(), objLoader.GetIndices(), ibUpload);
+	N_RETURN(createVB(objLoader.GetNumVertices(), objLoader.GetVertexStride(), objLoader.GetVertices(), vbUpload), false);
+	N_RETURN(createIB(objLoader.GetNumIndices(), objLoader.GetIndices(), ibUpload), false);
 
 	// Extract boundary
 	const auto center = objLoader.GetCenter();
 	m_bound = XMFLOAT4(center.x, center.y, center.z, objLoader.GetRadius());
 
 	m_numLevels = max(static_cast<uint32_t>(log2(GRID_SIZE)), 1);
-	createCBs();
+	N_RETURN(createCBs(), false);
 
 	for (auto &grid : m_grids)
-		grid.Create(m_device, GRID_SIZE, GRID_SIZE, GRID_SIZE, DXGI_FORMAT_R10G10B10A2_UNORM, BIND_PACKED_UAV);
+		N_RETURN(grid.Create(m_device, GRID_SIZE, GRID_SIZE, GRID_SIZE, DXGI_FORMAT_R10G10B10A2_UNORM, BIND_PACKED_UAV), false);
 
 	for (auto &KBufferDepth : m_KBufferDepths)
-		KBufferDepth.Create(m_device, GRID_SIZE, GRID_SIZE, DXGI_FORMAT_R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
-			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		N_RETURN(KBufferDepth.Create(m_device, GRID_SIZE, GRID_SIZE, DXGI_FORMAT_R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
+			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), false);
 
 	// Prepare for rendering
 	prevoxelize();
 	prerenderBoxArray(rtFormat, dsFormat);
+
+	return true;
 }
 
 void Voxelizer::UpdateFrame(CXMVECTOR eyePt, CXMMATRIX viewProj)
@@ -96,57 +98,47 @@ void Voxelizer::Render(uint32_t frameIndex, const RenderTargetTable &rtvs, const
 	renderBoxArray(frameIndex, rtvs, dsv);
 }
 
-void Voxelizer::createShaders()
+bool Voxelizer::createShaders()
 {
-	m_shaderPool.CreateShader(Shader::Stage::VS, VS_TRI_PROJ, L"VSTriProj.cso");
-	m_shaderPool.CreateShader(Shader::Stage::VS, VS_BOX_ARRAY, L"VSBoxArray.cso");
+	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::VS, VS_TRI_PROJ, L"VSTriProj.cso"), false);
+	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::VS, VS_BOX_ARRAY, L"VSBoxArray.cso"), false);
 
-	m_shaderPool.CreateShader(Shader::Stage::PS, PS_TRI_PROJ, L"PSTriProj.cso");
-	m_shaderPool.CreateShader(Shader::Stage::PS, PS_SIMPLE, L"PSSimple.cso");
+	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::PS, PS_TRI_PROJ, L"PSTriProj.cso"), false);
+	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::PS, PS_SIMPLE, L"PSSimple.cso"), false);
+
+	return true;
 }
 
-void Voxelizer::createInputLayout()
-{
-	const auto offset = D3D12_APPEND_ALIGNED_ELEMENT;
-
-	// Define the vertex input layout.
-	InputElementTable inputElementDescs =
-	{
-		{ "POSITION",	0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL",		0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-	};
-
-	m_inputLayout = m_pipelinePool.CreateInputLayout(inputElementDescs);
-}
-
-void Voxelizer::createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData, Resource &vbUpload)
+bool Voxelizer::createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData, Resource &vbUpload)
 {
 	m_vertexStride = stride;
-	m_vertexBuffer.Create(m_device, stride * numVert, stride, D3D12_RESOURCE_FLAG_NONE,
-		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST);
-	m_vertexBuffer.Upload(m_commandList, vbUpload, pData, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	N_RETURN(m_vertexBuffer.Create(m_device, stride * numVert, stride, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST), false);
+
+	return m_vertexBuffer.Upload(m_commandList, vbUpload, pData, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
 
-void Voxelizer::createIB(uint32_t numIndices, const uint32_t *pData, Resource &ibUpload)
+bool Voxelizer::createIB(uint32_t numIndices, const uint32_t *pData, Resource &ibUpload)
 {
 	m_numIndices = numIndices;
-	m_indexbuffer.Create(m_device, sizeof(uint32_t) * numIndices, DXGI_FORMAT_R32_UINT, D3D12_RESOURCE_FLAG_NONE,
-		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST);
-	m_indexbuffer.Upload(m_commandList, ibUpload, pData, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	N_RETURN(m_indexbuffer.Create(m_device, sizeof(uint32_t) * numIndices, DXGI_FORMAT_R32_UINT, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST), false);
+
+	return m_indexbuffer.Upload(m_commandList, ibUpload, pData, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
 
-void Voxelizer::createCBs()
+bool Voxelizer::createCBs()
 {
 	// Common CBs
 	{
-		m_cbMatrices.Create(m_device, ((sizeof(CBMatrices) + 255) & ~255) * 8, sizeof(CBMatrices));
-		m_cbPerFrame.Create(m_device, ((sizeof(CBPerFrame) + 255) & ~255) * 8, sizeof(CBPerFrame));
-		m_cbPerObject.Create(m_device, ((sizeof(CBPerObject) + 255) & ~255) * 8, sizeof(CBPerObject));
+		N_RETURN(m_cbMatrices.Create(m_device, ((sizeof(CBMatrices) + 255) & ~255) * 8, sizeof(CBMatrices)), false);
+		N_RETURN(m_cbPerFrame.Create(m_device, ((sizeof(CBPerFrame) + 255) & ~255) * 8, sizeof(CBPerFrame)), false);
+		N_RETURN(m_cbPerObject.Create(m_device, ((sizeof(CBPerObject) + 255) & ~255) * 8, sizeof(CBPerObject)), false);
 	}
 
 	// Immutable CBs
 	{
-		m_cbBound.Create(m_device, 256, sizeof(XMFLOAT4));
+		N_RETURN(m_cbBound.Create(m_device, 256, sizeof(XMFLOAT4)), false);
 
 		const auto pCbBound = reinterpret_cast<XMFLOAT4*>(m_cbBound.Map());
 		*pCbBound = m_bound;
@@ -158,12 +150,28 @@ void Voxelizer::createCBs()
 	{
 		auto &cb = m_cbPerMipLevels[i];
 		const auto gridSize = static_cast<float>(GRID_SIZE >> i);
-		cb.Create(m_device, 256, sizeof(XMFLOAT4));
+		N_RETURN(cb.Create(m_device, 256, sizeof(XMFLOAT4)), false);
 
 		const auto pCbData = reinterpret_cast<float*>(cb.Map());
 		*pCbData = gridSize;
 		cb.Unmap();
 	}
+
+	return true;
+}
+
+void Voxelizer::createInputLayout()
+{
+	const auto offset = D3D12_APPEND_ALIGNED_ELEMENT;
+
+	// Define the vertex input layout.
+	InputElementTable inputElementDescs =
+	{
+		{ "POSITION",	0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	{ "NORMAL",		0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+
+	m_inputLayout = m_pipelinePool.CreateInputLayout(inputElementDescs);
 }
 
 void Voxelizer::prevoxelize(uint8_t mipLevel)
@@ -218,7 +226,6 @@ void Voxelizer::prevoxelize(uint8_t mipLevel)
 	state.IASetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 	state.RSSetState(Graphics::RasterizerPreset::CULL_NONE, m_pipelinePool);
 	state.OMSetNumRenderTargets(0);
-	//state.OMSetRTVFormat(0, DXGI_FORMAT_R8G8B8A8_UNORM);
 	m_pipelines[PASS_VOXELIZE] = state.GetPipeline(m_pipelinePool);
 }
 
@@ -251,8 +258,7 @@ void Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 	state.SetShader(Shader::Stage::VS, m_shaderPool.GetShader(Shader::Stage::VS, VS_BOX_ARRAY));
 	state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_SIMPLE));
 	state.IASetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-	state.OMSetNumRenderTargets(1);
-	state.OMSetRTVFormat(0, rtFormat);
+	state.OMSetRTVFormats(&rtFormat, 1);
 	state.OMSetDSVFormat(dsFormat);
 	m_pipelines[PASS_DRAW_AS_BOX] = state.GetPipeline(m_pipelinePool);
 }
