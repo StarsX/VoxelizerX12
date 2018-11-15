@@ -1048,19 +1048,39 @@ Descriptor Texture3D::GetSubSRV(uint8_t i) const
 }
 
 //--------------------------------------------------------------------------------------
-// Buffer base
+// Raw buffer
 //--------------------------------------------------------------------------------------
 
-BufferBase::BufferBase() :
-	ResourceBase()
+RawBuffer::RawBuffer() :
+	ResourceBase(),
+	m_counter(nullptr),
+	m_UAV(D3D12_DEFAULT)
 {
 }
 
-BufferBase::~BufferBase()
+RawBuffer::~RawBuffer()
 {
 }
 
-bool BufferBase::Upload(const GraphicsCommandList &commandList, Resource &resourceUpload,
+bool RawBuffer::Create(const Device &device, uint32_t byteWidth, ResourceFlags resourceFlags,
+	PoolType poolType, ResourceState state)
+{
+	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	// Create buffer
+	N_RETURN(create(device, byteWidth, resourceFlags, poolType, state, hasSRV, hasUAV), false);
+
+	// Create SRV
+	if (hasSRV) CreateSRV(byteWidth);
+
+	// Create UAV
+	if (hasUAV) CreateUAV(byteWidth);
+
+	return true;
+}
+
+bool RawBuffer::Upload(const GraphicsCommandList &commandList, Resource &resourceUpload,
 	const void *pData, ResourceState dstState)
 {
 	const auto desc = m_resource->GetDesc();
@@ -1087,39 +1107,6 @@ bool BufferBase::Upload(const GraphicsCommandList &commandList, Resource &resour
 	M_RETURN(UpdateSubresources(commandList.Get(), m_resource.Get(), resourceUpload.Get(),
 		0, 0, 1, &subresourceData) <= 0, clog, "Failed to upload the resource.", false);
 	Barrier(commandList, dstState);
-
-	return true;
-}
-
-//--------------------------------------------------------------------------------------
-// Raw buffer
-//--------------------------------------------------------------------------------------
-
-RawBuffer::RawBuffer() :
-	BufferBase(),
-	m_counter(nullptr),
-	m_UAV(D3D12_DEFAULT)
-{
-}
-
-RawBuffer::~RawBuffer()
-{
-}
-
-bool RawBuffer::Create(const Device &device, uint32_t byteWidth, ResourceFlags resourceFlags,
-	PoolType poolType, ResourceState state)
-{
-	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-	// Create buffer
-	N_RETURN(create(device, byteWidth, resourceFlags, poolType, state, hasSRV, hasUAV), false);
-
-	// Create SRV
-	if (hasSRV) CreateSRV(byteWidth);
-
-	// Create UAV
-	if (hasUAV) CreateUAV(byteWidth);
 
 	return true;
 }
@@ -1188,91 +1175,64 @@ bool RawBuffer::create(const Device &device, uint32_t byteWidth, ResourceFlags r
 }
 
 //--------------------------------------------------------------------------------------
-// Vertex buffer
+// Structured buffer
 //--------------------------------------------------------------------------------------
 
-VertexBuffer::VertexBuffer() :
-	RawBuffer(),
-	m_VBV()
+StructuredBuffer::StructuredBuffer() :
+	RawBuffer()
 {
 }
 
-VertexBuffer::~VertexBuffer()
+StructuredBuffer::~StructuredBuffer()
 {
 }
 
-bool VertexBuffer::Create(const Device &device, uint32_t byteWidth, uint32_t stride,
+bool StructuredBuffer::Create(const Device &device, uint32_t numElements, uint32_t stride,
 	ResourceFlags resourceFlags, PoolType poolType, ResourceState state)
 {
 	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
 	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-	// Determine initial state
-	if (state == 0)
-	{
-		state = hasSRV ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE :
-			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		state = hasUAV ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS : state;
-	}
+	// Create buffer
+	N_RETURN(create(device, stride * numElements, resourceFlags,
+		poolType, state, hasSRV, hasUAV), false);
 
-	N_RETURN(RawBuffer::Create(device, byteWidth, resourceFlags, poolType, state), false);
+	// Create SRV
+	if (hasSRV) CreateSRV(numElements, stride);
 
-	// Create vertex buffer view
-	m_VBV.BufferLocation = m_resource->GetGPUVirtualAddress();
-	m_VBV.StrideInBytes = stride;
-	m_VBV.SizeInBytes = byteWidth;
+	// Create UAV
+	if (hasUAV) CreateUAV(numElements, stride);
 
 	return true;
 }
 
-const VertexBufferView &VertexBuffer::GetVBV() const
+void StructuredBuffer::CreateSRV(uint32_t numElements, uint32_t stride)
 {
-	return m_VBV;
+	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+	desc.Format = m_resource->GetDesc().Format;
+	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	desc.Buffer.NumElements = numElements;
+	desc.Buffer.StructureByteStride = stride;
+
+	// Create a shader resource view
+	m_SRV = m_srvUavCurrent;
+	m_device->CreateShaderResourceView(m_resource.Get(), &desc, m_SRV);
+	m_srvUavCurrent.Offset(m_strideSrvUav);
 }
 
-//--------------------------------------------------------------------------------------
-// Index buffer
-//--------------------------------------------------------------------------------------
-
-IndexBuffer::IndexBuffer() :
-	RawBuffer(),
-	m_IBV()
+void StructuredBuffer::CreateUAV(uint32_t numElements, uint32_t stride)
 {
-}
+	D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+	desc.Format = m_resource->GetDesc().Format;
+	desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	desc.Buffer.NumElements = numElements;
+	desc.Buffer.StructureByteStride = stride;
 
-IndexBuffer::~IndexBuffer()
-{
-}
-
-bool IndexBuffer::Create(const Device &device, uint32_t byteWidth, Format format,
-	ResourceFlags resourceFlags, PoolType poolType, ResourceState state)
-{
-	setDevice(device);
-
-	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-	assert(format == DXGI_FORMAT_R32_UINT || format == DXGI_FORMAT_R16_UINT);
-	if (hasSRV || hasUAV) byteWidth += byteWidth % 4;
-
-	// Determine initial state
-	if (state) m_state = state;
-	else m_state = hasSRV ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE :
-		D3D12_RESOURCE_STATE_INDEX_BUFFER;
-	
-	N_RETURN(RawBuffer::Create(device, byteWidth, resourceFlags, poolType, state), false);
-
-	// Create index buffer view
-	m_IBV.BufferLocation = m_resource->GetGPUVirtualAddress();
-	m_IBV.SizeInBytes = byteWidth;
-	m_IBV.Format = format;
-
-	return true;
-}
-
-const IndexBufferView &IndexBuffer::GetIBV() const
-{
-	return m_IBV;
+	// Create an unordered access view
+	m_UAV = m_srvUavCurrent;
+	m_device->CreateUnorderedAccessView(m_resource.Get(), m_counter.Get(), &desc, m_UAV);
+	m_srvUavCurrent.Offset(m_strideSrvUav);
 }
 
 //--------------------------------------------------------------------------------------
@@ -1362,62 +1322,89 @@ void TypedBuffer::CreateUAV(uint32_t numElements, Format format)
 }
 
 //--------------------------------------------------------------------------------------
-// Structured buffer
+// Vertex buffer
 //--------------------------------------------------------------------------------------
 
-StructuredBuffer::StructuredBuffer() :
-	RawBuffer()
+VertexBuffer::VertexBuffer() :
+	StructuredBuffer(),
+	m_VBV()
 {
 }
 
-StructuredBuffer::~StructuredBuffer()
+VertexBuffer::~VertexBuffer()
 {
 }
 
-bool StructuredBuffer::Create(const Device &device, uint32_t numElements, uint32_t stride,
+bool VertexBuffer::Create(const Device &device, uint32_t numVertices, uint32_t stride,
 	ResourceFlags resourceFlags, PoolType poolType, ResourceState state)
 {
 	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
 	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-	// Create buffer
-	N_RETURN(create(device, stride * numElements, resourceFlags,
-		poolType, state, hasSRV, hasUAV), false);
+	// Determine initial state
+	if (state == 0)
+	{
+		state = hasSRV ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE :
+			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		state = hasUAV ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS : state;
+	}
 
-	// Create SRV
-	if (hasSRV) CreateSRV(numElements, stride);
+	N_RETURN(StructuredBuffer::Create(device, numVertices, stride, resourceFlags, poolType, state), false);
 
-	// Create UAV
-	if (hasUAV) CreateUAV(numElements, stride);
+	// Create vertex buffer view
+	m_VBV.BufferLocation = m_resource->GetGPUVirtualAddress();
+	m_VBV.StrideInBytes = stride;
+	m_VBV.SizeInBytes = stride * numVertices;
 
 	return true;
 }
 
-void StructuredBuffer::CreateSRV(uint32_t numElements, uint32_t stride)
+const VertexBufferView &VertexBuffer::GetVBV() const
 {
-	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-	desc.Format = m_resource->GetDesc().Format;
-	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	desc.Buffer.NumElements = numElements;
-	desc.Buffer.StructureByteStride = stride;
-
-	// Create a shader resource view
-	m_SRV = m_srvUavCurrent;
-	m_device->CreateShaderResourceView(m_resource.Get(), &desc, m_SRV);
-	m_srvUavCurrent.Offset(m_strideSrvUav);
+	return m_VBV;
 }
 
-void StructuredBuffer::CreateUAV(uint32_t numElements, uint32_t stride)
-{
-	D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-	desc.Format = m_resource->GetDesc().Format;
-	desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	desc.Buffer.NumElements = numElements;
-	desc.Buffer.StructureByteStride = stride;
+//--------------------------------------------------------------------------------------
+// Index buffer
+//--------------------------------------------------------------------------------------
 
-	// Create an unordered access view
-	m_UAV = m_srvUavCurrent;
-	m_device->CreateUnorderedAccessView(m_resource.Get(), m_counter.Get(), &desc, m_UAV);
-	m_srvUavCurrent.Offset(m_strideSrvUav);
+IndexBuffer::IndexBuffer() :
+	RawBuffer(),
+	m_IBV()
+{
+}
+
+IndexBuffer::~IndexBuffer()
+{
+}
+
+bool IndexBuffer::Create(const Device &device, uint32_t byteWidth, Format format,
+	ResourceFlags resourceFlags, PoolType poolType, ResourceState state)
+{
+	setDevice(device);
+
+	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	assert(format == DXGI_FORMAT_R32_UINT || format == DXGI_FORMAT_R16_UINT);
+	if (hasSRV || hasUAV) byteWidth += byteWidth % 4;
+
+	// Determine initial state
+	if (state) m_state = state;
+	else m_state = hasSRV ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE :
+		D3D12_RESOURCE_STATE_INDEX_BUFFER;
+
+	N_RETURN(RawBuffer::Create(device, byteWidth, resourceFlags, poolType, state), false);
+
+	// Create index buffer view
+	m_IBV.BufferLocation = m_resource->GetGPUVirtualAddress();
+	m_IBV.SizeInBytes = byteWidth;
+	m_IBV.Format = format;
+
+	return true;
+}
+
+const IndexBufferView &IndexBuffer::GetIBV() const
+{
+	return m_IBV;
 }

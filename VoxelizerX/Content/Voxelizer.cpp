@@ -112,7 +112,7 @@ bool Voxelizer::createShaders()
 bool Voxelizer::createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData, Resource &vbUpload)
 {
 	m_vertexStride = stride;
-	N_RETURN(m_vertexBuffer.Create(m_device, stride * numVert, stride, D3D12_RESOURCE_FLAG_NONE,
+	N_RETURN(m_vertexBuffer.Create(m_device, numVert, stride, D3D12_RESOURCE_FLAG_NONE,
 		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST), false);
 
 	return m_vertexBuffer.Upload(m_commandList, vbUpload, pData, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);

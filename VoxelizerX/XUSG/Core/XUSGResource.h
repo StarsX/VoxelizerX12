@@ -208,24 +208,10 @@ namespace XUSG
 	};
 
 	//--------------------------------------------------------------------------------------
-	// Buffer base
-	//--------------------------------------------------------------------------------------
-	class BufferBase :
-		public ResourceBase
-	{
-	public:
-		BufferBase();
-		virtual ~BufferBase();
-
-		bool Upload(const GraphicsCommandList &commandList, Resource &resourceUpload,
-			const void *pData, ResourceState dstState = ResourceState(0));
-	};
-
-	//--------------------------------------------------------------------------------------
 	// Raw buffer
 	//--------------------------------------------------------------------------------------
 	class RawBuffer :
-		public BufferBase
+		public ResourceBase
 	{
 	public:
 		RawBuffer();
@@ -233,6 +219,8 @@ namespace XUSG
 
 		bool Create(const Device &device, uint32_t byteWidth, ResourceFlags resourceFlags = ResourceFlags(0),
 			PoolType poolType = PoolType(1), ResourceState state = ResourceState(0));
+		bool Upload(const GraphicsCommandList &commandList, Resource &resourceUpload,
+			const void *pData, ResourceState dstState = ResourceState(0));
 		void CreateSRV(uint32_t byteWidth);
 		void CreateUAV(uint32_t byteWidth);
 
@@ -247,16 +235,50 @@ namespace XUSG
 	};
 
 	//--------------------------------------------------------------------------------------
+	// Structured buffer
+	//--------------------------------------------------------------------------------------
+	class StructuredBuffer :
+		public RawBuffer
+	{
+	public:
+		StructuredBuffer();
+		virtual ~StructuredBuffer();
+
+		bool Create(const Device &device, uint32_t numElements, uint32_t stride,
+			ResourceFlags resourceFlags = ResourceFlags(0), PoolType poolType = PoolType(1),
+			ResourceState state = ResourceState(0));
+		void CreateSRV(uint32_t numElements, uint32_t stride);
+		void CreateUAV(uint32_t numElements, uint32_t stride);
+	};
+
+	//--------------------------------------------------------------------------------------
+	// Typed buffer
+	//--------------------------------------------------------------------------------------
+	class TypedBuffer :
+		public RawBuffer
+	{
+	public:
+		TypedBuffer();
+		virtual ~TypedBuffer();
+
+		bool Create(const Device &device, uint32_t numElements, uint32_t stride, Format format,
+			ResourceFlags resourceFlags = ResourceFlags(0), PoolType poolType = PoolType(1),
+			ResourceState state = ResourceState(0));
+		void CreateSRV(uint32_t numElements, Format format);
+		void CreateUAV(uint32_t numElements, Format format);
+	};
+
+	//--------------------------------------------------------------------------------------
 	// Vertex buffer
 	//--------------------------------------------------------------------------------------
 	class VertexBuffer :
-		public RawBuffer
+		public StructuredBuffer
 	{
 	public:
 		VertexBuffer();
 		virtual ~VertexBuffer();
 
-		bool Create(const Device &device, uint32_t byteWidth, uint32_t stride,
+		bool Create(const Device &device, uint32_t numVertices, uint32_t stride,
 			ResourceFlags resourceFlags = ResourceFlags(0), PoolType poolType = PoolType(1),
 			ResourceState state = ResourceState(0));
 
@@ -279,44 +301,10 @@ namespace XUSG
 		bool Create(const Device &device, uint32_t byteWidth, Format format = Format(42),
 			ResourceFlags resourceFlags = ResourceFlags(0x8), PoolType poolType = PoolType(1),
 			ResourceState state = ResourceState(0));
-		
+
 		const IndexBufferView &GetIBV() const;
 
 	protected:
 		IndexBufferView m_IBV;
-	};
-
-	//--------------------------------------------------------------------------------------
-	// Typed buffer
-	//--------------------------------------------------------------------------------------
-	class TypedBuffer :
-		public RawBuffer
-	{
-	public:
-		TypedBuffer();
-		virtual ~TypedBuffer();
-
-		bool Create(const Device &device, uint32_t numElements, uint32_t stride, Format format,
-			ResourceFlags resourceFlags = ResourceFlags(0), PoolType poolType = PoolType(1),
-			ResourceState state = ResourceState(0));
-		void CreateSRV(uint32_t numElements, Format format);
-		void CreateUAV(uint32_t numElements, Format format);
-	};
-
-	//--------------------------------------------------------------------------------------
-	// Structured buffer
-	//--------------------------------------------------------------------------------------
-	class StructuredBuffer :
-		public RawBuffer
-	{
-	public:
-		StructuredBuffer();
-		virtual ~StructuredBuffer();
-
-		bool Create(const Device &device, uint32_t numElements, uint32_t stride,
-			ResourceFlags resourceFlags = ResourceFlags(0), PoolType poolType = PoolType(1),
-			ResourceState state = ResourceState(0));
-		void CreateSRV(uint32_t numElements, uint32_t stride);
-		void CreateUAV(uint32_t numElements, uint32_t stride);
 	};
 }

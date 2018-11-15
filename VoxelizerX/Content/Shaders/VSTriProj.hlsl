@@ -19,21 +19,16 @@ static const uint g_uStrideVB = SIZE_OF_FLOAT3 * 2;
 // Buffers
 //--------------------------------------------------------------------------------------
 ByteAddressBuffer g_roIndices;
-ByteAddressBuffer g_roVertices;
+StructuredBuffer<VSIn> g_roVertices;
 
 //--------------------------------------------------------------------------------------
 // Load IA
 //--------------------------------------------------------------------------------------
 VSIn LoadVSIn(const uint uIdx)
 {
-	VSIn result;
 	const uint uVid = g_roIndices.Load(SIZE_OF_UINT * uIdx);
-	const uint uBase = uVid * g_uStrideVB;
 
-	result.Pos = asfloat(g_roVertices.Load3(uBase));
-	result.Nrm = asfloat(g_roVertices.Load3(uBase + SIZE_OF_FLOAT3));
-
-	return result;
+	return g_roVertices[uVid];
 }
 
 //--------------------------------------------------------------------------------------
