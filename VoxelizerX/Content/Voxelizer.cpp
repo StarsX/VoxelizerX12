@@ -13,6 +13,7 @@ Voxelizer::Voxelizer(const Device &device, const GraphicsCommandList &commandLis
 {
 	m_pipelinePool.SetDevice(device);
 	m_descriptorTablePool.SetDevice(device);
+	m_pipelineLayoutPool.SetDevice(device);
 }
 
 Voxelizer::~Voxelizer()
@@ -215,7 +216,8 @@ void Voxelizer::prevoxelize(uint8_t mipLevel)
 	utilPipelineLayout.SetShaderStage(1, Shader::Stage::PS);
 	utilPipelineLayout.SetShaderStage(2, Shader::Stage::VS);
 	utilPipelineLayout.SetShaderStage(3, Shader::Stage::PS);
-	m_pipelineLayouts[PASS_VOXELIZE] = utilPipelineLayout.GetPipelineLayout(m_pipelinePool, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+	m_pipelineLayouts[PASS_VOXELIZE] = utilPipelineLayout.GetPipelineLayout(
+		m_pipelineLayoutPool, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 
 	// Get pipeline
 	Graphics::State state;
@@ -250,7 +252,8 @@ void Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 	utilPipelineLayout.SetRange(1, DescriptorType::SRV, 1, 0);
 	utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
 	utilPipelineLayout.SetShaderStage(1, Shader::Stage::VS);
-	m_pipelineLayouts[PASS_DRAW_AS_BOX] = utilPipelineLayout.GetPipelineLayout(m_pipelinePool, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+	m_pipelineLayouts[PASS_DRAW_AS_BOX] = utilPipelineLayout.GetPipelineLayout(
+		m_pipelineLayoutPool, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 
 	// Get pipeline
 	Graphics::State state;

@@ -60,6 +60,11 @@ namespace XUSG
 			};
 		};
 
+		namespace Pipeline
+		{
+			class Pool;
+		}
+
 		class State
 		{
 		public:
@@ -146,7 +151,6 @@ namespace XUSG
 				Device m_device;
 
 				InputLayoutPool		m_inputLayoutPool;
-				PipelineLayoutPool	m_pipelineLayoutPool;
 				
 				std::unordered_map<std::string, PipelineState> m_pipelines;
 				Blend			m_blends[BlendPreset::NUM];

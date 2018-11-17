@@ -159,7 +159,6 @@ Pool::~Pool()
 void Pool::SetDevice(const Device &device)
 {
 	m_device = device;
-	m_pipelineLayoutPool.SetDevice(device);
 }
 
 void Pool::SetInputLayout(uint32_t index, const InputElementTable &elementTable)
@@ -175,26 +174,6 @@ InputLayout Pool::GetInputLayout(uint32_t index) const
 InputLayout Pool::CreateInputLayout(const InputElementTable &elementTable)
 {
 	return m_inputLayoutPool.CreateLayout(elementTable);;
-}
-
-PipelineLayout Pool::GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags)
-{
-	return m_pipelineLayoutPool.GetPipelineLayout(util, flags);
-}
-
-DescriptorTableLayout Pool::CreateDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util)
-{
-	return m_pipelineLayoutPool.CreateDescriptorTableLayout(index, util);
-}
-
-DescriptorTableLayout Pool::GetDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util)
-{
-	return m_pipelineLayoutPool.GetDescriptorTableLayout(index, util);
-}
-
-PipelineLayoutPool &Pool::GetPipelineLayoutPool()
-{
-	return m_pipelineLayoutPool;
 }
 
 PipelineState Pool::GetPipeline(const State &state)

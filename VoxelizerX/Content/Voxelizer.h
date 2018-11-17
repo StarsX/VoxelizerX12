@@ -132,6 +132,7 @@ protected:
 
 	XUSG::Shader::Pool				m_shaderPool;
 	XUSG::Graphics::Pipeline::Pool	m_pipelinePool;
+	XUSG::PipelineLayoutPool		m_pipelineLayoutPool;
 	XUSG::DescriptorTablePool		m_descriptorTablePool;
 
 	XUSG::Device m_device;
