@@ -183,6 +183,10 @@ void VoxelizerX::LoadAssets()
 	const auto aspectRatio = m_width / static_cast<float>(m_height);
 	const auto proj = XMMatrixPerspectiveFovLH(g_FOVAngleY, aspectRatio, g_zNear, g_zFar);
 	XMStoreFloat4x4(&m_proj, proj);
+
+	// View initialization
+	m_focusPt = XMFLOAT3(0.0f, 4.0f, 0.0f);
+	m_eyePt = XMFLOAT3(-8.0f, 12.0f, 14.0f);
 }
 
 // Update frame-based values.
@@ -192,8 +196,8 @@ void VoxelizerX::OnUpdate()
 	CalculateFrameStats();
 
 	// View
-	const auto focusPt = XMVectorSet(0.0f, 4.0f, 0.0f, 1.0f);
-	const auto eyePt = XMVectorSet(-8.0f, 12.0f, 14.0f, 1.0f);
+	const auto focusPt = XMLoadFloat3(&m_focusPt);
+	const auto eyePt = XMLoadFloat3(&m_eyePt);
 	const auto view = XMMatrixLookAtLH(eyePt, focusPt, XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f));
 	const auto proj = XMLoadFloat4x4(&m_proj);
 	m_voxelizer->UpdateFrame(eyePt, view * proj);
@@ -222,6 +226,55 @@ void VoxelizerX::OnDestroy()
 	WaitForGpu();
 
 	CloseHandle(m_fenceEvent);
+}
+
+void VoxelizerX::OnLButtonDown(uint32_t posX, uint32_t posY)
+{
+	m_tracking = true;
+	m_startTrack = true;
+}
+
+void VoxelizerX::OnLButtonUp(uint32_t posX, uint32_t posY)
+{
+	m_tracking = false;
+	m_startTrack = false;
+}
+
+void VoxelizerX::OnMouseMove(float posX, float posY)
+{
+	static auto pointer = XMFLOAT2(posX, posY);
+
+	if (m_tracking)
+	{
+		const auto dPos = XMFLOAT2(pointer.x - posX, pointer.y - posY);
+		if (m_startTrack && (abs(dPos.x) > 10.0f || abs(dPos.y) > 10.0f))
+			m_startTrack = false;
+		else
+		{
+			//radians.x += XM_2PI * dPos.y / m_height;
+			//radians.y += XM_2PI * dPos.x / m_width;
+			//radians.x = max(-XM_PIDIV2, radians.x);
+			//radians.x = min(+XM_PIDIV2, radians.x);
+			//radians.y = radians.y < -XM_PI ? radians.y + XM_2PI : radians.y;
+			//radians.y = radians.y > +XM_PI ? radians.y - XM_2PI : radians.y;
+			XMFLOAT2 radians;
+			radians.x = XM_2PI * dPos.y / m_height;
+			radians.y = -XM_2PI * dPos.x / m_width;
+
+			const auto rot = XMMatrixRotationRollPitchYaw(radians.x, radians.y, 0.0f);
+			const auto focusPt = XMLoadFloat3(&m_focusPt);
+			auto eyePt = XMLoadFloat3(&m_eyePt);
+			eyePt = XMVector3TransformCoord(eyePt - focusPt, rot) + focusPt;
+			XMStoreFloat3(&m_eyePt, eyePt);
+		}
+		pointer = XMFLOAT2(posX, posY);
+	}
+}
+
+void VoxelizerX::OnMouseLeave()
+{
+	m_tracking = false;
+	m_startTrack = false;
 }
 
 void VoxelizerX::PopulateCommandList()

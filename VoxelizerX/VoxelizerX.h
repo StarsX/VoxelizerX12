@@ -33,6 +33,11 @@ public:
 	virtual void OnRender();
 	virtual void OnDestroy();
 
+	virtual void OnLButtonDown(uint32_t posX, uint32_t posY);
+	virtual void OnLButtonUp(uint32_t posX, uint32_t posY);
+	virtual void OnMouseMove(float posX, float posY);
+	virtual void OnMouseLeave();
+
 private:
 	XUSG::DescriptorTablePool		m_descriptorTablePool;
 
@@ -50,6 +55,8 @@ private:
 	XUSG::RenderTargetTable	m_rtvTables[Voxelizer::FrameCount];
 	XUSG::DepthStencil		m_depth;
 	DirectX::XMFLOAT4X4		m_proj;
+	DirectX::XMFLOAT3		m_focusPt;
+	DirectX::XMFLOAT3		m_eyePt;
 
 	// Synchronization objects.
 	uint32_t m_frameIndex;
@@ -59,6 +66,10 @@ private:
 
 	// Application state
 	StepTimer m_timer;
+
+	// User interactions
+	bool m_tracking = false;
+	bool m_startTrack = false;
 
 	void LoadPipeline();
 	void LoadAssets();

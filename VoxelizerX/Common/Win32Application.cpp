@@ -9,6 +9,7 @@
 //
 //*********************************************************
 
+#include <windowsx.h>
 #include "Win32Application.h"
 
 HWND Win32Application::m_hwnd = nullptr;
@@ -98,6 +99,23 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
 		{
 			pSample->OnKeyUp(static_cast<UINT8>(wParam));
 		}
+		return 0;
+
+	case WM_LBUTTONDOWN:
+		if (pSample) pSample->OnLButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		return 0;
+
+	case WM_LBUTTONUP:
+		if (pSample) pSample->OnLButtonUp(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		return 0;
+
+	case WM_MOUSEMOVE:
+		if (pSample)
+			pSample->OnMouseMove(static_cast<float>(GET_X_LPARAM(lParam)), static_cast<float>(GET_Y_LPARAM(lParam)));
+		return 0;
+
+	case WM_MOUSELEAVE:
+		if (pSample) pSample->OnMouseLeave();
 		return 0;
 
 	case WM_PAINT:
