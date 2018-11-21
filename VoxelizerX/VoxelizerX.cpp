@@ -17,7 +17,8 @@ using namespace XUSG;
 
 VoxelizerX::VoxelizerX(uint32_t width, uint32_t height, std::wstring name) :
 	DXFramework(width, height, name),
-	m_frameIndex(0)
+	m_frameIndex(0),
+	m_tracking(false)
 {
 }
 
@@ -187,6 +188,10 @@ void VoxelizerX::LoadAssets()
 	// View initialization
 	m_focusPt = XMFLOAT3(0.0f, 4.0f, 0.0f);
 	m_eyePt = XMFLOAT3(-8.0f, 12.0f, 14.0f);
+	const auto focusPt = XMLoadFloat3(&m_focusPt);
+	const auto eyePt = XMLoadFloat3(&m_eyePt);
+	const auto view = XMMatrixLookAtLH(eyePt, focusPt, XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f));
+	XMStoreFloat4x4(&m_view, view);
 }
 
 // Update frame-based values.
@@ -196,9 +201,8 @@ void VoxelizerX::OnUpdate()
 	CalculateFrameStats();
 
 	// View
-	const auto focusPt = XMLoadFloat3(&m_focusPt);
 	const auto eyePt = XMLoadFloat3(&m_eyePt);
-	const auto view = XMMatrixLookAtLH(eyePt, focusPt, XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f));
+	const auto view = XMLoadFloat4x4(&m_view); 
 	const auto proj = XMLoadFloat4x4(&m_proj);
 	m_voxelizer->UpdateFrame(eyePt, view * proj);
 }
@@ -228,53 +232,65 @@ void VoxelizerX::OnDestroy()
 	CloseHandle(m_fenceEvent);
 }
 
-void VoxelizerX::OnLButtonDown(uint32_t posX, uint32_t posY)
+void VoxelizerX::OnLButtonDown(float posX, float posY)
 {
 	m_tracking = true;
-	m_startTrack = true;
+	m_mousePt = XMFLOAT2(posX, posY);
 }
 
-void VoxelizerX::OnLButtonUp(uint32_t posX, uint32_t posY)
+void VoxelizerX::OnLButtonUp(float posX, float posY)
 {
 	m_tracking = false;
-	m_startTrack = false;
 }
 
 void VoxelizerX::OnMouseMove(float posX, float posY)
 {
-	static auto pointer = XMFLOAT2(posX, posY);
-
 	if (m_tracking)
 	{
-		const auto dPos = XMFLOAT2(pointer.x - posX, pointer.y - posY);
-		if (m_startTrack && (abs(dPos.x) > 10.0f || abs(dPos.y) > 10.0f))
-			m_startTrack = false;
-		else
-		{
-			//radians.x += XM_2PI * dPos.y / m_height;
-			//radians.y += XM_2PI * dPos.x / m_width;
-			//radians.x = max(-XM_PIDIV2, radians.x);
-			//radians.x = min(+XM_PIDIV2, radians.x);
-			//radians.y = radians.y < -XM_PI ? radians.y + XM_2PI : radians.y;
-			//radians.y = radians.y > +XM_PI ? radians.y - XM_2PI : radians.y;
-			XMFLOAT2 radians;
-			radians.x = XM_2PI * dPos.y / m_height;
-			radians.y = -XM_2PI * dPos.x / m_width;
+		const auto dPos = XMFLOAT2(m_mousePt.x - posX, m_mousePt.y - posY);
+		
+		XMFLOAT2 radians;
+		radians.x = XM_2PI * dPos.y / m_height;
+		radians.y = XM_2PI * dPos.x / m_width;
 
-			const auto rot = XMMatrixRotationRollPitchYaw(radians.x, radians.y, 0.0f);
-			const auto focusPt = XMLoadFloat3(&m_focusPt);
-			auto eyePt = XMLoadFloat3(&m_eyePt);
-			eyePt = XMVector3TransformCoord(eyePt - focusPt, rot) + focusPt;
-			XMStoreFloat3(&m_eyePt, eyePt);
-		}
-		pointer = XMFLOAT2(posX, posY);
+		const auto focusPt = XMLoadFloat3(&m_focusPt);
+		auto eyePt = XMLoadFloat3(&m_eyePt);
+
+		const auto len = XMVectorGetX(XMVector3Length(focusPt - eyePt));
+		auto transform = XMMatrixTranslation(0.0f, 0.0f, -len);
+		transform *= XMMatrixRotationRollPitchYaw(radians.x, radians.y, 0.0f);
+		transform *= XMMatrixTranslation(0.0f, 0.0f, len);
+
+		const auto view = XMLoadFloat4x4(&m_view) * transform;
+		const auto viewInv = XMMatrixInverse(nullptr, view);
+		eyePt = viewInv.r[3];
+
+		XMStoreFloat3(&m_eyePt, eyePt);
+		XMStoreFloat4x4(&m_view, view);
+
+		m_mousePt = XMFLOAT2(posX, posY);
 	}
+}
+
+void VoxelizerX::OnMouseWheel(float deltaZ, float posX, float posY)
+{
+	const auto focusPt = XMLoadFloat3(&m_focusPt);
+	auto eyePt = XMLoadFloat3(&m_eyePt);
+
+	const auto len = XMVectorGetX(XMVector3Length(focusPt - eyePt));
+	const auto transform = XMMatrixTranslation(0.0f, 0.0f, -len * deltaZ / 16.0f);
+	
+	const auto view = XMLoadFloat4x4(&m_view) * transform;
+	const auto viewInv = XMMatrixInverse(nullptr, view);
+	eyePt = viewInv.r[3];
+
+	XMStoreFloat3(&m_eyePt, eyePt);
+	XMStoreFloat4x4(&m_view, view);
 }
 
 void VoxelizerX::OnMouseLeave()
 {
 	m_tracking = false;
-	m_startTrack = false;
 }
 
 void VoxelizerX::PopulateCommandList()

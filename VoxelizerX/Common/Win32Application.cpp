@@ -14,12 +14,12 @@
 
 HWND Win32Application::m_hwnd = nullptr;
 
-int Win32Application::Run(DXFramework* pSample, HINSTANCE hInstance, int nCmdShow)
+int Win32Application::Run(DXFramework *pFramework, HINSTANCE hInstance, int nCmdShow)
 {
 	// Parse the command line parameters
 	int argc;
-	LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-	pSample->ParseCommandLineArgs(argv, argc);
+	const auto argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+	pFramework->ParseCommandLineArgs(argv, argc);
 	LocalFree(argv);
 
 	// Initialize the window class.
@@ -32,13 +32,13 @@ int Win32Application::Run(DXFramework* pSample, HINSTANCE hInstance, int nCmdSho
 	windowClass.lpszClassName = L"DXSampleClass";
 	RegisterClassEx(&windowClass);
 
-	RECT windowRect = { 0, 0, static_cast<LONG>(pSample->GetWidth()), static_cast<LONG>(pSample->GetHeight()) };
+	RECT windowRect = { 0, 0, static_cast<long>(pFramework->GetWidth()), static_cast<long>(pFramework->GetHeight()) };
 	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
 	// Create the window and store a handle to it.
 	m_hwnd = CreateWindow(
 		windowClass.lpszClassName,
-		pSample->GetTitle(),
+		pFramework->GetTitle(),
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
@@ -47,10 +47,10 @@ int Win32Application::Run(DXFramework* pSample, HINSTANCE hInstance, int nCmdSho
 		nullptr,		// We have no parent window.
 		nullptr,		// We aren't using menus.
 		hInstance,
-		pSample);
+		pFramework);
 
 	// Initialize the sample. OnInit is defined in each child-implementation of DXSample.
-	pSample->OnInit();
+	pFramework->OnInit();
 
 	ShowWindow(m_hwnd, nCmdShow);
 
@@ -59,14 +59,14 @@ int Win32Application::Run(DXFramework* pSample, HINSTANCE hInstance, int nCmdSho
 	while (msg.message != WM_QUIT)
 	{
 		// Process any messages in the queue.
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
 	}
 
-	pSample->OnDestroy();
+	pFramework->OnDestroy();
 
 	// Return this part of the WM_QUIT message to Windows.
 	return static_cast<char>(msg.wParam);
@@ -75,7 +75,7 @@ int Win32Application::Run(DXFramework* pSample, HINSTANCE hInstance, int nCmdSho
 // Main message handler for the sample.
 LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	DXFramework* pSample = reinterpret_cast<DXFramework*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+	const auto pFramework = reinterpret_cast<DXFramework*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
 	switch (message)
 	{
@@ -88,41 +88,56 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
 		return 0;
 
 	case WM_KEYDOWN:
-		if (pSample)
-		{
-			pSample->OnKeyDown(static_cast<UINT8>(wParam));
-		}
+		if (pFramework) pFramework->OnKeyDown(static_cast<uint8_t>(wParam));
 		return 0;
 
 	case WM_KEYUP:
-		if (pSample)
-		{
-			pSample->OnKeyUp(static_cast<UINT8>(wParam));
-		}
+		if (pFramework) pFramework->OnKeyUp(static_cast<uint8_t>(wParam));
 		return 0;
 
 	case WM_LBUTTONDOWN:
-		if (pSample) pSample->OnLButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		if (pFramework)
+			pFramework->OnLButtonDown(static_cast<float>(GET_X_LPARAM(lParam)), static_cast<float>(GET_Y_LPARAM(lParam)));
 		return 0;
 
 	case WM_LBUTTONUP:
-		if (pSample) pSample->OnLButtonUp(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		if (pFramework)
+			pFramework->OnLButtonUp(static_cast<float>(GET_X_LPARAM(lParam)), static_cast<float>(GET_Y_LPARAM(lParam)));
+		return 0;
+
+	case WM_RBUTTONDOWN:
+		if (pFramework)
+			pFramework->OnRButtonDown(static_cast<float>(GET_X_LPARAM(lParam)), static_cast<float>(GET_Y_LPARAM(lParam)));
+		return 0;
+
+	case WM_RBUTTONUP:
+		if (pFramework)
+			pFramework->OnRButtonUp(static_cast<float>(GET_X_LPARAM(lParam)), static_cast<float>(GET_Y_LPARAM(lParam)));
 		return 0;
 
 	case WM_MOUSEMOVE:
-		if (pSample)
-			pSample->OnMouseMove(static_cast<float>(GET_X_LPARAM(lParam)), static_cast<float>(GET_Y_LPARAM(lParam)));
+		if (pFramework)
+			pFramework->OnMouseMove(static_cast<float>(GET_X_LPARAM(lParam)), static_cast<float>(GET_Y_LPARAM(lParam)));
+		{
+			TRACKMOUSEEVENT csTME = { sizeof(TRACKMOUSEEVENT), TME_LEAVE, hWnd };
+			TrackMouseEvent(&csTME);
+		}
 		return 0;
 
 	case WM_MOUSELEAVE:
-		if (pSample) pSample->OnMouseLeave();
+		if (pFramework) pFramework->OnMouseLeave();
+		return 0;
+
+	case WM_MOUSEWHEEL:
+		if (pFramework) pFramework->OnMouseWheel(static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam)) / WHEEL_DELTA,
+			static_cast<float>(GET_X_LPARAM(lParam)), static_cast<float>(GET_Y_LPARAM(lParam)));
 		return 0;
 
 	case WM_PAINT:
-		if (pSample)
+		if (pFramework)
 		{
-			pSample->OnUpdate();
-			pSample->OnRender();
+			pFramework->OnUpdate();
+			pFramework->OnRender();
 		}
 		return 0;
 

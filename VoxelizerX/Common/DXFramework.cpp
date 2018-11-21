@@ -13,7 +13,7 @@
 
 using namespace Microsoft::WRL;
 
-DXFramework::DXFramework(UINT width, UINT height, std::wstring name) :
+DXFramework::DXFramework(uint32_t width, uint32_t height, std::wstring name) :
 	m_width(width),
 	m_height(height),
 	m_title(name),
