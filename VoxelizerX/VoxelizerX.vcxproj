@@ -22,7 +22,7 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{99BC179A-8DDD-404A-9051-221693BF72B3}</ProjectGuid>
     <RootNamespace>VoxelizerX</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
