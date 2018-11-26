@@ -71,7 +71,7 @@ namespace XUSG
 	};
 	using DescriptorTableLayout = std::shared_ptr<RootParameter>;
 
-	using PipelineState = ComPtr<ID3D12PipelineState>;
+	using Pipeline = ComPtr<ID3D12PipelineState>;
 
 	// Shaders related
 	namespace Shader

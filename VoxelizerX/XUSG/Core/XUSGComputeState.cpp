@@ -8,7 +8,6 @@
 using namespace std;
 using namespace XUSG;
 using namespace Compute;
-using namespace Pipeline;
 
 State::State()
 {
@@ -32,66 +31,60 @@ void State::SetShader(Blob shader)
 	m_pKey->Shader = shader.Get();
 }
 
-PipelineState State::CreatePipeline(Pipeline::Pool &pipelinePool) const
+Pipeline State::CreatePipeline(PipelineCache &pipelineCache) const
 {
-	return pipelinePool.createPipeline(m_pKey);
+	return pipelineCache.CreatePipeline(*this);
 }
 
-PipelineState State::GetPipeline(Pipeline::Pool &pipelinePool) const
+Pipeline State::GetPipeline(PipelineCache &pipelineCache) const
 {
-	return pipelinePool.getPipeline(m_key);
+	return pipelineCache.GetPipeline(*this);
+}
+
+const string &State::GetKey() const
+{
+	return m_key;
 }
 
 //--------------------------------------------------------------------------------------
 
-Pool::Pool() :
+PipelineCache::PipelineCache() :
 	m_device(nullptr),
 	m_pipelines()
 {
 }
 
-Pool::Pool(const Device &device) :
-	Pool()
+PipelineCache::PipelineCache(const Device &device) :
+	PipelineCache()
 {
 	SetDevice(device);
 }
 
-Pool::~Pool()
+PipelineCache::~PipelineCache()
 {
 }
 
-void Pool::SetDevice(const Device &device)
+void PipelineCache::SetDevice(const Device &device)
 {
 	m_device = device;
-	m_pipelineLayoutPool.SetDevice(device);
 }
 
-PipelineLayout Pool::GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags)
+void PipelineCache::SetPipeline(const string &key, const Pipeline &pipeline)
 {
-	return m_pipelineLayoutPool.GetPipelineLayout(util, flags);
+	m_pipelines[key] = pipeline;
 }
 
-DescriptorTableLayout Pool::CreateDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util)
+Pipeline PipelineCache::CreatePipeline(const State &state)
 {
-	return m_pipelineLayoutPool.CreateDescriptorTableLayout(index, util);
+	return createPipeline(reinterpret_cast<const State::Key*>(state.GetKey().data()));
 }
 
-DescriptorTableLayout Pool::GetDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util)
+Pipeline PipelineCache::GetPipeline(const State &state)
 {
-	return m_pipelineLayoutPool.GetDescriptorTableLayout(index, util);
+	return getPipeline(state.GetKey());
 }
 
-PipelineLayoutPool &Pool::GetPipelineLayoutPool()
-{
-	return m_pipelineLayoutPool;
-}
-
-PipelineState Pool::GetPipeline(const State &state)
-{
-	return getPipeline(state.m_key);
-}
-
-PipelineState Pool::createPipeline(const State::Key *pKey)
+Pipeline PipelineCache::createPipeline(const State::Key *pKey)
 {
 	// Fill desc
 	PipelineDesc desc = {};
@@ -102,13 +95,13 @@ PipelineState Pool::createPipeline(const State::Key *pKey)
 		desc.CS = Shader::ByteCode(static_cast<BlobType*>(pKey->Shader));
 
 	// Create pipeline
-	PipelineState pipeline;
+	Pipeline pipeline;
 	V_RETURN(m_device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&pipeline)), cerr, nullptr);
 
 	return pipeline;
 }
 
-PipelineState Pool::getPipeline(const string &key)
+Pipeline PipelineCache::getPipeline(const string &key)
 {
 	const auto pPipeline = m_pipelines.find(key);
 

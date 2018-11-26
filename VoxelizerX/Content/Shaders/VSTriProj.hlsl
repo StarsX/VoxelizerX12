@@ -2,8 +2,6 @@
 // By XU, Tianchen
 //--------------------------------------------------------------------------------------
 
-#include "CHDataSize.hlsli"
-
 #define	main	VertShader
 #include "VSTriProjTess.hlsl"
 #undef main
@@ -13,7 +11,7 @@
 #include "HSTriProj.hlsli"
 #include "DSTriProj.hlsli"
 
-static const uint g_uStrideVB = SIZE_OF_FLOAT3 * 2;
+#define	SIZE_OF_UINT		4
 
 //--------------------------------------------------------------------------------------
 // Buffers

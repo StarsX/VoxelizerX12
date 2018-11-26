@@ -8,30 +8,27 @@
 
 namespace XUSG
 {
-	struct SamplerPreset
+	enum SamplerPreset : uint8_t
 	{
-		enum Type : uint8_t
-		{
-			POINT_WRAP,
-			POINT_CLAMP,
-			POINT_BORDER,
-			POINT_LESS_EQUAL,
+		POINT_WRAP,
+		POINT_CLAMP,
+		POINT_BORDER,
+		POINT_LESS_EQUAL,
 
-			LINEAR_WRAP,
-			LINEAR_CLAMP,
-			LINEAR_BORDER,
-			LINEAR_LESS_EQUAL,
+		LINEAR_WRAP,
+		LINEAR_CLAMP,
+		LINEAR_BORDER,
+		LINEAR_LESS_EQUAL,
 
-			ANISOTROPIC_WRAP,
-			ANISOTROPIC_CLAMP,
-			ANISOTROPIC_BORDER,
-			ANISOTROPIC_LESS_EQUAL,
+		ANISOTROPIC_WRAP,
+		ANISOTROPIC_CLAMP,
+		ANISOTROPIC_BORDER,
+		ANISOTROPIC_LESS_EQUAL,
 
-			NUM
-		};
+		NUM_SAMPLER_PRESET
 	};
 	
-	class DescriptorTablePool;
+	class DescriptorTableCache;
 
 	namespace Util
 	{
@@ -42,31 +39,31 @@ namespace XUSG
 			virtual ~DescriptorTable();
 
 			void SetDescriptors(uint32_t start, uint32_t num, const Descriptor *srcDescriptors);
-			void SetSamplers(uint32_t start, uint32_t num, const SamplerPreset::Type *presets,
-				DescriptorTablePool &descriptorTablePool);
+			void SetSamplers(uint32_t start, uint32_t num, const SamplerPreset *presets,
+				DescriptorTableCache &descriptorTableCache);
 
-			XUSG::DescriptorTable CreateCbvSrvUavTable(DescriptorTablePool &descriptorTablePool);
-			XUSG::DescriptorTable GetCbvSrvUavTable(DescriptorTablePool &descriptorTablePool);
+			XUSG::DescriptorTable CreateCbvSrvUavTable(DescriptorTableCache &descriptorTableCache);
+			XUSG::DescriptorTable GetCbvSrvUavTable(DescriptorTableCache &descriptorTableCache);
 
-			XUSG::DescriptorTable CreateSamplerTable(DescriptorTablePool &descriptorTablePool);
-			XUSG::DescriptorTable GetSamplerTable(DescriptorTablePool &descriptorTablePool);
+			XUSG::DescriptorTable CreateSamplerTable(DescriptorTableCache &descriptorTableCache);
+			XUSG::DescriptorTable GetSamplerTable(DescriptorTableCache &descriptorTableCache);
 
-			XUSG::RenderTargetTable CreateRtvTable(DescriptorTablePool &descriptorTablePool);
-			XUSG::RenderTargetTable GetRtvTable(DescriptorTablePool &descriptorTablePool);
+			RenderTargetTable CreateRtvTable(DescriptorTableCache &descriptorTableCache);
+			RenderTargetTable GetRtvTable(DescriptorTableCache &descriptorTableCache);
+
+			const std::string &GetKey() const;
 
 		protected:
-			friend class DescriptorTablePool;
-
 			std::string m_key;
 		};
 	}
 
-	class DescriptorTablePool
+	class DescriptorTableCache
 	{
 	public:
-		DescriptorTablePool();
-		DescriptorTablePool(const Device &device);
-		virtual ~DescriptorTablePool();
+		DescriptorTableCache();
+		DescriptorTableCache(const Device &device);
+		virtual ~DescriptorTableCache();
 
 		void SetDevice(const Device &device);
 
@@ -86,7 +83,7 @@ namespace XUSG
 		const DescriptorPool &GetCbvSrvUavPool() const;
 		const DescriptorPool &GetSamplerPool() const;
 
-		const std::shared_ptr<Sampler> &GetSampler(SamplerPreset::Type preset);
+		const std::shared_ptr<Sampler> &GetSampler(SamplerPreset preset);
 
 	protected:
 		friend class Util::DescriptorTable;
@@ -127,7 +124,7 @@ namespace XUSG
 		uint32_t		m_strideRtv;
 		uint32_t		m_numRtvs;
 
-		std::shared_ptr<Sampler> m_samplerPresets[SamplerPreset::NUM];
-		std::function<Sampler()> m_pfnSamplers[SamplerPreset::NUM];
+		std::shared_ptr<Sampler> m_samplerPresets[NUM_SAMPLER_PRESET];
+		std::function<Sampler()> m_pfnSamplers[NUM_SAMPLER_PRESET];
 	};
 }

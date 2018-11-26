@@ -108,7 +108,7 @@ void VoxelizerX::LoadPipeline()
 	ThrowIfFailed(swapChain.As(&m_swapChain));
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-	m_descriptorTablePool.SetDevice(m_device);
+	m_descriptorTableCache.SetDevice(m_device);
 
 	// Create descriptor heaps.
 	{
@@ -133,7 +133,7 @@ void VoxelizerX::LoadPipeline()
 
 			Util::DescriptorTable rtvTable;
 			rtvTable.SetDescriptors(0, 1, &rtv);
-			m_rtvTables[n] = rtvTable.GetRtvTable(m_descriptorTablePool);
+			m_rtvTables[n] = rtvTable.GetRtvTable(m_descriptorTableCache);
 
 			rtv.Offset(strideRtv);
 

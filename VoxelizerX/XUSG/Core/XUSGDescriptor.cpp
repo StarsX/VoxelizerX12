@@ -29,7 +29,7 @@ void Util::DescriptorTable::SetDescriptors(uint32_t start, uint32_t num, const D
 }
 
 void Util::DescriptorTable::SetSamplers(uint32_t start, uint32_t num,
-	const SamplerPreset::Type *presets, DescriptorTablePool &descriptorTablePool)
+	const SamplerPreset *presets, DescriptorTableCache &descriptorTableCache)
 {
 	const auto size = sizeof(void*) * (start + num);
 	if (size > m_key.size())
@@ -38,42 +38,47 @@ void Util::DescriptorTable::SetSamplers(uint32_t start, uint32_t num,
 	const auto descriptors = reinterpret_cast<const Sampler**>(&m_key[0]);
 
 	for (auto i = 0u; i < num; ++i)
-		descriptors[start + i] = descriptorTablePool.GetSampler(presets[i]).get();
+		descriptors[start + i] = descriptorTableCache.GetSampler(presets[i]).get();
 }
 
-DescriptorTable Util::DescriptorTable::CreateCbvSrvUavTable(DescriptorTablePool &descriptorTablePool)
+DescriptorTable Util::DescriptorTable::CreateCbvSrvUavTable(DescriptorTableCache &descriptorTableCache)
 {
-	return descriptorTablePool.createCbvSrvUavTable(m_key);
+	return descriptorTableCache.createCbvSrvUavTable(m_key);
 }
 
-DescriptorTable Util::DescriptorTable::GetCbvSrvUavTable(DescriptorTablePool &descriptorTablePool)
+DescriptorTable Util::DescriptorTable::GetCbvSrvUavTable(DescriptorTableCache &descriptorTableCache)
 {
-	return descriptorTablePool.getCbvSrvUavTable(m_key);
+	return descriptorTableCache.getCbvSrvUavTable(m_key);
 }
 
-DescriptorTable Util::DescriptorTable::CreateSamplerTable(DescriptorTablePool &descriptorTablePool)
+DescriptorTable Util::DescriptorTable::CreateSamplerTable(DescriptorTableCache &descriptorTableCache)
 {
-	return descriptorTablePool.createSamplerTable(m_key);
+	return descriptorTableCache.createSamplerTable(m_key);
 }
 
-DescriptorTable Util::DescriptorTable::GetSamplerTable(DescriptorTablePool &descriptorTablePool)
+DescriptorTable Util::DescriptorTable::GetSamplerTable(DescriptorTableCache &descriptorTableCache)
 {
-	return descriptorTablePool.getSamplerTable(m_key);
+	return descriptorTableCache.getSamplerTable(m_key);
 }
 
-RenderTargetTable Util::DescriptorTable::CreateRtvTable(DescriptorTablePool &descriptorTablePool)
+RenderTargetTable Util::DescriptorTable::CreateRtvTable(DescriptorTableCache &descriptorTableCache)
 {
-	return descriptorTablePool.createRtvTable(m_key);
+	return descriptorTableCache.createRtvTable(m_key);
 }
 
-RenderTargetTable Util::DescriptorTable::GetRtvTable(DescriptorTablePool &descriptorTablePool)
+RenderTargetTable Util::DescriptorTable::GetRtvTable(DescriptorTableCache &descriptorTableCache)
 {
-	return descriptorTablePool.getRtvTable(m_key);
+	return descriptorTableCache.getRtvTable(m_key);
+}
+
+const string &Util::DescriptorTable::GetKey() const
+{
+	return m_key;
 }
 
 //--------------------------------------------------------------------------------------
 
-DescriptorTablePool::DescriptorTablePool() :
+DescriptorTableCache::DescriptorTableCache() :
 	m_device(nullptr),
 	m_cbvSrvUavTables(0),
 	m_samplerTables(0),
@@ -103,17 +108,17 @@ DescriptorTablePool::DescriptorTablePool() :
 	m_pfnSamplers[SamplerPreset::ANISOTROPIC_LESS_EQUAL] = SamplerAnisotropicLessEqual;
 }
 
-DescriptorTablePool::DescriptorTablePool(const Device &device) :
-	DescriptorTablePool()
+DescriptorTableCache::DescriptorTableCache(const Device &device) :
+	DescriptorTableCache()
 {
 	SetDevice(device);
 }
 
-DescriptorTablePool::~DescriptorTablePool()
+DescriptorTableCache::~DescriptorTableCache()
 {
 }
 
-void DescriptorTablePool::SetDevice(const Device &device)
+void DescriptorTableCache::SetDevice(const Device &device)
 {
 	m_device = device;
 
@@ -122,62 +127,62 @@ void DescriptorTablePool::SetDevice(const Device &device)
 	m_strideRtv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
 
-void DescriptorTablePool::AllocateCbvSrvUavPool(uint32_t numDescriptors)
+void DescriptorTableCache::AllocateCbvSrvUavPool(uint32_t numDescriptors)
 {
 	allocateCbvSrvUavPool(numDescriptors);
 }
 
-void DescriptorTablePool::AllocateSamplerPool(uint32_t numDescriptors)
+void DescriptorTableCache::AllocateSamplerPool(uint32_t numDescriptors)
 {
 	allocateSamplerPool(numDescriptors);
 }
 
-void DescriptorTablePool::AllocateRtvPool(uint32_t numDescriptors)
+void DescriptorTableCache::AllocateRtvPool(uint32_t numDescriptors)
 {
 	allocateRtvPool(numDescriptors);
 }
 
-DescriptorTable DescriptorTablePool::CreateCbvSrvUavTable(const Util::DescriptorTable &util)
+DescriptorTable DescriptorTableCache::CreateCbvSrvUavTable(const Util::DescriptorTable &util)
 {
-	return createCbvSrvUavTable(util.m_key);
+	return createCbvSrvUavTable(util.GetKey());
 }
 
-DescriptorTable DescriptorTablePool::GetCbvSrvUavTable(const Util::DescriptorTable &util)
+DescriptorTable DescriptorTableCache::GetCbvSrvUavTable(const Util::DescriptorTable &util)
 {
-	return getCbvSrvUavTable(util.m_key);
+	return getCbvSrvUavTable(util.GetKey());
 }
 
-DescriptorTable DescriptorTablePool::CreateSamplerTable(const Util::DescriptorTable &util)
+DescriptorTable DescriptorTableCache::CreateSamplerTable(const Util::DescriptorTable &util)
 {
-	return createSamplerTable(util.m_key);
+	return createSamplerTable(util.GetKey());
 }
 
-DescriptorTable DescriptorTablePool::GetSamplerTable(const Util::DescriptorTable &util)
+DescriptorTable DescriptorTableCache::GetSamplerTable(const Util::DescriptorTable &util)
 {
-	return getSamplerTable(util.m_key);
+	return getSamplerTable(util.GetKey());
 }
 
-RenderTargetTable DescriptorTablePool::CreateRtvTable(const Util::DescriptorTable &util)
+RenderTargetTable DescriptorTableCache::CreateRtvTable(const Util::DescriptorTable &util)
 {
-	return createRtvTable(util.m_key);
+	return createRtvTable(util.GetKey());
 }
 
-RenderTargetTable DescriptorTablePool::GetRtvTable(const Util::DescriptorTable &util)
+RenderTargetTable DescriptorTableCache::GetRtvTable(const Util::DescriptorTable &util)
 {
-	return getRtvTable(util.m_key);
+	return getRtvTable(util.GetKey());
 }
 
-const DescriptorPool &DescriptorTablePool::GetCbvSrvUavPool() const
+const DescriptorPool &DescriptorTableCache::GetCbvSrvUavPool() const
 {
 	return m_cbvSrvUavPool;
 }
 
-const DescriptorPool &DescriptorTablePool::GetSamplerPool() const
+const DescriptorPool &DescriptorTableCache::GetSamplerPool() const
 {
 	return m_samplerPool;
 }
 
-const shared_ptr<Sampler> &DescriptorTablePool::GetSampler(SamplerPreset::Type preset)
+const shared_ptr<Sampler> &DescriptorTableCache::GetSampler(SamplerPreset preset)
 {
 	if (m_samplerPresets[preset] == nullptr)
 		m_samplerPresets[preset] = make_shared<Sampler>(m_pfnSamplers[preset]());
@@ -185,7 +190,7 @@ const shared_ptr<Sampler> &DescriptorTablePool::GetSampler(SamplerPreset::Type p
 	return m_samplerPresets[preset];
 }
 
-bool DescriptorTablePool::allocateCbvSrvUavPool(uint32_t numDescriptors)
+bool DescriptorTableCache::allocateCbvSrvUavPool(uint32_t numDescriptors)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 	desc.NumDescriptors = numDescriptors;
@@ -198,7 +203,7 @@ bool DescriptorTablePool::allocateCbvSrvUavPool(uint32_t numDescriptors)
 	return true;
 }
 
-bool DescriptorTablePool::allocateSamplerPool(uint32_t numDescriptors)
+bool DescriptorTableCache::allocateSamplerPool(uint32_t numDescriptors)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 	desc.NumDescriptors = numDescriptors;
@@ -211,7 +216,7 @@ bool DescriptorTablePool::allocateSamplerPool(uint32_t numDescriptors)
 	return true;
 }
 
-bool DescriptorTablePool::allocateRtvPool(uint32_t numDescriptors)
+bool DescriptorTableCache::allocateRtvPool(uint32_t numDescriptors)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 	desc.NumDescriptors = numDescriptors;
@@ -223,7 +228,7 @@ bool DescriptorTablePool::allocateRtvPool(uint32_t numDescriptors)
 	return true;
 }
 
-bool DescriptorTablePool::reallocateCbvSrvUavPool(const string &key)
+bool DescriptorTableCache::reallocateCbvSrvUavPool(const string &key)
 {
 	assert(key.size() > 0);
 	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(size_t));
@@ -257,7 +262,7 @@ bool DescriptorTablePool::reallocateCbvSrvUavPool(const string &key)
 	return true;
 }
 
-bool DescriptorTablePool::reallocateSamplerPool(const string &key)
+bool DescriptorTableCache::reallocateSamplerPool(const string &key)
 {
 	assert(key.size() > 0);
 	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(size_t));
@@ -276,7 +281,7 @@ bool DescriptorTablePool::reallocateSamplerPool(const string &key)
 	return true;
 }
 
-bool DescriptorTablePool::reallocateRtvPool(const string &key)
+bool DescriptorTableCache::reallocateRtvPool(const string &key)
 {
 	assert(key.size() > 0);
 	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(size_t));
@@ -295,7 +300,7 @@ bool DescriptorTablePool::reallocateRtvPool(const string &key)
 	return true;
 }
 
-DescriptorTable DescriptorTablePool::createCbvSrvUavTable(const string &key)
+DescriptorTable DescriptorTableCache::createCbvSrvUavTable(const string &key)
 {
 	if (key.size() > 0)
 	{
@@ -322,7 +327,7 @@ DescriptorTable DescriptorTablePool::createCbvSrvUavTable(const string &key)
 	return nullptr;
 }
 
-DescriptorTable DescriptorTablePool::getCbvSrvUavTable(const string &key)
+DescriptorTable DescriptorTableCache::getCbvSrvUavTable(const string &key)
 {
 	if (key.size() > 0)
 	{
@@ -343,7 +348,7 @@ DescriptorTable DescriptorTablePool::getCbvSrvUavTable(const string &key)
 	return nullptr;
 }
 
-DescriptorTable DescriptorTablePool::createSamplerTable(const string &key)
+DescriptorTable DescriptorTableCache::createSamplerTable(const string &key)
 {
 	if (key.size() > 0)
 	{
@@ -370,7 +375,7 @@ DescriptorTable DescriptorTablePool::createSamplerTable(const string &key)
 	return nullptr;
 }
 
-DescriptorTable DescriptorTablePool::getSamplerTable(const string &key)
+DescriptorTable DescriptorTableCache::getSamplerTable(const string &key)
 {
 	if (key.size() > 0)
 	{
@@ -391,7 +396,7 @@ DescriptorTable DescriptorTablePool::getSamplerTable(const string &key)
 	return nullptr;
 }
 
-RenderTargetTable DescriptorTablePool::createRtvTable(const string &key)
+RenderTargetTable DescriptorTableCache::createRtvTable(const string &key)
 {
 	if (key.size() > 0)
 	{
@@ -418,7 +423,7 @@ RenderTargetTable DescriptorTablePool::createRtvTable(const string &key)
 	return nullptr;
 }
 
-RenderTargetTable DescriptorTablePool::getRtvTable(const string &key)
+RenderTargetTable DescriptorTableCache::getRtvTable(const string &key)
 {
 	if (key.size() > 0)
 	{

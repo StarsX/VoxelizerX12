@@ -112,7 +112,7 @@ protected:
 
 	XUSG::InputLayout		m_inputLayout;
 	XUSG::PipelineLayout	m_pipelineLayouts[NUM_PASS];
-	XUSG::PipelineState		m_pipelines[NUM_PASS];
+	XUSG::Pipeline			m_pipelines[NUM_PASS];
 
 	XUSG::DescriptorTable	m_cbvTables[NUM_CBV_TABLE];
 	XUSG::DescriptorTable	m_srvTables[NUM_SRV_TABLE];
@@ -130,10 +130,10 @@ protected:
 	XUSG::Texture3D			m_grids[FrameCount];
 	XUSG::Texture2D			m_KBufferDepths[FrameCount];
 
-	XUSG::Shader::Pool				m_shaderPool;
-	XUSG::Graphics::Pipeline::Pool	m_pipelinePool;
-	XUSG::PipelineLayoutPool		m_pipelineLayoutPool;
-	XUSG::DescriptorTablePool		m_descriptorTablePool;
+	XUSG::ShaderPool				m_shaderPool;
+	XUSG::Graphics::PipelineCache	m_pipelineCache;
+	XUSG::PipelineLayoutCache		m_pipelineLayoutCache;
+	XUSG::DescriptorTableCache		m_descriptorTableCache;
 
 	XUSG::Device m_device;
 	XUSG::GraphicsCommandList m_commandList;

@@ -10,43 +10,40 @@ namespace XUSG
 {
 	namespace Shader
 	{
-		namespace Stage
+		enum Stage : uint8_t
 		{
-			enum Type : uint8_t
-			{
-				VS,
-				PS,
-				DS,
-				HS,
-				GS,
-				CS,
-				ALL = CS,
+			VS,
+			PS,
+			DS,
+			HS,
+			GS,
+			CS,
+			ALL = CS,
 
-				NUM_GRAPHICS = ALL,
-				NUM,
-			};
-		}
-
-		class Pool
-		{
-		public:
-			Pool();
-			virtual ~Pool();
-
-			void SetShader(Stage::Type stage, uint32_t index, const Blob &shader);
-			void SetShader(Stage::Type stage, uint32_t index, const Blob &shader, const Reflector &reflector);
-			void SetReflector(Stage::Type stage, uint32_t index, const Reflector &reflector);
-
-			Blob		CreateShader(Stage::Type stage, uint32_t index, const std::wstring &fileName);
-			Blob		GetShader(Stage::Type stage, uint32_t index) const;
-			Reflector	GetReflector(Stage::Type stage, uint32_t index) const;
-
-		protected:
-			Blob		&checkShaderStorage(Stage::Type stage, uint32_t index);
-			Reflector	&checkReflectorStorage(Stage::Type stage, uint32_t index);
-
-			std::vector<Blob>		m_shaders[Stage::NUM];
-			std::vector<Reflector>	m_reflectors[Stage::NUM];
+			NUM_GRAPHICS = ALL,
+			NUM_STAGE,
 		};
 	}
+
+	class ShaderPool
+	{
+	public:
+		ShaderPool();
+		virtual ~ShaderPool();
+
+		void SetShader(Shader::Stage stage, uint32_t index, const Blob &shader);
+		void SetShader(Shader::Stage stage, uint32_t index, const Blob &shader, const Shader::Reflector &reflector);
+		void SetReflector(Shader::Stage stage, uint32_t index, const Shader::Reflector &reflector);
+
+		Blob		CreateShader(Shader::Stage stage, uint32_t index, const std::wstring &fileName);
+		Blob		GetShader(Shader::Stage stage, uint32_t index) const;
+		Shader::Reflector GetReflector(Shader::Stage stage, uint32_t index) const;
+
+	protected:
+		Blob		&checkShaderStorage(Shader::Stage stage, uint32_t index);
+		Shader::Reflector &checkReflectorStorage(Shader::Stage stage, uint32_t index);
+
+		std::vector<Blob> m_shaders[Shader::NUM_STAGE];
+		std::vector<Shader::Reflector> m_reflectors[Shader::NUM_STAGE];
+	};
 }

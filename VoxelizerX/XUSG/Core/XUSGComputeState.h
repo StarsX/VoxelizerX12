@@ -10,67 +10,53 @@ namespace XUSG
 {
 	namespace Compute
 	{
-		namespace Pipeline
-		{
-			class Pool;
-		}
+		class PipelineCache;
 
 		class State
 		{
 		public:
+			struct Key
+			{
+				void *PipelineLayout;
+				void *Shader;
+			};
+
 			State();
 			virtual ~State();
 
 			void SetPipelineLayout(const PipelineLayout &layout);
 			void SetShader(Blob shader);
 
-			PipelineState CreatePipeline(Pipeline::Pool &pipelinePool) const;
-			PipelineState GetPipeline(Pipeline::Pool &pipelinePool) const;
+			Pipeline CreatePipeline(PipelineCache &pipelineCache) const;
+			Pipeline GetPipeline(PipelineCache &pipelineCache) const;
+
+			const std::string &GetKey() const;
 
 		protected:
-			friend class Pipeline::Pool;
-
-			struct Key
-			{
-				void	*PipelineLayout;
-				void	*Shader;
-			};
-
 			Key *m_pKey;
 			std::string m_key;
 		};
 
-		namespace Pipeline
+		class PipelineCache
 		{
-			class Pool
-			{
-			public:
-				Pool();
-				Pool(const Device &device);
-				virtual ~Pool();
+		public:
+			PipelineCache();
+			PipelineCache(const Device &device);
+			virtual ~PipelineCache();
 
-				void SetDevice(const Device &device);
+			void SetDevice(const Device &device);
+			void SetPipeline(const std::string &key, const Pipeline &pipeline);
 
-				PipelineLayout GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags);
-				DescriptorTableLayout CreateDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util);
-				DescriptorTableLayout GetDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util);
+			Pipeline CreatePipeline(const State &state);
+			Pipeline GetPipeline(const State &state);
 
-				PipelineLayoutPool &GetPipelineLayoutPool();
+		protected:
+			Pipeline createPipeline(const State::Key *pKey);
+			Pipeline getPipeline(const std::string &key);
 
-				PipelineState GetPipeline(const State &state);
+			Device m_device;
 
-			protected:
-				friend class State;
-
-				PipelineState createPipeline(const State::Key *pKey);
-				PipelineState getPipeline(const std::string &key);
-
-				Device m_device;
-
-				PipelineLayoutPool	m_pipelineLayoutPool;
-
-				std::unordered_map<std::string, PipelineState> m_pipelines;
-			};
-		}
+			std::unordered_map<std::string, Pipeline> m_pipelines;
+		};
 	}
 }

@@ -19,12 +19,12 @@ namespace XUSG
 		NUM
 	};
 
-	class PipelineLayoutPool;
+	class PipelineLayoutCache;
 
 	struct DescriptorRange
 	{
-		DescriptorType ViewType;
-		Shader::Stage::Type ShaderStage;
+		DescriptorType	ViewType;
+		Shader::Stage	ShaderStage;
 		uint32_t NumDescriptors;
 		uint32_t BaseRegister;
 		uint32_t Space;
@@ -39,20 +39,21 @@ namespace XUSG
 			PipelineLayout();
 			virtual ~PipelineLayout();
 
-			void SetShaderStage(uint32_t index, Shader::Stage::Type stage);
+			void SetShaderStage(uint32_t index, Shader::Stage stage);
 			void SetRange(uint32_t index, DescriptorType type, uint32_t num, uint32_t baseReg,
 				uint32_t space = 0, uint8_t flags = 0);
+			void SetPipelineLayoutFlags(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags);
 
-			XUSG::PipelineLayout CreatePipelineLayout(PipelineLayoutPool &pipelineLayoutPool, uint8_t flags);
-			XUSG::PipelineLayout GetPipelineLayout(PipelineLayoutPool &pipelineLayoutPool, uint8_t flags);
+			XUSG::PipelineLayout CreatePipelineLayout(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags);
+			XUSG::PipelineLayout GetPipelineLayout(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags);
 
-			DescriptorTableLayout CreateDescriptorTableLayout(uint32_t index, PipelineLayoutPool &pipelineLayoutPool) const;
-			DescriptorTableLayout GetDescriptorTableLayout(uint32_t index, PipelineLayoutPool &pipelineLayoutPool) const;
+			DescriptorTableLayout CreateDescriptorTableLayout(uint32_t index, PipelineLayoutCache &pipelineLayoutCache) const;
+			DescriptorTableLayout GetDescriptorTableLayout(uint32_t index, PipelineLayoutCache &pipelineLayoutCache) const;
+
+			const std::vector<std::string> &GetDescriptorTableLayoutKeys() const;
+			const std::string &GetPipelineLayoutKey() const;
 
 		protected:
-			friend class PipelineLayoutPool;
-
-			void setPipelineLayoutKey(PipelineLayoutPool &pipelineLayoutPool, uint8_t flags);
 			std::string &checkKeySpace(uint32_t index);
 
 			std::vector<std::string> m_descriptorTableLayoutKeys;
@@ -60,23 +61,23 @@ namespace XUSG
 		};
 	}
 
-	class PipelineLayoutPool
+	class PipelineLayoutCache
 	{
 	public:
-		PipelineLayoutPool();
-		PipelineLayoutPool(const Device &device);
-		virtual ~PipelineLayoutPool();
+		PipelineLayoutCache();
+		PipelineLayoutCache(const Device &device);
+		virtual ~PipelineLayoutCache();
 
 		void SetDevice(const Device &device);
+		void SetPipelineLayout(const std::string &key, const PipelineLayout &pipelineLayout);
 
+		PipelineLayout CreatePipelineLayout(Util::PipelineLayout &util, uint8_t flags);
 		PipelineLayout GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags);
 
 		DescriptorTableLayout CreateDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util);
 		DescriptorTableLayout GetDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util);
 
 	protected:
-		friend class Util::PipelineLayout;
-
 		PipelineLayout createPipelineLayout(const std::string &key) const;
 		PipelineLayout getPipelineLayout(const std::string &key);
 

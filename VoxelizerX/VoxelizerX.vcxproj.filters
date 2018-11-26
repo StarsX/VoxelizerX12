@@ -40,9 +40,6 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{b260c74f-31ac-461c-aa6e-80f763f7e27d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="XUSG\Shaders">
-      <UniqueIdentifier>{58365fd1-dd2c-4665-af7f-26a2a89f171f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="XUSG\Advanced">
       <UniqueIdentifier>{e02eb163-b419-4362-90fe-77044bf6b63f}</UniqueIdentifier>
     </Filter>
@@ -160,11 +157,23 @@
     <None Include="XUSG\Core\XUSGSampler.inl">
       <Filter>XUSG\Core\Source Files\Inc</Filter>
     </None>
-    <None Include="XUSG\Shaders\CHDataSize.hlsli">
-      <Filter>XUSG\Shaders</Filter>
-    </None>
     <None Include="Common\d3dx_dxgiformatconvert.inl">
       <Filter>Common\Shaders</Filter>
+    </None>
+    <None Include="Content\Shaders\CSMutex.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Content\Shaders\DSTriProj.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Content\Shaders\HSTriProj.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Content\Shaders\PSDepthPeel.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Content\Shaders\PSTriProj.hlsli">
+      <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -178,6 +187,33 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Content\Shaders\VSTriProj.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\CSFillSolid.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\CSRayCast.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\DSTriProj.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\HSTriProj.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\PSTriProjSolid.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\PSTriProjUnion.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\PSTriProjUnionSolid.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\VSTriProjTess.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\VSTriProjUnion.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

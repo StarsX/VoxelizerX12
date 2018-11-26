@@ -41,7 +41,7 @@ public:
 	virtual void OnMouseLeave();
 
 private:
-	XUSG::DescriptorTablePool		m_descriptorTablePool;
+	XUSG::DescriptorTableCache		m_descriptorTableCache;
 
 	ComPtr<IDXGISwapChain3>			m_swapChain;
 	ComPtr<ID3D12CommandAllocator>	m_commandAllocators[Voxelizer::FrameCount];
