@@ -3,6 +3,7 @@
 #include "DXFramework.h"
 #include "Core/XUSGGraphicsState.h"
 #include "Core/XUSGResource.h"
+#include "Advanced/XUSGSharedConst.h"
 
 #include "SharedConst.h"
 
@@ -18,7 +19,7 @@ public:
 	void UpdateFrame(DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
 	void Render(uint32_t frameIndex, const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
 
-	static const uint32_t FrameCount = 3;
+	static const uint32_t FrameCount = FRAME_COUNT;
 
 protected:
 	enum RenderPass : uint8_t

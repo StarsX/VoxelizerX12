@@ -102,6 +102,9 @@
     <ClInclude Include="Common\StepTimer.h">
       <Filter>Common\Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="XUSG\Core\XUSGComputeState.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Common\DXFramework.cpp">
@@ -142,6 +145,9 @@
     </ClCompile>
     <ClCompile Include="Content\ObjLoader.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\Core\XUSGComputeState.cpp">
+      <Filter>XUSG\Core\Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

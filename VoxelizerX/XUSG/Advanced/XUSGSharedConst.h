@@ -2,6 +2,10 @@
 // By Stars XU Tianchen
 //--------------------------------------------------------------------------------------
 
+#ifndef FRAME_COUNT
+#define	FRAME_COUNT		3
+#endif
+
 #ifndef TAA_SHOW_DIFF
 #define TAA_CLIP_DIFF	1
 #define TAA_FRAME_DIFF	2
