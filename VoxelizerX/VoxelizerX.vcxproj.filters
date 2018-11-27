@@ -40,9 +40,6 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{b260c74f-31ac-461c-aa6e-80f763f7e27d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="XUSG\Advanced">
-      <UniqueIdentifier>{e02eb163-b419-4362-90fe-77044bf6b63f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Common\Shaders">
       <UniqueIdentifier>{6dd91738-67f0-4f61-b496-ce52037c557a}</UniqueIdentifier>
     </Filter>
@@ -92,9 +89,6 @@
     </ClInclude>
     <ClInclude Include="Content\ObjLoader.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="XUSG\Advanced\XUSGSharedConst.h">
-      <Filter>XUSG\Advanced</Filter>
     </ClInclude>
     <ClInclude Include="Content\SharedConst.h">
       <Filter>Header Files</Filter>

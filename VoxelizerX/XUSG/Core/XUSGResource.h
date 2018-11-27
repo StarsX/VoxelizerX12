@@ -264,10 +264,15 @@ namespace XUSG
 			uint32_t numSRVs = 1, const uint32_t *firstSRVElements = nullptr,
 			uint32_t numUAVs = 1, const uint32_t *firstUAVElements = nullptr);
 		
-		void CreateSRVs(uint32_t numElements, uint32_t stride,
-			const uint32_t *firstElements = nullptr, uint32_t numDescriptors = 1);
-		void CreateUAVs(uint32_t numElements, uint32_t stride,
-			const uint32_t *firstElements = nullptr, uint32_t numDescriptors = 1);
+		void CreateSRVs(const uint32_t *firstElements = nullptr, uint32_t numDescriptors = 1);
+		void CreateUAVs(const uint32_t *firstElements = nullptr, uint32_t numDescriptors = 1);
+
+		uint32_t GetElementCount() const;
+		uint32_t GetStride() const;
+
+	protected:
+		uint32_t m_numElements;
+		uint32_t m_stride;
 	};
 
 	//--------------------------------------------------------------------------------------
@@ -286,10 +291,17 @@ namespace XUSG
 			uint32_t numSRVs = 1, const uint32_t *firstSRVElements = nullptr,
 			uint32_t numUAVs = 1, const uint32_t *firstUAVElements = nullptr);
 		
-		void CreateSRVs(uint32_t numElements, Format format, uint32_t stride,
+		void CreateSRVs(Format format, uint32_t stride,
 			const uint32_t *firstElements = nullptr, uint32_t numDescriptors = 1);
-		void CreateUAVs(uint32_t numElements, Format format, uint32_t stride,
+		void CreateUAVs(Format format, uint32_t stride,
 			const uint32_t *firstElements = nullptr, uint32_t numDescriptors = 1);
+
+		uint32_t	GetElementCount() const;
+		Format		GetFormat() const;
+
+	protected:
+		uint32_t	m_numElements;
+		Format		m_format;
 	};
 
 	//--------------------------------------------------------------------------------------

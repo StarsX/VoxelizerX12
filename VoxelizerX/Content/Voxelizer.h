@@ -5,7 +5,6 @@
 #include "Core/XUSGResource.h"
 
 #include "SharedConst.h"
-#include "Advanced/XUSGSharedConst.h"
 
 class Voxelizer
 {

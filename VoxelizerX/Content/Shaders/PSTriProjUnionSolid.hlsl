@@ -2,7 +2,6 @@
 // By XU, Tianchen
 //--------------------------------------------------------------------------------------
 
-#include "SharedConst.h"
 #include "PSTriProj.hlsli"
 #include "PSDepthPeel.hlsli"
 

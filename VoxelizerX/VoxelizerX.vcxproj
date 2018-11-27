@@ -165,7 +165,6 @@ COPY /Y "$(OutDir)*.exe" "$(ProjectDir)..\Bin\"</Command>
     <ClInclude Include="Content\Voxelizer.h" />
     <ClInclude Include="VoxelizerX.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="XUSG\Advanced\XUSGSharedConst.h" />
     <ClInclude Include="XUSG\Core\XUSGComputeState.h" />
     <ClInclude Include="XUSG\Core\XUSGDescriptor.h" />
     <ClInclude Include="XUSG\Core\XUSGGraphicsState.h" />
