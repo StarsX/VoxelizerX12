@@ -3,9 +3,9 @@
 #include "DXFramework.h"
 #include "Core/XUSGGraphicsState.h"
 #include "Core/XUSGResource.h"
-#include "Advanced/XUSGSharedConst.h"
 
 #include "SharedConst.h"
+#include "Advanced/XUSGSharedConst.h"
 
 class Voxelizer
 {
