@@ -177,26 +177,25 @@ void Voxelizer::createInputLayout()
 
 void Voxelizer::prevoxelize(uint8_t mipLevel)
 {
+	// Get CBVs
+	Util::DescriptorTable utilCbvTable;
+	utilCbvTable.SetDescriptors(0, 1, &m_cbBound.GetCBV());
+	utilCbvTable.SetDescriptors(1, 1, &m_cbPerMipLevels[mipLevel].GetCBV());
+	m_cbvTables[CBV_TABLE_VOXELIZE] = utilCbvTable.GetCbvSrvUavTable(m_descriptorTableCache);
+
+	Util::DescriptorTable utilCbvPerMipLevelTable;
+	utilCbvPerMipLevelTable.SetDescriptors(0, 1, &m_cbPerMipLevels[mipLevel].GetCBV());
+	m_cbvTables[CBV_TABLE_PER_MIP] = utilCbvPerMipLevelTable.GetCbvSrvUavTable(m_descriptorTableCache);
+
 	// Get SRVs
 	const Descriptor srvs[] = { m_indexbuffer.GetSRV(), m_vertexBuffer.GetSRV() };
 	Util::DescriptorTable utilSrvTable;
 	utilSrvTable.SetDescriptors(0, _countof(srvs), srvs);
 	m_srvTables[SRV_TABLE_VB_IB] = utilSrvTable.GetCbvSrvUavTable(m_descriptorTableCache);
 
-	
+	// Get UAVs
 	for (auto i = 0ui8; i < FrameCount; ++i)
 	{
-		// Get CBVs
-		Util::DescriptorTable utilCbvTable;
-		utilCbvTable.SetDescriptors(0, 1, &m_cbBound.GetCBV());
-		utilCbvTable.SetDescriptors(1, 1, &m_cbPerMipLevels[mipLevel].GetCBV());
-		m_cbvTables[i][CBV_TABLE_VOXELIZE] = utilCbvTable.GetCbvSrvUavTable(m_descriptorTableCache);
-
-		Util::DescriptorTable utilCbvPerMipLevelTable;
-		utilCbvPerMipLevelTable.SetDescriptors(0, 1, &m_cbPerMipLevels[mipLevel].GetCBV());
-		m_cbvTables[i][CBV_TABLE_PER_MIP] = utilCbvPerMipLevelTable.GetCbvSrvUavTable(m_descriptorTableCache);
-
-		// Get UAVs
 		Util::DescriptorTable utilUavGridTable;
 		utilUavGridTable.SetDescriptors(0, 1, &m_grids[i].GetUAV());
 		m_uavTables[i][UAV_TABLE_VOXELIZE] = utilUavGridTable.GetCbvSrvUavTable(m_descriptorTableCache);
@@ -238,8 +237,8 @@ void Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 	{
 		// Get CBV
 		Util::DescriptorTable utilCbvTable;
-		utilCbvTable.SetDescriptors(0, 1, &m_cbMatrices.GetCBV());
-		m_cbvTables[i][CBV_TABLE_MATRICES] = utilCbvTable.GetCbvSrvUavTable(m_descriptorTableCache);
+		utilCbvTable.SetDescriptors(0, 1, &m_cbMatrices.GetCBV(i));
+		m_cbvTables[CBV_TABLE_MATRICES + i] = utilCbvTable.GetCbvSrvUavTable(m_descriptorTableCache);
 
 		// Get SRV
 		Util::DescriptorTable utilSrvTable;
@@ -275,8 +274,8 @@ void Voxelizer::voxelize(uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
 
 	// Set descriptor tables
 	m_grids[frameIndex].Barrier(m_commandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	m_commandList->SetGraphicsRootDescriptorTable(0, *m_cbvTables[frameIndex][CBV_TABLE_VOXELIZE]);
-	m_commandList->SetGraphicsRootDescriptorTable(1, *m_cbvTables[frameIndex][CBV_TABLE_PER_MIP]);
+	m_commandList->SetGraphicsRootDescriptorTable(0, *m_cbvTables[CBV_TABLE_VOXELIZE]);
+	m_commandList->SetGraphicsRootDescriptorTable(1, *m_cbvTables[CBV_TABLE_PER_MIP]);
 	m_commandList->SetGraphicsRootDescriptorTable(2, *m_srvTables[SRV_TABLE_VB_IB]);
 	m_commandList->SetGraphicsRootDescriptorTable(3, *m_uavTables[frameIndex][UAV_TABLE_VOXELIZE]);
 
@@ -306,7 +305,7 @@ void Voxelizer::renderBoxArray(uint32_t frameIndex, const RenderTargetTable &rtv
 
 	// Set descriptor tables
 	m_grids[frameIndex].Barrier(m_commandList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	m_commandList->SetGraphicsRootDescriptorTable(0, *m_cbvTables[frameIndex][CBV_TABLE_MATRICES]);
+	m_commandList->SetGraphicsRootDescriptorTable(0, *m_cbvTables[CBV_TABLE_MATRICES+ frameIndex]);
 	m_commandList->SetGraphicsRootDescriptorTable(1, *m_srvTables[SRV_TABLE_GRID + frameIndex]);
 
 	// Set viewport

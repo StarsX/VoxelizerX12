@@ -36,7 +36,7 @@ protected:
 		CBV_TABLE_PER_MIP,
 		CBV_TABLE_MATRICES,
 
-		NUM_CBV_TABLE
+		NUM_CBV_TABLE = CBV_TABLE_MATRICES + FrameCount
 	};
 
 	enum SRVTable
@@ -115,7 +115,7 @@ protected:
 	XUSG::PipelineLayout	m_pipelineLayouts[NUM_PASS];
 	XUSG::Pipeline			m_pipelines[NUM_PASS];
 
-	XUSG::DescriptorTable	m_cbvTables[FrameCount][NUM_CBV_TABLE];
+	XUSG::DescriptorTable	m_cbvTables[NUM_CBV_TABLE];
 	XUSG::DescriptorTable	m_srvTables[NUM_SRV_TABLE];
 	XUSG::DescriptorTable	m_uavTables[FrameCount][NUM_UAV_TABLE];
 
