@@ -20,13 +20,15 @@ namespace XUSG
 		ConstantBuffer();
 		virtual ~ConstantBuffer();
 
-		bool Create(const Device &device, uint32_t byteWidth, uint32_t cbvSize);
+		bool CreateUniform(const Device &device, uint32_t cbvSize, uint32_t numCBVs = 1);
+		bool Create(const Device &device, uint32_t byteWidth,
+			uint32_t numCBVs = 1, const uint32_t *offsets = nullptr);
 
-		void *Map();
+		void *Map(uint32_t i = 0);
 		void Unmap();
 
 		const Resource	&GetResource() const;
-		const Descriptor	&GetCBV() const;
+		Descriptor		GetCBV(uint32_t i = 0) const;
 
 	protected:
 		bool allocateDescriptorPool(uint32_t numDescriptors);
@@ -35,7 +37,10 @@ namespace XUSG
 
 		Resource		m_resource;
 		DescriptorPool	m_cbvPool;
-		Descriptor		m_CBV;
+		std::vector<Descriptor> m_CBVs;
+		Descriptor		m_cbvCurrent;
+		
+		std::vector<uint32_t> m_CBVOffsets;
 
 		void			*m_pDataBegin;
 	};
@@ -164,7 +169,7 @@ namespace XUSG
 		Descriptor GetDSVReadOnly(uint8_t mipLevel = 0) const;
 		const Descriptor &GetSRVStencil() const;
 
-		const uint8_t		GetNumMips() const;
+		const uint8_t GetNumMips() const;
 
 	protected:
 		bool allocateDsvPool(uint32_t numDescriptors);
@@ -175,7 +180,7 @@ namespace XUSG
 		Descriptor	m_SRVStencil;
 		Descriptor	m_dsvCurrent;
 
-		uint32_t		m_strideDsv;
+		uint32_t	m_strideDsv;
 	};
 
 	//--------------------------------------------------------------------------------------
@@ -229,8 +234,7 @@ namespace XUSG
 
 		Descriptor GetUAV(uint32_t i = 0) const;
 		
-		void *Map();
-		void *Map(uint32_t i);
+		void *Map(uint32_t i = 0);
 		void Unmap();
 
 	protected:
@@ -315,7 +319,7 @@ namespace XUSG
 	// Index buffer
 	//--------------------------------------------------------------------------------------
 	class IndexBuffer :
-		public RawBuffer
+		public TypedBuffer
 	{
 	public:
 		IndexBuffer();

@@ -57,7 +57,9 @@ ConstantBuffer::ConstantBuffer() :
 	m_device(nullptr),
 	m_resource(nullptr),
 	m_cbvPool(nullptr),
-	m_CBV(D3D12_DEFAULT),
+	m_CBVs(0),
+	m_cbvCurrent(D3D12_DEFAULT),
+	m_CBVOffsets(0),
 	m_pDataBegin(nullptr)
 {
 }
@@ -66,10 +68,27 @@ ConstantBuffer::~ConstantBuffer()
 {
 }
 
-bool ConstantBuffer::Create(const Device &device, uint32_t byteWidth, uint32_t cbvSize)
+bool ConstantBuffer::CreateUniform(const Device &device, uint32_t cbvSize, uint32_t numCBVs)
+{
+	auto numBytes = 0u;
+	cbvSize = ALIGN_WITH(cbvSize, 256);	// CB size is required to be 256-byte aligned.
+	vector<uint32_t> offsets(numCBVs);
+
+	for (auto &offset : offsets)
+	{
+		offset = numBytes;
+		numBytes += cbvSize;
+	}
+
+	return Create(device, cbvSize * numCBVs, numCBVs, offsets.data());
+}
+
+bool ConstantBuffer::Create(const Device &device, uint32_t byteWidth, uint32_t numCBVs, const uint32_t *offsets)
 {
 	M_RETURN(!device, cerr, "The device is NULL.", false);
 	m_device = device;
+
+	const auto strideCbv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	V_RETURN(m_device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
@@ -80,21 +99,32 @@ bool ConstantBuffer::Create(const Device &device, uint32_t byteWidth, uint32_t c
 		IID_PPV_ARGS(&m_resource)), clog, false);
 
 	// Allocate descriptor pool
-	N_RETURN(allocateDescriptorPool(1), false);
+	N_RETURN(allocateDescriptorPool(numCBVs), false);
 
 	// Describe and create a constant buffer view.
 	D3D12_CONSTANT_BUFFER_VIEW_DESC desc;
-	desc.BufferLocation = m_resource->GetGPUVirtualAddress();
-	desc.SizeInBytes = ALIGN_WITH(cbvSize, 256);	// CB size is required to be 256-byte aligned.
 
-	// Create CBV
-	m_CBV = m_cbvPool->GetCPUDescriptorHandleForHeapStart();
-	m_device->CreateConstantBufferView(&desc, m_CBV);
+	m_CBVs.resize(numCBVs);
+	m_CBVOffsets.resize(numCBVs);
+	for (auto i = 0u; i < numCBVs; ++i)
+	{
+		const auto offset = offsets ? offsets[i] : 0;
+		desc.BufferLocation = m_resource->GetGPUVirtualAddress() + offset;
+		desc.SizeInBytes = (!offsets || i + 1 >= numCBVs ?
+			byteWidth : offsets[i + 1]) - offset;
+
+		m_CBVOffsets[i] = offset;
+
+		// Create a constant buffer view
+		m_CBVs[i] = m_cbvCurrent;
+		m_device->CreateConstantBufferView(&desc, m_CBVs[i]);
+		m_cbvCurrent.Offset(strideCbv);
+	}
 
 	return true;
 }
 
-void *ConstantBuffer::Map()
+void *ConstantBuffer::Map(uint32_t i)
 {
 	if (m_pDataBegin == nullptr)
 	{
@@ -104,7 +134,7 @@ void *ConstantBuffer::Map()
 		V_RETURN(m_resource->Map(0, &readRange, &m_pDataBegin), cerr, false);
 	}
 
-	return m_pDataBegin;
+	return &reinterpret_cast<uint8_t*>(m_pDataBegin)[m_CBVOffsets[i]];
 }
 
 void ConstantBuffer::Unmap()
@@ -118,9 +148,9 @@ const Resource &ConstantBuffer::GetResource() const
 	return m_resource;
 }
 
-const Descriptor &ConstantBuffer::GetCBV() const
+Descriptor ConstantBuffer::GetCBV(uint32_t i) const
 {
-	return m_CBV;
+	return m_CBVs.size() > i ? m_CBVs[i] : Descriptor(D3D12_DEFAULT);
 }
 
 bool ConstantBuffer::allocateDescriptorPool(uint32_t numDescriptors)
@@ -129,6 +159,8 @@ bool ConstantBuffer::allocateDescriptorPool(uint32_t numDescriptors)
 	desc.NumDescriptors = numDescriptors;
 	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	V_RETURN(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvPool)), cerr, false);
+
+	m_cbvCurrent = m_cbvPool->GetCPUDescriptorHandleForHeapStart();
 
 	return true;
 }
@@ -225,11 +257,11 @@ bool Texture2D::Create(const Device &device, uint32_t width, uint32_t height, Fo
 	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
-	auto formatReousrce = format;
-	const auto formatUAV = isPacked ? MapToPackedFormat(formatReousrce) : format;
+	auto formatResource = format;
+	const auto formatUAV = isPacked ? MapToPackedFormat(formatResource) : format;
 
 	// Setup the texture description.
-	const auto desc = CD3DX12_RESOURCE_DESC::Tex2D(formatReousrce, width, height, arraySize,
+	const auto desc = CD3DX12_RESOURCE_DESC::Tex2D(formatResource, width, height, arraySize,
 		numMips, sampleCount, 0, D3D12_RESOURCE_FLAGS(resourceFlags));
 
 	// Determine initial state
@@ -868,11 +900,11 @@ bool Texture3D::Create(const Device &device, uint32_t width, uint32_t height,
 	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
-	auto formatReousrce = format;
-	const auto formatUAV = isPacked ? MapToPackedFormat(formatReousrce) : format;
+	auto formatResource = format;
+	const auto formatUAV = isPacked ? MapToPackedFormat(formatResource) : format;
 
 	// Setup the texture description.
-	const auto desc = CD3DX12_RESOURCE_DESC::Tex3D(formatReousrce, width, height, depth,
+	const auto desc = CD3DX12_RESOURCE_DESC::Tex3D(formatResource, width, height, depth,
 		numMips, D3D12_RESOURCE_FLAGS(resourceFlags));
 
 	// Determine initial state
@@ -1119,22 +1151,16 @@ Descriptor RawBuffer::GetUAV(uint32_t i) const
 	return m_UAVs.size() > i ? m_UAVs[i] : Descriptor(D3D12_DEFAULT);
 }
 
-void *RawBuffer::Map()
+void *RawBuffer::Map(uint32_t i)
 {
 	if (m_pDataBegin == nullptr)
 	{
-		// Map and initialize the constant buffer. We don't unmap this until the
-		// app closes. Keeping things mapped for the lifetime of the resource is okay.
+		// Map and initialize the buffer.
 		CD3DX12_RANGE readRange(0, 0);	// We do not intend to read from this resource on the CPU.
 		V_RETURN(m_resource->Map(0, &readRange, &m_pDataBegin), cerr, false);
 	}
 
-	return m_pDataBegin;
-}
-
-void *RawBuffer::Map(uint32_t i)
-{
-	return &reinterpret_cast<uint8_t*>(Map())[m_SRVOffsets[i]];
+	return &reinterpret_cast<uint8_t*>(m_pDataBegin)[m_SRVOffsets[i]];
 }
 
 void RawBuffer::Unmap()
@@ -1288,28 +1314,12 @@ bool TypedBuffer::Create(const Device &device, uint32_t numElements, uint32_t st
 	numUAVs = hasUAV ? numUAVs : 0;
 
 	// Map formats
-	auto formatReousrce = format;
-	const auto formatUAV = isPacked ? MapToPackedFormat(formatReousrce) : format;
+	auto formatResource = format;
+	const auto formatUAV = isPacked ? MapToPackedFormat(formatResource) : format;
 
-	// Setup the buffer description.
-	auto desc = CD3DX12_RESOURCE_DESC::Buffer(stride * numElements, D3D12_RESOURCE_FLAGS(resourceFlags));
-	desc.Format = formatReousrce;
-
-	// Determine initial state
-	if (state) m_state = state;
-	else
-	{
-		m_state = hasSRV ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE |
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_COMMON;
-		m_state = hasUAV ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS : m_state;
-	}
-
-	V_RETURN(m_device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(poolType),
-		D3D12_HEAP_FLAG_NONE, &desc, m_state, nullptr, IID_PPV_ARGS(&m_resource)), clog, false);
-
-	// Allocate descriptor pool
-	const auto numDescriptors = numSRVs + numUAVs;
-	N_RETURN(allocateDescriptorPool(numDescriptors), false);
+	// Create buffer
+	N_RETURN(create(device, stride * numElements, resourceFlags,
+		poolType, state, numSRVs, numUAVs), false);
 
 	// Create SRV
 	if (hasSRV) CreateSRVs(numElements, format, stride, firstSRVElements, numSRVs);
@@ -1409,7 +1419,7 @@ bool VertexBuffer::Create(const Device &device, uint32_t numVertices, uint32_t s
 		const auto firstVertex = firstVertices ? firstVertices[i] : 0;
 		m_VBVs[i].BufferLocation = m_resource->GetGPUVirtualAddress() + stride * firstVertex;
 		m_VBVs[i].StrideInBytes = stride;
-		m_VBVs[i].SizeInBytes = stride * ((!firstVertex || i + 1 >= numVBVs ?
+		m_VBVs[i].SizeInBytes = stride * ((!firstVertices || i + 1 >= numVBVs ?
 			numVertices : firstVertices[i + 1]) - firstVertex);
 	}
 
@@ -1426,7 +1436,7 @@ VertexBufferView VertexBuffer::GetVBV(uint32_t i) const
 //--------------------------------------------------------------------------------------
 
 IndexBuffer::IndexBuffer() :
-	RawBuffer(),
+	TypedBuffer(),
 	m_IBVs(0)
 {
 }
@@ -1447,15 +1457,15 @@ bool IndexBuffer::Create(const Device &device, uint32_t byteWidth, Format format
 	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	assert(format == DXGI_FORMAT_R32_UINT || format == DXGI_FORMAT_R16_UINT);
-	if (hasSRV || hasUAV) byteWidth += byteWidth % 4;
+	const auto stride = format == DXGI_FORMAT_R32_UINT ? 4 : 2;
 
 	// Determine initial state
 	if (state) m_state = state;
 	else m_state = hasSRV ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE :
 		D3D12_RESOURCE_STATE_INDEX_BUFFER;
 
-	N_RETURN(RawBuffer::Create(device, byteWidth, resourceFlags, poolType,
-		state, numSRVs, firstSRVElements, numUAVs, firstUAVElements), false);
+	N_RETURN(TypedBuffer::Create(device, byteWidth / stride, stride, format, resourceFlags,
+		poolType, state, numSRVs, firstSRVElements, numUAVs, firstUAVElements), false);
 
 	// Create index buffer view
 	m_IBVs.resize(numIBVs);
@@ -1473,5 +1483,5 @@ bool IndexBuffer::Create(const Device &device, uint32_t byteWidth, Format format
 
 IndexBufferView IndexBuffer::GetIBV(uint32_t i) const
 {
-	return m_IBVs[i];
+	return m_IBVs.size() > i ? m_IBVs[i] : IndexBufferView();
 }

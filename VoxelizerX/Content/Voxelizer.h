@@ -16,7 +16,7 @@ public:
 	bool Init(uint32_t width, uint32_t height, XUSG::Format rtFormat, XUSG::Format dsFormat,
 		XUSG::Resource &vbUpload, XUSG::Resource &ibUpload,
 		const char *fileName = "Media\\bunny.obj");
-	void UpdateFrame(DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
+	void UpdateFrame(uint32_t frameIndex, DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
 	void Render(uint32_t frameIndex, const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
 
 	static const uint32_t FrameCount = FRAME_COUNT;
@@ -115,9 +115,9 @@ protected:
 	XUSG::PipelineLayout	m_pipelineLayouts[NUM_PASS];
 	XUSG::Pipeline			m_pipelines[NUM_PASS];
 
-	XUSG::DescriptorTable	m_cbvTables[NUM_CBV_TABLE];
+	XUSG::DescriptorTable	m_cbvTables[FrameCount][NUM_CBV_TABLE];
 	XUSG::DescriptorTable	m_srvTables[NUM_SRV_TABLE];
-	XUSG::DescriptorTable	m_uavTables[NUM_UAV_TABLE][FrameCount];
+	XUSG::DescriptorTable	m_uavTables[FrameCount][NUM_UAV_TABLE];
 
 	XUSG::VertexBuffer		m_vertexBuffer;
 	XUSG::IndexBuffer		m_indexbuffer;

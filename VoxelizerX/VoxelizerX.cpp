@@ -209,7 +209,7 @@ void VoxelizerX::OnUpdate()
 	const auto eyePt = XMLoadFloat3(&m_eyePt);
 	const auto view = XMLoadFloat4x4(&m_view); 
 	const auto proj = XMLoadFloat4x4(&m_proj);
-	m_voxelizer->UpdateFrame(eyePt, view * proj);
+	m_voxelizer->UpdateFrame(m_frameIndex, eyePt, view * proj);
 }
 
 // Render the scene.

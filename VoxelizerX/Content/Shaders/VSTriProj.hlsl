@@ -11,12 +11,10 @@
 #include "HSTriProj.hlsli"
 #include "DSTriProj.hlsli"
 
-#define	SIZE_OF_UINT		4
-
 //--------------------------------------------------------------------------------------
 // Buffers
 //--------------------------------------------------------------------------------------
-ByteAddressBuffer g_roIndices;
+Buffer<uint> g_roIndices;
 StructuredBuffer<VSIn> g_roVertices;
 
 //--------------------------------------------------------------------------------------
@@ -24,7 +22,7 @@ StructuredBuffer<VSIn> g_roVertices;
 //--------------------------------------------------------------------------------------
 VSIn LoadVSIn(const uint uIdx)
 {
-	const uint uVid = g_roIndices.Load(SIZE_OF_UINT * uIdx);
+	const uint uVid = g_roIndices[uIdx];
 
 	return g_roVertices[uVid];
 }
