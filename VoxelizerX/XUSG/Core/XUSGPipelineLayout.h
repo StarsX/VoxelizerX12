@@ -42,7 +42,6 @@ namespace XUSG
 			void SetShaderStage(uint32_t index, Shader::Stage stage);
 			void SetRange(uint32_t index, DescriptorType type, uint32_t num, uint32_t baseReg,
 				uint32_t space = 0, uint8_t flags = 0);
-			void SetPipelineLayoutFlags(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags);
 
 			XUSG::PipelineLayout CreatePipelineLayout(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags);
 			XUSG::PipelineLayout GetPipelineLayout(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags);
@@ -51,13 +50,15 @@ namespace XUSG
 			DescriptorTableLayout GetDescriptorTableLayout(uint32_t index, PipelineLayoutCache &pipelineLayoutCache) const;
 
 			const std::vector<std::string> &GetDescriptorTableLayoutKeys() const;
-			const std::string &GetPipelineLayoutKey() const;
+			std::string &GetPipelineLayoutKey(PipelineLayoutCache *pPipelineLayoutCache);
 
 		protected:
 			std::string &checkKeySpace(uint32_t index);
 
 			std::vector<std::string> m_descriptorTableLayoutKeys;
 			std::string m_pipelineLayoutKey;
+
+			bool m_tableLayoutsCompleted;
 		};
 	}
 

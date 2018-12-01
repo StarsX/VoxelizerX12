@@ -68,25 +68,28 @@ ConstantBuffer::~ConstantBuffer()
 {
 }
 
-bool ConstantBuffer::CreateUniform(const Device &device, uint32_t cbvSize, uint32_t numCBVs)
-{
-	auto numBytes = 0u;
-	cbvSize = ALIGN_WITH(cbvSize, 256);	// CB size is required to be 256-byte aligned.
-	vector<uint32_t> offsets(numCBVs);
-
-	for (auto &offset : offsets)
-	{
-		offset = numBytes;
-		numBytes += cbvSize;
-	}
-
-	return Create(device, cbvSize * numCBVs, numCBVs, offsets.data());
-}
-
 bool ConstantBuffer::Create(const Device &device, uint32_t byteWidth, uint32_t numCBVs, const uint32_t *offsets)
 {
 	M_RETURN(!device, cerr, "The device is NULL.", false);
 	m_device = device;
+
+	// Instanced CBVs
+	vector<uint32_t> offsetList;
+	if (!offsets)
+	{
+		auto numBytes = 0u;
+		const auto cbvSize = ALIGN(byteWidth / numCBVs, 256);	// CB size is required to be 256-byte aligned.
+		offsetList.resize(numCBVs);
+
+		for (auto &offset : offsetList)
+		{
+			offset = numBytes;
+			numBytes += cbvSize;
+		}
+
+		offsets = offsetList.data();
+		byteWidth = cbvSize * numCBVs;
+	}
 
 	const auto strideCbv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
@@ -108,10 +111,9 @@ bool ConstantBuffer::Create(const Device &device, uint32_t byteWidth, uint32_t n
 	m_CBVOffsets.resize(numCBVs);
 	for (auto i = 0u; i < numCBVs; ++i)
 	{
-		const auto offset = offsets ? offsets[i] : 0;
+		const auto &offset = offsets[i];
 		desc.BufferLocation = m_resource->GetGPUVirtualAddress() + offset;
-		desc.SizeInBytes = (!offsets || i + 1 >= numCBVs ?
-			byteWidth : offsets[i + 1]) - offset;
+		desc.SizeInBytes = (i + 1 >= numCBVs ? byteWidth : offsets[i + 1]) - offset;
 
 		m_CBVOffsets[i] = offset;
 

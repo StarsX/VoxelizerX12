@@ -132,14 +132,14 @@ bool Voxelizer::createCBs()
 {
 	// Common CBs
 	{
-		N_RETURN(m_cbMatrices.CreateUniform(m_device, sizeof(CBMatrices), FrameCount), false);
-		N_RETURN(m_cbPerFrame.CreateUniform(m_device, sizeof(CBPerFrame), FrameCount), false);
-		N_RETURN(m_cbPerObject.CreateUniform(m_device, sizeof(CBPerObject), FrameCount), false);
+		N_RETURN(m_cbMatrices.Create(m_device, sizeof(CBMatrices) * FrameCount, FrameCount), false);
+		N_RETURN(m_cbPerFrame.Create(m_device, sizeof(CBPerFrame) * FrameCount, FrameCount), false);
+		N_RETURN(m_cbPerObject.Create(m_device, sizeof(CBPerObject) * FrameCount, FrameCount), false);
 	}
 
 	// Immutable CBs
 	{
-		N_RETURN(m_cbBound.CreateUniform(m_device, sizeof(XMFLOAT4)), false);
+		N_RETURN(m_cbBound.Create(m_device, sizeof(XMFLOAT4)), false);
 
 		const auto pCbBound = reinterpret_cast<XMFLOAT4*>(m_cbBound.Map());
 		*pCbBound = m_bound;
@@ -151,7 +151,7 @@ bool Voxelizer::createCBs()
 	{
 		auto &cb = m_cbPerMipLevels[i];
 		const auto gridSize = static_cast<float>(GRID_SIZE >> i);
-		N_RETURN(cb.CreateUniform(m_device, sizeof(XMFLOAT4)), false);
+		N_RETURN(cb.Create(m_device, sizeof(XMFLOAT4)), false);
 
 		const auto pCbData = reinterpret_cast<float*>(cb.Map());
 		*pCbData = gridSize;

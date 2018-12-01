@@ -6,8 +6,8 @@
 
 #include "XUSGDescriptor.h"
 
-#define	BIND_PACKED_UAV		ResourceFlags(0x4 | 0x8000)
-#define ALIGN_WITH(x, n)	(((x) + (n - 1)) & ~(n - 1))
+#define	BIND_PACKED_UAV	ResourceFlags(0x4 | 0x8000)
+#define ALIGN(x, n)		(((x) + (n - 1)) & ~(n - 1))
 
 namespace XUSG
 {
@@ -20,7 +20,6 @@ namespace XUSG
 		ConstantBuffer();
 		virtual ~ConstantBuffer();
 
-		bool CreateUniform(const Device &device, uint32_t cbvSize, uint32_t numCBVs = 1);
 		bool Create(const Device &device, uint32_t byteWidth,
 			uint32_t numCBVs = 1, const uint32_t *offsets = nullptr);
 

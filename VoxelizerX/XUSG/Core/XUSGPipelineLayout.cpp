@@ -9,7 +9,8 @@ using namespace std;
 using namespace XUSG;
 
 Util::PipelineLayout::PipelineLayout() :
-	m_descriptorTableLayoutKeys(0)
+	m_descriptorTableLayoutKeys(0),
+	m_tableLayoutsCompleted(false)
 {
 	m_pipelineLayoutKey.resize(1);
 }
@@ -43,17 +44,6 @@ void Util::PipelineLayout::SetRange(uint32_t index, DescriptorType type, uint32_
 	pRanges[i].Flags = flags;
 }
 
-void Util::PipelineLayout::SetPipelineLayoutFlags(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags)
-{
-	m_pipelineLayoutKey.resize(sizeof(void*) * m_descriptorTableLayoutKeys.size() + 1);
-	m_pipelineLayoutKey[0] = flags;
-
-	const auto descriptorTableLayouts = reinterpret_cast<const void**>(&m_pipelineLayoutKey[1]);
-
-	for (auto i = 0u; i < m_descriptorTableLayoutKeys.size(); ++i)
-		descriptorTableLayouts[i] = GetDescriptorTableLayout(i, pipelineLayoutCache).get();
-}
-
 PipelineLayout Util::PipelineLayout::CreatePipelineLayout(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags)
 {
 	return pipelineLayoutCache.CreatePipelineLayout(*this, flags);
@@ -79,13 +69,27 @@ const vector<string> &Util::PipelineLayout::GetDescriptorTableLayoutKeys() const
 	return m_descriptorTableLayoutKeys;
 }
 
-const string &Util::PipelineLayout::GetPipelineLayoutKey() const
+string &Util::PipelineLayout::GetPipelineLayoutKey(PipelineLayoutCache *pPipelineLayoutCache)
 {
+	if (!m_tableLayoutsCompleted && pPipelineLayoutCache)
+	{
+		m_pipelineLayoutKey.resize(sizeof(void*) * m_descriptorTableLayoutKeys.size() + 1);
+
+		const auto descriptorTableLayouts = reinterpret_cast<const void**>(&m_pipelineLayoutKey[1]);
+
+		for (auto i = 0u; i < m_descriptorTableLayoutKeys.size(); ++i)
+			descriptorTableLayouts[i] = GetDescriptorTableLayout(i, *pPipelineLayoutCache).get();
+
+		m_tableLayoutsCompleted = true;
+	}
+
 	return m_pipelineLayoutKey;
 }
 
 string &Util::PipelineLayout::checkKeySpace(uint32_t index)
 {
+	m_tableLayoutsCompleted = false;
+
 	if (index >= m_descriptorTableLayoutKeys.size())
 		m_descriptorTableLayoutKeys.resize(index + 1);
 
@@ -126,16 +130,18 @@ void PipelineLayoutCache::SetPipelineLayout(const string &key, const PipelineLay
 
 PipelineLayout PipelineLayoutCache::CreatePipelineLayout(Util::PipelineLayout &util, uint8_t flags)
 {
-	util.SetPipelineLayoutFlags(*this, flags);
+	auto& pipelineLayoutKey = util.GetPipelineLayoutKey(this);
+	pipelineLayoutKey[0] = flags;
 
-	return createPipelineLayout(util.GetPipelineLayoutKey());
+	return createPipelineLayout(pipelineLayoutKey);
 }
 
 PipelineLayout PipelineLayoutCache::GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags)
 {
-	util.SetPipelineLayoutFlags(*this, flags);
+	auto& pipelineLayoutKey = util.GetPipelineLayoutKey(this);
+	pipelineLayoutKey[0] = flags;
 
-	return getPipelineLayout(util.GetPipelineLayoutKey());
+	return getPipelineLayout(pipelineLayoutKey);
 }
 
 DescriptorTableLayout PipelineLayoutCache::CreateDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util)
