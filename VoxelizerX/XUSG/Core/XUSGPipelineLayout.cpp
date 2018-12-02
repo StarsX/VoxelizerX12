@@ -96,6 +96,8 @@ string &Util::PipelineLayout::checkKeySpace(uint32_t index)
 	if (m_descriptorTableLayoutKeys[index].empty())
 		m_descriptorTableLayoutKeys[index].resize(1);
 
+	m_descriptorTableLayoutKeys[index][0] = Shader::Stage::ALL;
+
 	return m_descriptorTableLayoutKeys[index];
 }
 

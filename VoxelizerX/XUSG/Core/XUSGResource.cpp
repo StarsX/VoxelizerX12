@@ -262,11 +262,11 @@ bool Texture2D::Create(const Device &device, uint32_t width, uint32_t height, Fo
 
 	if (name) m_name = name;
 
-	const auto isPacked = static_cast<bool>(resourceFlags & BIND_PACKED_UAV);
+	const auto isPacked = (resourceFlags & BIND_PACKED_UAV) == BIND_PACKED_UAV;
 	resourceFlags &= REMOVE_PACKED_UAV;
 
 	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const bool hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
 	auto formatResource = format;
@@ -613,11 +613,11 @@ bool RenderTarget::create(const Device &device, uint32_t width, uint32_t height,
 
 	m_strideRtv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-	const auto isPacked = static_cast<bool>(resourceFlags & BIND_PACKED_UAV);
+	const auto isPacked = (resourceFlags & BIND_PACKED_UAV) == BIND_PACKED_UAV;;
 	resourceFlags &= REMOVE_PACKED_UAV;
 
 	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const bool hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
 	auto formatResource = format;
@@ -917,11 +917,11 @@ bool Texture3D::Create(const Device &device, uint32_t width, uint32_t height,
 
 	if (name) m_name = name;
 
-	const auto isPacked = static_cast<bool>(resourceFlags & BIND_PACKED_UAV);
+	const auto isPacked = (resourceFlags & BIND_PACKED_UAV) == BIND_PACKED_UAV;
 	resourceFlags &= REMOVE_PACKED_UAV;
 
 	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const bool hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Map formats
 	auto formatResource = format;
@@ -1070,7 +1070,7 @@ bool RawBuffer::Create(const Device &device, uint32_t byteWidth, ResourceFlags r
 	uint32_t numUAVs, const uint32_t *firstUAVElements, const wchar_t *name)
 {
 	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const bool hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	numSRVs = hasSRV ? numSRVs : 0;
 	numUAVs = hasUAV ? numUAVs : 0;
@@ -1251,7 +1251,7 @@ bool StructuredBuffer::Create(const Device &device, uint32_t numElements, uint32
 	const wchar_t *name)
 {
 	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const bool hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	numSRVs = hasSRV ? numSRVs : 0;
 	numUAVs = hasUAV ? numUAVs : 0;
@@ -1341,11 +1341,11 @@ bool TypedBuffer::Create(const Device &device, uint32_t numElements, uint32_t st
 	M_RETURN(!device, cerr, "The device is NULL.", false);
 	setDevice(device);
 
-	const auto isPacked = static_cast<bool>(resourceFlags & BIND_PACKED_UAV);
+	const auto isPacked = (resourceFlags & BIND_PACKED_UAV) == BIND_PACKED_UAV;
 	resourceFlags &= REMOVE_PACKED_UAV;
 
 	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const bool hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	numSRVs = hasSRV ? numSRVs : 0;
 	numUAVs = hasUAV ? numUAVs : 0;
@@ -1437,7 +1437,7 @@ bool VertexBuffer::Create(const Device &device, uint32_t numVertices, uint32_t s
 	const wchar_t *name)
 {
 	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const bool hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	// Determine initial state
 	if (state == 0)
@@ -1493,7 +1493,7 @@ bool IndexBuffer::Create(const Device &device, uint32_t byteWidth, Format format
 	setDevice(device);
 
 	const auto hasSRV = !(resourceFlags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-	const auto hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	const bool hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	assert(format == DXGI_FORMAT_R32_UINT || format == DXGI_FORMAT_R16_UINT);
 	const auto stride = static_cast<uint32_t>(format == DXGI_FORMAT_R32_UINT ?
