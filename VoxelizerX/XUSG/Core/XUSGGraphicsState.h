@@ -93,8 +93,8 @@ namespace XUSG
 			void OMSetRTVFormats(const Format *formats, uint8_t n);
 			void OMSetDSVFormat(Format format);
 
-			Pipeline CreatePipeline(PipelineCache &pipelineCache) const;
-			Pipeline GetPipeline(PipelineCache &pipelineCache) const;
+			Pipeline CreatePipeline(PipelineCache &pipelineCache, const wchar_t *name = nullptr) const;
+			Pipeline GetPipeline(PipelineCache &pipelineCache, const wchar_t *name = nullptr) const;
 
 			const std::string &GetKey() const;
 
@@ -117,16 +117,16 @@ namespace XUSG
 			InputLayout GetInputLayout(uint32_t index) const;
 			InputLayout CreateInputLayout(const InputElementTable &elementTable);
 
-			Pipeline CreatePipeline(const State &state);
-			Pipeline GetPipeline(const State &state);
+			Pipeline CreatePipeline(const State &state, const wchar_t *name = nullptr);
+			Pipeline GetPipeline(const State &state, const wchar_t *name = nullptr);
 
 			const Blend			&GetBlend(BlendPreset preset);
 			const Rasterizer	&GetRasterizer(RasterizerPreset preset);
 			const DepthStencil	&GetDepthStencil(DepthStencilPreset preset);
 
 		protected:
-			Pipeline createPipeline(const State::Key *pKey);
-			Pipeline getPipeline(const std::string &key);
+			Pipeline createPipeline(const State::Key *pKey, const wchar_t *name);
+			Pipeline getPipeline(const std::string &key, const wchar_t *name);
 
 			Device m_device;
 

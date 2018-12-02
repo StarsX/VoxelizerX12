@@ -62,10 +62,11 @@ namespace XUSG
 	{
 	public:
 		DescriptorTableCache();
-		DescriptorTableCache(const Device &device);
+		DescriptorTableCache(const Device &device, const wchar_t *name = nullptr);
 		virtual ~DescriptorTableCache();
 
 		void SetDevice(const Device &device);
+		void SetName(const wchar_t *name);
 
 		void AllocateCbvSrvUavPool(uint32_t numDescriptors);
 		void AllocateSamplerPool(uint32_t numDescriptors);
@@ -126,5 +127,7 @@ namespace XUSG
 
 		std::shared_ptr<Sampler> m_samplerPresets[NUM_SAMPLER_PRESET];
 		std::function<Sampler()> m_pfnSamplers[NUM_SAMPLER_PRESET];
+
+		std::wstring	m_name;
 	};
 }

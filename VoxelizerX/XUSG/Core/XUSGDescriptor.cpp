@@ -108,10 +108,11 @@ DescriptorTableCache::DescriptorTableCache() :
 	m_pfnSamplers[SamplerPreset::ANISOTROPIC_LESS_EQUAL] = SamplerAnisotropicLessEqual;
 }
 
-DescriptorTableCache::DescriptorTableCache(const Device &device) :
+DescriptorTableCache::DescriptorTableCache(const Device &device, const wchar_t *name) :
 	DescriptorTableCache()
 {
 	SetDevice(device);
+	SetName(name);
 }
 
 DescriptorTableCache::~DescriptorTableCache()
@@ -125,6 +126,11 @@ void DescriptorTableCache::SetDevice(const Device &device)
 	m_strideCbvSrvUav = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_strideSampler = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 	m_strideRtv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+}
+
+void DescriptorTableCache::SetName(const wchar_t *name)
+{
+	if (name) m_name = name;
 }
 
 void DescriptorTableCache::AllocateCbvSrvUavPool(uint32_t numDescriptors)
@@ -197,6 +203,7 @@ bool DescriptorTableCache::allocateCbvSrvUavPool(uint32_t numDescriptors)
 	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	V_RETURN(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_cbvSrvUavPool)), cerr, false);
+	if (!m_name.empty()) m_cbvSrvUavPool->SetName((m_name + L".CbvSrvUavPool").c_str());
 
 	m_numCbvSrvUavs = 0;
 
@@ -210,6 +217,7 @@ bool DescriptorTableCache::allocateSamplerPool(uint32_t numDescriptors)
 	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	V_RETURN(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_samplerPool)), cerr, false);
+	if (!m_name.empty()) m_samplerPool->SetName((m_name + L".SamplerPool").c_str());
 
 	m_numSamplers = 0;
 
@@ -222,6 +230,7 @@ bool DescriptorTableCache::allocateRtvPool(uint32_t numDescriptors)
 	desc.NumDescriptors = numDescriptors;
 	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	V_RETURN(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_rtvPool)), cerr, false);
+	if (!m_name.empty()) m_rtvPool->SetName((m_name + L".RtvPool").c_str());
 	
 	m_numRtvs = 0;
 

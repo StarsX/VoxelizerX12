@@ -98,14 +98,14 @@ void State::OMSetDSVFormat(Format format)
 	m_pKey->DSVFormat = format;
 }
 
-Pipeline State::CreatePipeline(PipelineCache &pipelineCache) const
+Pipeline State::CreatePipeline(PipelineCache &pipelineCache, const wchar_t *name) const
 {
-	return pipelineCache.CreatePipeline(*this);
+	return pipelineCache.CreatePipeline(*this, name);
 }
 
-Pipeline State::GetPipeline(PipelineCache &pipelineCache) const
+Pipeline State::GetPipeline(PipelineCache &pipelineCache, const wchar_t *name) const
 {
-	return pipelineCache.GetPipeline(*this);
+	return pipelineCache.GetPipeline(*this, name);
 }
 
 const string &State::GetKey() const
@@ -182,17 +182,17 @@ InputLayout PipelineCache::GetInputLayout(uint32_t index) const
 
 InputLayout PipelineCache::CreateInputLayout(const InputElementTable &elementTable)
 {
-	return m_inputLayoutPool.CreateLayout(elementTable);;
+	return m_inputLayoutPool.CreateLayout(elementTable);
 }
 
-Pipeline PipelineCache::CreatePipeline(const State &state)
+Pipeline PipelineCache::CreatePipeline(const State &state, const wchar_t *name)
 {
-	return createPipeline(reinterpret_cast<const State::Key*>(state.GetKey().data()));
+	return createPipeline(reinterpret_cast<const State::Key*>(state.GetKey().data()), name);
 }
 
-Pipeline PipelineCache::GetPipeline(const State &state)
+Pipeline PipelineCache::GetPipeline(const State &state, const wchar_t *name)
 {
-	return getPipeline(state.GetKey());
+	return getPipeline(state.GetKey(), name);
 }
 
 const Blend &PipelineCache::GetBlend(BlendPreset preset)
@@ -219,7 +219,7 @@ const DepthStencil &PipelineCache::GetDepthStencil(DepthStencilPreset preset)
 	return m_depthStencils[preset];
 }
 
-Pipeline PipelineCache::createPipeline(const State::Key *pKey)
+Pipeline PipelineCache::createPipeline(const State::Key *pKey, const wchar_t *name)
 {
 	// Fill desc
 	PipelineDesc desc = {};
@@ -258,11 +258,12 @@ Pipeline PipelineCache::createPipeline(const State::Key *pKey)
 	// Create pipeline
 	Pipeline pipeline;
 	V_RETURN(m_device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipeline)), cerr, nullptr);
+	if (name) pipeline->SetName(name);
 
 	return pipeline;
 }
 
-Pipeline PipelineCache::getPipeline(const string &key)
+Pipeline PipelineCache::getPipeline(const string &key, const wchar_t *name)
 {
 	const auto pPipeline = m_pipelines.find(key);
 
@@ -270,7 +271,7 @@ Pipeline PipelineCache::getPipeline(const string &key)
 	if (pPipeline == m_pipelines.end())
 	{
 		const auto pKey = reinterpret_cast<const State::Key*>(key.data());
-		const auto pipeline = createPipeline(pKey);
+		const auto pipeline = createPipeline(pKey, name);
 		m_pipelines[key] = pipeline;
 
 		return pipeline;

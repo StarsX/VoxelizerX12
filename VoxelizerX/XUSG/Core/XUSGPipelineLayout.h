@@ -43,8 +43,10 @@ namespace XUSG
 			void SetRange(uint32_t index, DescriptorType type, uint32_t num, uint32_t baseReg,
 				uint32_t space = 0, uint8_t flags = 0);
 
-			XUSG::PipelineLayout CreatePipelineLayout(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags);
-			XUSG::PipelineLayout GetPipelineLayout(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags);
+			XUSG::PipelineLayout CreatePipelineLayout(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags,
+				const wchar_t *name = nullptr);
+			XUSG::PipelineLayout GetPipelineLayout(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags,
+				const wchar_t *name = nullptr);
 
 			DescriptorTableLayout CreateDescriptorTableLayout(uint32_t index, PipelineLayoutCache &pipelineLayoutCache) const;
 			DescriptorTableLayout GetDescriptorTableLayout(uint32_t index, PipelineLayoutCache &pipelineLayoutCache) const;
@@ -72,15 +74,17 @@ namespace XUSG
 		void SetDevice(const Device &device);
 		void SetPipelineLayout(const std::string &key, const PipelineLayout &pipelineLayout);
 
-		PipelineLayout CreatePipelineLayout(Util::PipelineLayout &util, uint8_t flags);
-		PipelineLayout GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags);
+		PipelineLayout CreatePipelineLayout(Util::PipelineLayout &util, uint8_t flags,
+			const wchar_t *name = nullptr);
+		PipelineLayout GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags,
+			const wchar_t *name = nullptr);
 
 		DescriptorTableLayout CreateDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util);
 		DescriptorTableLayout GetDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util);
 
 	protected:
-		PipelineLayout createPipelineLayout(const std::string &key) const;
-		PipelineLayout getPipelineLayout(const std::string &key);
+		PipelineLayout createPipelineLayout(const std::string &key, const wchar_t *name) const;
+		PipelineLayout getPipelineLayout(const std::string &key, const wchar_t *name);
 
 		DescriptorTableLayout createDescriptorTableLayout(const std::string &key);
 		DescriptorTableLayout getDescriptorTableLayout(const std::string &key);
