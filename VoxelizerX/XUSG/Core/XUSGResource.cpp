@@ -66,6 +66,7 @@ ConstantBuffer::ConstantBuffer() :
 
 ConstantBuffer::~ConstantBuffer()
 {
+	if (m_resource) Unmap();
 }
 
 bool ConstantBuffer::Create(const Device &device, uint32_t byteWidth, uint32_t numCBVs, const uint32_t *offsets,
@@ -143,8 +144,11 @@ void *ConstantBuffer::Map(uint32_t i)
 
 void ConstantBuffer::Unmap()
 {
-	m_resource->Unmap(0, nullptr);
-	m_pDataBegin = nullptr;
+	if (m_pDataBegin)
+	{
+		m_resource->Unmap(0, nullptr);
+		m_pDataBegin = nullptr;
+	}
 }
 
 const Resource &ConstantBuffer::GetResource() const
@@ -1058,6 +1062,7 @@ RawBuffer::RawBuffer() :
 
 RawBuffer::~RawBuffer()
 {
+	if (m_resource) Unmap();
 }
 
 bool RawBuffer::Create(const Device &device, uint32_t byteWidth, ResourceFlags resourceFlags,
@@ -1188,8 +1193,11 @@ void *RawBuffer::Map(uint32_t i)
 
 void RawBuffer::Unmap()
 {
-	m_resource->Unmap(0, nullptr);
-	m_pDataBegin = nullptr;
+	if (m_pDataBegin)
+	{
+		m_resource->Unmap(0, nullptr);
+		m_pDataBegin = nullptr;
+	}
 }
 
 bool RawBuffer::create(const Device &device, uint32_t byteWidth, ResourceFlags resourceFlags,
