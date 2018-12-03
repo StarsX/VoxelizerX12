@@ -15,6 +15,7 @@ namespace XUSG
 		UAV,
 		CBV,
 		SAMPLER,
+		CONSTANT,
 
 		NUM
 	};
@@ -24,9 +25,8 @@ namespace XUSG
 	struct DescriptorRange
 	{
 		DescriptorType	ViewType;
-		Shader::Stage	ShaderStage;
 		uint32_t NumDescriptors;
-		uint32_t BaseRegister;
+		uint32_t BaseBinding;
 		uint32_t Space;
 		uint8_t Flags;
 	};
@@ -40,8 +40,10 @@ namespace XUSG
 			virtual ~PipelineLayout();
 
 			void SetShaderStage(uint32_t index, Shader::Stage stage);
-			void SetRange(uint32_t index, DescriptorType type, uint32_t num, uint32_t baseReg,
+			void SetRange(uint32_t index, DescriptorType type, uint32_t num, uint32_t baseBinding,
 				uint32_t space = 0, uint8_t flags = 0);
+			void SetConstants(uint32_t index, uint32_t num32BitValues, uint32_t binding,
+				uint32_t space = 0, Shader::Stage stage = Shader::Stage::ALL);
 
 			XUSG::PipelineLayout CreatePipelineLayout(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags,
 				const wchar_t *name = nullptr);
@@ -77,14 +79,14 @@ namespace XUSG
 		PipelineLayout CreatePipelineLayout(Util::PipelineLayout &util, uint8_t flags,
 			const wchar_t *name = nullptr);
 		PipelineLayout GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags,
-			const wchar_t *name = nullptr);
+			const wchar_t *name = nullptr, bool needCreate = true);
 
 		DescriptorTableLayout CreateDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util);
 		DescriptorTableLayout GetDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util);
 
 	protected:
 		PipelineLayout createPipelineLayout(const std::string &key, const wchar_t *name) const;
-		PipelineLayout getPipelineLayout(const std::string &key, const wchar_t *name);
+		PipelineLayout getPipelineLayout(const std::string &key, const wchar_t *name, bool needCreate);
 
 		DescriptorTableLayout createDescriptorTableLayout(const std::string &key);
 		DescriptorTableLayout getDescriptorTableLayout(const std::string &key);

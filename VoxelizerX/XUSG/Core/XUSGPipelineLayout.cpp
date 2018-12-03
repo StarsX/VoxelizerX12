@@ -24,7 +24,7 @@ void Util::PipelineLayout::SetShaderStage(uint32_t index, Shader::Stage stage)
 	checkKeySpace(index)[0] = stage;
 }
 
-void Util::PipelineLayout::SetRange(uint32_t index, DescriptorType type, uint32_t num, uint32_t baseReg,
+void Util::PipelineLayout::SetRange(uint32_t index, DescriptorType type, uint32_t num, uint32_t baseBinding,
 	uint32_t space, uint8_t flags)
 {
 	auto &key = checkKeySpace(index);
@@ -39,9 +39,28 @@ void Util::PipelineLayout::SetRange(uint32_t index, DescriptorType type, uint32_
 	// Fill key entries
 	pRanges[i].ViewType = type;
 	pRanges[i].NumDescriptors = num;
-	pRanges[i].BaseRegister = baseReg;
+	pRanges[i].BaseBinding = baseBinding;
 	pRanges[i].Space = space;
 	pRanges[i].Flags = flags;
+}
+
+void Util::PipelineLayout::SetConstants(uint32_t index, uint32_t num32BitValues,
+	uint32_t binding, uint32_t space, Shader::Stage stage)
+{
+	auto &key = checkKeySpace(index);
+	key[0] = stage;
+
+	key.resize(1 + sizeof(DescriptorRange));
+
+	// Interpret key data as the layout of constants
+	auto &contantLayout = reinterpret_cast<DescriptorRange&>(key[1]);
+
+	// Fill key entries
+	contantLayout.ViewType = DescriptorType::CONSTANT;
+	contantLayout.NumDescriptors = num32BitValues;
+	contantLayout.BaseBinding = binding;
+	contantLayout.Space = space;
+	contantLayout.Flags = 0;
 }
 
 PipelineLayout Util::PipelineLayout::CreatePipelineLayout(PipelineLayoutCache &pipelineLayoutCache, uint8_t flags, const wchar_t *name)
@@ -138,12 +157,13 @@ PipelineLayout PipelineLayoutCache::CreatePipelineLayout(Util::PipelineLayout &u
 	return createPipelineLayout(pipelineLayoutKey, name);
 }
 
-PipelineLayout PipelineLayoutCache::GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags, const wchar_t *name)
+PipelineLayout PipelineLayoutCache::GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags,
+	const wchar_t *name, bool needCreate)
 {
 	auto& pipelineLayoutKey = util.GetPipelineLayoutKey(this);
 	pipelineLayoutKey[0] = flags;
 
-	return getPipelineLayout(pipelineLayoutKey, name);
+	return getPipelineLayout(pipelineLayoutKey, name, needCreate);
 }
 
 DescriptorTableLayout PipelineLayoutCache::CreateDescriptorTableLayout(uint32_t index, const Util::PipelineLayout &util)
@@ -179,31 +199,35 @@ PipelineLayout PipelineLayoutCache::createPipelineLayout(const string &key, cons
 		descriptorTableLayouts[i] = *pDescriptorTableLayoutPtrs[i];
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC layoutDesc;
-	layoutDesc.Init_1_1(numLayouts, descriptorTableLayouts.data(), 0, nullptr, static_cast<D3D12_ROOT_SIGNATURE_FLAGS>(flags));
+	layoutDesc.Init_1_1(numLayouts, descriptorTableLayouts.data(), 0, nullptr, flags);
 
 	Blob signature, error;
 	H_RETURN(D3DX12SerializeVersionedRootSignature(&layoutDesc, featureData.HighestVersion, &signature, &error),
 		cerr, reinterpret_cast<char*>(error->GetBufferPointer()), nullptr);
 
 	PipelineLayout layout;
-	H_RETURN(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
-		IID_PPV_ARGS(&layout)), cerr, reinterpret_cast<char*>(error->GetBufferPointer()), nullptr);
+	V_RETURN(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
+		IID_PPV_ARGS(&layout)), cerr, nullptr);
 	if (name) layout->SetName(name);
 
 	return layout;
 }
 
-PipelineLayout PipelineLayoutCache::getPipelineLayout(const string &key, const wchar_t *name)
+PipelineLayout PipelineLayoutCache::getPipelineLayout(const string &key, const wchar_t *name, bool needCreate)
 {
 	const auto layoutIter = m_pipelineLayouts.find(key);
 
 	// Create one, if it does not exist
 	if (layoutIter == m_pipelineLayouts.end())
 	{
-		const auto layout = createPipelineLayout(key, name);
-		m_pipelineLayouts[key] = layout;
+		if (needCreate)
+		{
+			const auto layout = createPipelineLayout(key, name);
+			m_pipelineLayouts[key] = layout;
 
-		return layout;
+			return layout;
+		}
+		else return nullptr;
 	}
 
 	return layoutIter->second;
@@ -224,27 +248,39 @@ DescriptorTableLayout PipelineLayoutCache::createDescriptorTableLayout(const str
 	const auto numRanges = static_cast<uint32_t>((key.size() - 1) / sizeof(DescriptorRange));
 	const auto pRanges = reinterpret_cast<const DescriptorRange*>(&key[1]);
 
-	layout->ranges = DescriptorRangeList(numRanges);
-	auto &ranges = layout->ranges;
-
-	for (auto i = 0u; i < numRanges; ++i)
+	if (numRanges > 0)
 	{
-		const auto &range = pRanges[i];
-		ranges[i].Init(rangeTypes[static_cast<uint8_t>(range.ViewType)], range.NumDescriptors,
-			range.BaseRegister, range.Space, D3D12_DESCRIPTOR_RANGE_FLAGS(range.Flags));
+		const auto stage = static_cast<Shader::Stage>(key[0]);
+		D3D12_SHADER_VISIBILITY visibilities[Shader::NUM_STAGE];
+		visibilities[Shader::Stage::VS] = D3D12_SHADER_VISIBILITY_VERTEX;
+		visibilities[Shader::Stage::PS] = D3D12_SHADER_VISIBILITY_PIXEL;
+		visibilities[Shader::Stage::DS] = D3D12_SHADER_VISIBILITY_DOMAIN;
+		visibilities[Shader::Stage::HS] = D3D12_SHADER_VISIBILITY_HULL;
+		visibilities[Shader::Stage::GS] = D3D12_SHADER_VISIBILITY_GEOMETRY;
+		visibilities[Shader::Stage::ALL] = D3D12_SHADER_VISIBILITY_ALL;
+
+		switch (pRanges->ViewType)
+		{
+		case DescriptorType::CONSTANT:
+			// Set param
+			layout->InitAsConstants(pRanges->NumDescriptors, pRanges->BaseBinding,
+				pRanges->Space, visibilities[stage]);
+			break;
+
+		default:
+			layout->ranges = DescriptorRangeList(numRanges);
+
+			for (auto i = 0u; i < numRanges; ++i)
+			{
+				const auto &range = pRanges[i];
+				layout->ranges[i].Init(rangeTypes[static_cast<uint8_t>(range.ViewType)], range.NumDescriptors,
+					range.BaseBinding, range.Space, D3D12_DESCRIPTOR_RANGE_FLAGS(range.Flags));
+			}
+
+			// Set param
+			layout->InitAsDescriptorTable(numRanges, layout->ranges.data(), visibilities[stage]);
+		}
 	}
-
-	D3D12_SHADER_VISIBILITY visibilities[Shader::NUM_STAGE];
-	visibilities[Shader::Stage::VS] = D3D12_SHADER_VISIBILITY_VERTEX;
-	visibilities[Shader::Stage::PS] = D3D12_SHADER_VISIBILITY_PIXEL;
-	visibilities[Shader::Stage::DS] = D3D12_SHADER_VISIBILITY_DOMAIN;
-	visibilities[Shader::Stage::HS] = D3D12_SHADER_VISIBILITY_HULL;
-	visibilities[Shader::Stage::GS] = D3D12_SHADER_VISIBILITY_GEOMETRY;
-	visibilities[Shader::Stage::ALL] = D3D12_SHADER_VISIBILITY_ALL;
-
-	// Set param
-	const auto stage = static_cast<Shader::Stage>(key[0]);
-	layout->InitAsDescriptorTable(numRanges, ranges.data(), visibilities[stage]);
 
 	return layout;
 }
