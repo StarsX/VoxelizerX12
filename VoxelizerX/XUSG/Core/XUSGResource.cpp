@@ -1128,7 +1128,7 @@ void RawBuffer::CreateSRVs(uint32_t byteWidth, const uint32_t *firstElements,
 	desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
 
-	const auto stride = static_cast<uint32_t>(sizeof(uint32_t));
+	const uint32_t stride = sizeof(uint32_t);
 	const auto numElements = byteWidth / stride;
 
 	m_SRVOffsets.resize(numDescriptors);
@@ -1157,7 +1157,7 @@ void RawBuffer::CreateUAVs(uint32_t byteWidth, const uint32_t *firstElements,
 	desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 	desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 
-	const auto numElements = byteWidth / static_cast<uint32_t>(sizeof(uint32_t));
+	const uint32_t numElements = byteWidth / sizeof(uint32_t);
 
 	m_UAVs.resize(numDescriptors);
 	for (auto i = 0u; i < numDescriptors; ++i)
@@ -1496,8 +1496,7 @@ bool IndexBuffer::Create(const Device &device, uint32_t byteWidth, Format format
 	const bool hasUAV = resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	assert(format == DXGI_FORMAT_R32_UINT || format == DXGI_FORMAT_R16_UINT);
-	const auto stride = static_cast<uint32_t>(format == DXGI_FORMAT_R32_UINT ?
-		sizeof(uint32_t) : sizeof(uint16_t));
+	const uint32_t stride = format == DXGI_FORMAT_R32_UINT ? sizeof(uint32_t) : sizeof(uint16_t);
 
 	// Determine initial state
 	if (state) m_state = state;

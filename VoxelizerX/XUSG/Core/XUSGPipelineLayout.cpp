@@ -151,7 +151,7 @@ void PipelineLayoutCache::SetPipelineLayout(const string &key, const PipelineLay
 
 PipelineLayout PipelineLayoutCache::CreatePipelineLayout(Util::PipelineLayout &util, uint8_t flags, const wchar_t *name)
 {
-	auto& pipelineLayoutKey = util.GetPipelineLayoutKey(this);
+	auto &pipelineLayoutKey = util.GetPipelineLayoutKey(this);
 	pipelineLayoutKey[0] = flags;
 
 	return createPipelineLayout(pipelineLayoutKey, name);
@@ -160,7 +160,7 @@ PipelineLayout PipelineLayoutCache::CreatePipelineLayout(Util::PipelineLayout &u
 PipelineLayout PipelineLayoutCache::GetPipelineLayout(Util::PipelineLayout &util, uint8_t flags,
 	const wchar_t *name, bool needCreate)
 {
-	auto& pipelineLayoutKey = util.GetPipelineLayoutKey(this);
+	auto &pipelineLayoutKey = util.GetPipelineLayoutKey(this);
 	pipelineLayoutKey[0] = flags;
 
 	return getPipelineLayout(pipelineLayoutKey, name, needCreate);

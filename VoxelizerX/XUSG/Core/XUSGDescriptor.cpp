@@ -20,18 +20,18 @@ Util::DescriptorTable::~DescriptorTable()
 
 void Util::DescriptorTable::SetDescriptors(uint32_t start, uint32_t num, const Descriptor *srcDescriptors)
 {
-	const auto size = sizeof(void*) * (start + num);
+	const auto size = sizeof(Descriptor) * (start + num);
 	if (size > m_key.size())
 		m_key.resize(size);
 
 	const auto descriptors = reinterpret_cast<Descriptor*>(&m_key[0]);
-	memcpy(&descriptors[start], srcDescriptors, sizeof(Descriptor*) * num);
+	memcpy(&descriptors[start], srcDescriptors, sizeof(Descriptor) * num);
 }
 
 void Util::DescriptorTable::SetSamplers(uint32_t start, uint32_t num,
 	const SamplerPreset *presets, DescriptorTableCache &descriptorTableCache)
 {
-	const auto size = sizeof(void*) * (start + num);
+	const auto size = sizeof(Sampler*) * (start + num);
 	if (size > m_key.size())
 		m_key.resize(size);
 
@@ -240,7 +240,7 @@ bool DescriptorTableCache::allocateRtvPool(uint32_t numDescriptors)
 bool DescriptorTableCache::reallocateCbvSrvUavPool(const string &key)
 {
 	assert(key.size() > 0);
-	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(size_t));
+	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(Descriptor));
 
 #if 0
 	// Record source data
@@ -274,7 +274,7 @@ bool DescriptorTableCache::reallocateCbvSrvUavPool(const string &key)
 bool DescriptorTableCache::reallocateSamplerPool(const string &key)
 {
 	assert(key.size() > 0);
-	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(size_t));
+	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(Sampler*));
 
 	// Allocate a new pool
 	m_numSamplers += numDescriptors;
@@ -293,7 +293,7 @@ bool DescriptorTableCache::reallocateSamplerPool(const string &key)
 bool DescriptorTableCache::reallocateRtvPool(const string &key)
 {
 	assert(key.size() > 0);
-	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(size_t));
+	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(Descriptor));
 
 	// Allocate a new pool
 	m_numRtvs += numDescriptors;
@@ -313,7 +313,7 @@ DescriptorTable DescriptorTableCache::createCbvSrvUavTable(const string &key)
 {
 	if (key.size() > 0)
 	{
-		const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(size_t));
+		const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(Descriptor));
 		const auto descriptors = reinterpret_cast<const Descriptor*>(&key[0]);
 
 		// Compute start addresses for CPU and GPU handles
@@ -361,7 +361,7 @@ DescriptorTable DescriptorTableCache::createSamplerTable(const string &key)
 {
 	if (key.size() > 0)
 	{
-		const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(void*));
+		const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(Sampler*));
 		const auto descriptors = reinterpret_cast<const Sampler* const*>(&key[0]);
 
 		// Compute start addresses for CPU and GPU handles
@@ -409,7 +409,7 @@ RenderTargetTable DescriptorTableCache::createRtvTable(const string &key)
 {
 	if (key.size() > 0)
 	{
-		const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(void*));
+		const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(Descriptor));
 		const auto descriptors = reinterpret_cast<const Descriptor*>(&key[0]);
 
 		// Compute start addresses for CPU and GPU handles
