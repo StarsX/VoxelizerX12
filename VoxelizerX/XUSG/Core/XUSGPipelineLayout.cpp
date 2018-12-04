@@ -203,7 +203,7 @@ PipelineLayout PipelineLayoutCache::createPipelineLayout(const string &key, cons
 
 	Blob signature, error;
 	H_RETURN(D3DX12SerializeVersionedRootSignature(&layoutDesc, featureData.HighestVersion, &signature, &error),
-		cerr, reinterpret_cast<char*>(error->GetBufferPointer()), nullptr);
+		cerr, reinterpret_cast<wchar_t*>(error->GetBufferPointer()), nullptr);
 
 	PipelineLayout layout;
 	V_RETURN(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
