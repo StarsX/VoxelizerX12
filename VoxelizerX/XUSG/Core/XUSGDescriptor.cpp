@@ -211,12 +211,9 @@ bool DescriptorTableCache::reallocateCbvSrvUavPool(const string &key)
 	assert(key.size() > 0);
 	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(Descriptor));
 
-	// Update the descriptor count
-	auto &descriptorCount = m_descriptorCounts[CBV_SRV_UAV_POOL];
-	descriptorCount += numDescriptors;
-
 	// Allocate a new pool if neccessary
 	const auto &descriptorPool = m_descriptorPools[CBV_SRV_UAV_POOL];
+	const auto descriptorCount = m_descriptorCounts[CBV_SRV_UAV_POOL] + numDescriptors;
 	if (!descriptorPool || descriptorPool->GetDesc().NumDescriptors < descriptorCount)
 	{
 		N_RETURN(allocateDescriptorPool(CBV_SRV_UAV_POOL, descriptorCount), false);
@@ -237,12 +234,9 @@ bool DescriptorTableCache::reallocateSamplerPool(const string &key)
 	assert(key.size() > 0);
 	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(Sampler*));
 
-	// Update the descriptor count
-	auto &descriptorCount = m_descriptorCounts[SAMPLER_POOL];
-	descriptorCount += numDescriptors;
-
 	// Allocate a new pool if neccessary
 	const auto &descriptorPool = m_descriptorPools[SAMPLER_POOL];
+	const auto descriptorCount = m_descriptorCounts[SAMPLER_POOL] + numDescriptors;
 	if (!descriptorPool || descriptorPool->GetDesc().NumDescriptors < descriptorCount)
 	{
 		N_RETURN(allocateDescriptorPool(SAMPLER_POOL, descriptorCount), false);
@@ -263,12 +257,9 @@ bool DescriptorTableCache::reallocateRtvPool(const string &key)
 	assert(key.size() > 0);
 	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(Descriptor));
 
-	// Update the descriptor count
-	auto &descriptorCount = m_descriptorCounts[RTV_POOL];
-	descriptorCount += numDescriptors;
-
 	// Allocate a new pool if neccessary
 	const auto &descriptorPool = m_descriptorPools[RTV_POOL];
+	const auto descriptorCount = m_descriptorCounts[RTV_POOL] + numDescriptors;
 	if (!descriptorPool || descriptorPool->GetDesc().NumDescriptors < descriptorCount)
 	{
 		N_RETURN(allocateDescriptorPool(RTV_POOL, descriptorCount), false);
