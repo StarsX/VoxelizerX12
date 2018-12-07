@@ -1,9 +1,7 @@
 #pragma once
 
 #include "DXFramework.h"
-#include "Core/XUSGGraphicsState.h"
-#include "Core/XUSGResource.h"
-
+#include "Core/XUSG.h"
 #include "SharedConst.h"
 
 class Voxelizer
@@ -102,13 +100,13 @@ protected:
 	void voxelize(uint32_t frameIndex, bool depthPeel = false, uint8_t mipLevel = 0);
 	void renderBoxArray(uint32_t frameIndex, const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
 
-	uint32_t	m_vertexStride;
-	uint32_t	m_numIndices;
+	XUSG::Device m_device;
+	XUSG::GraphicsCommandList m_commandList;
 
-	uint32_t	m_numLevels;
-
-	DirectX::XMFLOAT4		m_bound;
-	DirectX::XMFLOAT2		m_viewport;
+	XUSG::ShaderPool				m_shaderPool;
+	XUSG::Graphics::PipelineCache	m_pipelineCache;
+	XUSG::PipelineLayoutCache		m_pipelineLayoutCache;
+	XUSG::DescriptorTableCache		m_descriptorTableCache;
 
 	XUSG::InputLayout		m_inputLayout;
 	XUSG::PipelineLayout	m_pipelineLayouts[NUM_PASS];
@@ -130,11 +128,9 @@ protected:
 	XUSG::Texture3D			m_grids[FrameCount];
 	XUSG::Texture2D			m_KBufferDepths[FrameCount];
 
-	XUSG::ShaderPool				m_shaderPool;
-	XUSG::Graphics::PipelineCache	m_pipelineCache;
-	XUSG::PipelineLayoutCache		m_pipelineLayoutCache;
-	XUSG::DescriptorTableCache		m_descriptorTableCache;
+	DirectX::XMFLOAT4		m_bound;
+	DirectX::XMFLOAT2		m_viewport;
 
-	XUSG::Device m_device;
-	XUSG::GraphicsCommandList m_commandList;
+	uint32_t				m_numLevels;
+	uint32_t				m_numIndices;
 };

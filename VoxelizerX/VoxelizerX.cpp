@@ -37,7 +37,7 @@ void VoxelizerX::LoadPipeline()
 	// Enable the debug layer (requires the Graphics Tools "optional feature").
 	// NOTE: Enabling the debug layer after device creation will invalidate the active device.
 	{
-		ComPtr<ID3D12Debug> debugController;
+		com_ptr<ID3D12Debug> debugController;
 		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 		{
 			debugController->EnableDebugLayer();
@@ -48,27 +48,27 @@ void VoxelizerX::LoadPipeline()
 	}
 #endif
 
-	ComPtr<IDXGIFactory4> factory;
+	com_ptr<IDXGIFactory4> factory;
 	ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
 
 	if (m_useWarpDevice)
 	{
-		ComPtr<IDXGIAdapter> warpAdapter;
+		com_ptr<IDXGIAdapter> warpAdapter;
 		ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
 
 		ThrowIfFailed(D3D12CreateDevice(
-			warpAdapter.Get(),
+			warpAdapter.get(),
 			D3D_FEATURE_LEVEL_11_0,
 			IID_PPV_ARGS(&m_device)
 			));
 	}
 	else
 	{
-		ComPtr<IDXGIAdapter1> hardwareAdapter;
-		GetHardwareAdapter(factory.Get(), &hardwareAdapter);
+		com_ptr<IDXGIAdapter1> hardwareAdapter;
+		GetHardwareAdapter(factory.get(), &hardwareAdapter);
 
 		ThrowIfFailed(D3D12CreateDevice(
-			hardwareAdapter.Get(),
+			hardwareAdapter.get(),
 			D3D_FEATURE_LEVEL_11_0,
 			IID_PPV_ARGS(&m_device)
 			));
@@ -91,9 +91,9 @@ void VoxelizerX::LoadPipeline()
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.SampleDesc.Count = 1;
 
-	ComPtr<IDXGISwapChain1> swapChain;
+	com_ptr<IDXGISwapChain1> swapChain;
 	ThrowIfFailed(factory->CreateSwapChainForHwnd(
-		m_commandQueue.Get(),		// Swap chain needs the queue so that it can force a flush on it.
+		m_commandQueue.get(),		// Swap chain needs the queue so that it can force a flush on it.
 		Win32Application::GetHwnd(),
 		&swapChainDesc,
 		nullptr,
@@ -128,7 +128,7 @@ void VoxelizerX::LoadPipeline()
 		for (auto n = 0u; n < Voxelizer::FrameCount; n++)
 		{
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtv);
+			m_device->CreateRenderTargetView(m_renderTargets[n].get(), nullptr, rtv);
 
 			Util::DescriptorTable rtvTable;
 			rtvTable.SetDescriptors(0, 1, &rtv);
@@ -148,7 +148,7 @@ void VoxelizerX::LoadPipeline()
 void VoxelizerX::LoadAssets()
 {
 	// Create the command list.
-	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[m_frameIndex].Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
+	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[m_frameIndex].get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 
 	m_voxelizer = make_unique<Voxelizer>(m_device, m_commandList);
 	if (!m_voxelizer) ThrowIfFailed(E_FAIL);
@@ -160,7 +160,7 @@ void VoxelizerX::LoadAssets()
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList->Close());
-	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+	ID3D12CommandList *ppCommandLists[] = { m_commandList.get() };
 	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
@@ -219,7 +219,7 @@ void VoxelizerX::OnRender()
 	PopulateCommandList();
 
 	// Execute the command list.
-	ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+	ID3D12CommandList *ppCommandLists[] = { m_commandList.get() };
 	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	// Present the frame.
@@ -320,10 +320,10 @@ void VoxelizerX::PopulateCommandList()
 	// However, when ExecuteCommandList() is called on a particular command 
 	// list, that command list can then be reset at any time and must be before 
 	// re-recording.
-	ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].Get(), nullptr));
+	ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].get(), nullptr));
 
 	// Indicate that the back buffer will be used as a render target.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(),
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].get(),
 		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	// Record commands.
@@ -335,7 +335,7 @@ void VoxelizerX::PopulateCommandList()
 	m_voxelizer->Render(m_frameIndex, m_rtvTables[m_frameIndex], m_depth.GetDSV());
 
 	// Indicate that the back buffer will now be used to present.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(),
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].get(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 	ThrowIfFailed(m_commandList->Close());
@@ -345,7 +345,7 @@ void VoxelizerX::PopulateCommandList()
 void VoxelizerX::WaitForGpu()
 {
 	// Schedule a Signal command in the queue.
-	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValues[m_frameIndex]));
+	ThrowIfFailed(m_commandQueue->Signal(m_fence.get(), m_fenceValues[m_frameIndex]));
 
 	// Wait until the fence has been processed.
 	ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
@@ -360,7 +360,7 @@ void VoxelizerX::MoveToNextFrame()
 {
 	// Schedule a Signal command in the queue.
 	const auto currentFenceValue = m_fenceValues[m_frameIndex];
-	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), currentFenceValue));
+	ThrowIfFailed(m_commandQueue->Signal(m_fence.get(), currentFenceValue));
 
 	// Update the frame index.
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();

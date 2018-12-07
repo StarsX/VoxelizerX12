@@ -7,9 +7,7 @@ using namespace XUSG;
 
 Voxelizer::Voxelizer(const Device &device, const GraphicsCommandList &commandList) :
 	m_device(device),
-	m_commandList(commandList),
-	m_vertexStride(0),
-	m_numIndices(0)
+	m_commandList(commandList)
 {
 	m_pipelineCache.SetDevice(device);
 	m_descriptorTableCache.SetDevice(device);
@@ -93,7 +91,9 @@ void Voxelizer::UpdateFrame(uint32_t frameIndex, CXMVECTOR eyePt, CXMMATRIX view
 
 void Voxelizer::Render(uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
 {
-	m_commandList->SetDescriptorHeaps(1, m_descriptorTableCache.GetCbvSrvUavPool().GetAddressOf());
+	DescriptorPool::element_type *const descriptorPools[] =
+	{ m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL).get() };
+	m_commandList->SetDescriptorHeaps(_countof(descriptorPools), descriptorPools);
 
 	voxelize(frameIndex);
 	renderBoxArray(frameIndex, rtvs, dsv);
@@ -112,7 +112,6 @@ bool Voxelizer::createShaders()
 
 bool Voxelizer::createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData, Resource &vbUpload)
 {
-	m_vertexStride = stride;
 	N_RETURN(m_vertexBuffer.Create(m_device, numVert, stride, D3D12_RESOURCE_FLAG_NONE,
 		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST), false);
 
@@ -269,8 +268,8 @@ void Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 void Voxelizer::voxelize(uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
 {
 	// Set pipeline state
-	m_commandList->SetPipelineState(m_pipelines[PASS_VOXELIZE].Get());
-	m_commandList->SetGraphicsRootSignature(m_pipelineLayouts[PASS_VOXELIZE].Get());
+	m_commandList->SetPipelineState(m_pipelines[PASS_VOXELIZE].get());
+	m_commandList->SetGraphicsRootSignature(m_pipelineLayouts[PASS_VOXELIZE].get());
 
 	// Set descriptor tables
 	m_grids[frameIndex].Barrier(m_commandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -289,9 +288,9 @@ void Voxelizer::voxelize(uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
 
 	// Record commands.
 	m_commandList->ClearUnorderedAccessViewUint(*m_uavTables[frameIndex][UAV_TABLE_VOXELIZE], m_grids[frameIndex].GetUAV(),
-		m_grids[frameIndex].GetResource().Get(), XMVECTORU32{ 0 }.u, 0, nullptr);
+		m_grids[frameIndex].GetResource().get(), XMVECTORU32{ 0 }.u, 0, nullptr);
 	if (depthPeel) m_commandList->ClearUnorderedAccessViewUint(*m_uavTables[frameIndex][UAV_TABLE_KBUFFER], m_KBufferDepths[frameIndex].GetUAV(),
-		m_KBufferDepths[frameIndex].GetResource().Get(), XMVECTORU32{ UINT32_MAX }.u, 0, nullptr);
+		m_KBufferDepths[frameIndex].GetResource().get(), XMVECTORU32{ UINT32_MAX }.u, 0, nullptr);
 
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_commandList->DrawInstanced(3, m_numIndices / 3, 0, 0);
@@ -300,8 +299,8 @@ void Voxelizer::voxelize(uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
 void Voxelizer::renderBoxArray(uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
 {
 	// Set pipeline state
-	m_commandList->SetPipelineState(m_pipelines[PASS_DRAW_AS_BOX].Get());
-	m_commandList->SetGraphicsRootSignature(m_pipelineLayouts[PASS_DRAW_AS_BOX].Get());
+	m_commandList->SetPipelineState(m_pipelines[PASS_DRAW_AS_BOX].get());
+	m_commandList->SetGraphicsRootSignature(m_pipelineLayouts[PASS_DRAW_AS_BOX].get());
 
 	// Set descriptor tables
 	m_grids[frameIndex].Barrier(m_commandList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
