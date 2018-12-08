@@ -99,6 +99,9 @@
     <ClInclude Include="XUSG\Core\XUSGComputeState.h">
       <Filter>XUSG\Core\Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="XUSG\Core\XUSG.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Common\DXFramework.cpp">
