@@ -42,13 +42,13 @@ public:
 private:
 	XUSG::DescriptorTableCache m_descriptorTableCache;
 
-	XUSG::com_ptr<IDXGISwapChain3>			m_swapChain;
-	XUSG::com_ptr<ID3D12CommandAllocator>	m_commandAllocators[Voxelizer::FrameCount];
-	XUSG::com_ptr<ID3D12CommandQueue>		m_commandQueue;
+	XUSG::SwapChain			m_swapChain;
+	XUSG::CommandAllocator	m_commandAllocators[Voxelizer::FrameCount];
+	XUSG::CommandQueue		m_commandQueue;
 
-	XUSG::Device m_device;
-	XUSG::Resource m_renderTargets[Voxelizer::FrameCount];
-	XUSG::GraphicsCommandList m_commandList;
+	XUSG::Device			m_device;
+	XUSG::Resource			m_renderTargets[Voxelizer::FrameCount];
+	XUSG::CommandList		m_commandList;
 	
 	// App resources.
 	std::unique_ptr<Voxelizer> m_voxelizer;
@@ -61,14 +61,14 @@ private:
 	DirectX::XMFLOAT3		m_eyePt;
 
 	// Synchronization objects.
-	uint32_t m_frameIndex;
-	HANDLE m_fenceEvent;
-	XUSG::com_ptr<ID3D12Fence> m_fence;
-	uint64_t m_fenceValues[Voxelizer::FrameCount];
+	uint32_t	m_frameIndex;
+	HANDLE		m_fenceEvent;
+	XUSG::Fence	m_fence;
+	uint64_t	m_fenceValues[Voxelizer::FrameCount];
 
 	// Application state
-	bool m_pausing;
-	StepTimer m_timer;
+	bool		m_pausing;
+	StepTimer	m_timer;
 
 	// User camera interactions
 	bool m_tracking;

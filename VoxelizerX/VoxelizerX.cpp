@@ -148,7 +148,8 @@ void VoxelizerX::LoadPipeline()
 void VoxelizerX::LoadAssets()
 {
 	// Create the command list.
-	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[m_frameIndex].get(), nullptr, IID_PPV_ARGS(&m_commandList)));
+	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+		m_commandAllocators[m_frameIndex].get(), nullptr, IID_PPV_ARGS(&m_commandList.GetCommandList())));
 
 	m_voxelizer = make_unique<Voxelizer>(m_device, m_commandList);
 	if (!m_voxelizer) ThrowIfFailed(E_FAIL);
@@ -159,9 +160,9 @@ void VoxelizerX::LoadAssets()
 		ThrowIfFailed(E_FAIL);
 
 	// Close the command list and execute it to begin the initial GPU setup.
-	ThrowIfFailed(m_commandList->Close());
-	ID3D12CommandList *ppCommandLists[] = { m_commandList.get() };
-	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	ThrowIfFailed(m_commandList.Close());
+	ID3D12CommandList *const ppCommandLists[] = { m_commandList.GetCommandList().get() };
+	m_commandQueue->ExecuteCommandLists(static_cast<uint32_t>(size(ppCommandLists)), ppCommandLists);
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
@@ -219,8 +220,8 @@ void VoxelizerX::OnRender()
 	PopulateCommandList();
 
 	// Execute the command list.
-	ID3D12CommandList *ppCommandLists[] = { m_commandList.get() };
-	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	ID3D12CommandList *const ppCommandLists[] = { m_commandList.GetCommandList().get() };
+	m_commandQueue->ExecuteCommandLists(static_cast<uint32_t>(size(ppCommandLists)), ppCommandLists);
 
 	// Present the frame.
 	ThrowIfFailed(m_swapChain->Present(0, 0));
@@ -320,25 +321,25 @@ void VoxelizerX::PopulateCommandList()
 	// However, when ExecuteCommandList() is called on a particular command 
 	// list, that command list can then be reset at any time and must be before 
 	// re-recording.
-	ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].get(), nullptr));
+	ThrowIfFailed(m_commandList.Reset(m_commandAllocators[m_frameIndex], nullptr));
 
 	// Indicate that the back buffer will be used as a render target.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].get(),
+	m_commandList.Barrier(1, &ResourceBarrier::Transition(m_renderTargets[m_frameIndex].get(),
 		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	// Record commands.
 	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-	m_commandList->ClearRenderTargetView(*m_rtvTables[m_frameIndex], clearColor, 0, nullptr);
-	m_commandList->ClearDepthStencilView(m_depth.GetDSV(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	m_commandList.ClearRenderTargetView(*m_rtvTables[m_frameIndex], clearColor, 0, nullptr);
+	m_commandList.ClearDepthStencilView(m_depth.GetDSV(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	// Voxelizer rendering
 	m_voxelizer->Render(m_frameIndex, m_rtvTables[m_frameIndex], m_depth.GetDSV());
 
 	// Indicate that the back buffer will now be used to present.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].get(),
+	m_commandList.Barrier(1, &ResourceBarrier::Transition(m_renderTargets[m_frameIndex].get(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
-	ThrowIfFailed(m_commandList->Close());
+	ThrowIfFailed(m_commandList.Close());
 }
 
 // Wait for pending GPU work to complete.

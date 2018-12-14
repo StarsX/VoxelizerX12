@@ -7,7 +7,7 @@
 class Voxelizer
 {
 public:
-	Voxelizer(const XUSG::Device &device, const XUSG::GraphicsCommandList &commandList);
+	Voxelizer(const XUSG::Device &device, const XUSG::CommandList &commandList);
 	virtual ~Voxelizer();
 
 	bool Init(uint32_t width, uint32_t height, XUSG::Format rtFormat, XUSG::Format dsFormat,
@@ -101,7 +101,7 @@ protected:
 	void renderBoxArray(uint32_t frameIndex, const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
 
 	XUSG::Device m_device;
-	XUSG::GraphicsCommandList m_commandList;
+	XUSG::CommandList m_commandList;
 
 	XUSG::ShaderPool				m_shaderPool;
 	XUSG::Graphics::PipelineCache	m_pipelineCache;
