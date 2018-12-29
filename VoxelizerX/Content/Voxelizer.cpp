@@ -288,9 +288,9 @@ void Voxelizer::voxelize(uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
 
 	// Record commands.
 	m_commandList.ClearUnorderedAccessViewUint(*m_uavTables[frameIndex][UAV_TABLE_VOXELIZE], m_grids[frameIndex].GetUAV(),
-		m_grids[frameIndex].GetResource(), XMVECTORU32{ 0 }.u, 0, nullptr);
+		m_grids[frameIndex].GetResource(), XMVECTORU32{ 0 }.u);
 	if (depthPeel) m_commandList.ClearUnorderedAccessViewUint(*m_uavTables[frameIndex][UAV_TABLE_KBUFFER], m_KBufferDepths[frameIndex].GetUAV(),
-		m_KBufferDepths[frameIndex].GetResource(), XMVECTORU32{ UINT32_MAX }.u, 0, nullptr);
+		m_KBufferDepths[frameIndex].GetResource(), XMVECTORU32{ UINT32_MAX }.u);
 
 	m_commandList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_commandList.Draw(3, m_numIndices / 3, 0, 0);
