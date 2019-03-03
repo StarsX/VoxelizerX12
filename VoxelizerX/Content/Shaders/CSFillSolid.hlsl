@@ -14,7 +14,7 @@
 //--------------------------------------------------------------------------------------
 cbuffer cbPerMipLevel
 {
-	float g_fGridSize;
+	float g_gridSize;
 };
 
 //--------------------------------------------------------------------------------------
@@ -22,10 +22,10 @@ cbuffer cbPerMipLevel
 //--------------------------------------------------------------------------------------
 Texture2DArray<uint>	g_txKBufDepth;
 #if	USE_MUTEX
-Texture3D<min16float>	g_txGrids[3];
-RWTexture3D<min16float>	g_RWGrid;
+Texture3D<float>		g_txGrids[3];
+RWTexture3D<float>		g_rwGrid;
 #else
-RWTexture3D<uint>		g_RWGrid;
+RWTexture3D<uint>		g_rwGrid;
 #endif
 
 //--------------------------------------------------------------------------------------
@@ -35,61 +35,61 @@ RWTexture3D<uint>		g_RWGrid;
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 #if	USE_MUTEX
-	min16float4 vData;
-	vData.x = g_txGrids[0][DTid];
-	vData.y = g_txGrids[1][DTid];
-	vData.z = g_txGrids[2][DTid];
-	vData.w = any(vData.xyz);
+	float4 data;
+	data.x = g_txGrids[0][DTid];
+	data.y = g_txGrids[1][DTid];
+	data.z = g_txGrids[2][DTid];
+	data.w = any(vData.xyz);
 #else
-	const float4 vData = unpack(g_RWGrid[DTid]);
+	const float4 data = unpack(g_rwGrid[DTid]);
 #endif
 
-	if (vData.w <= 0.0)
+	if (data.w <= 0.0)
 	{
-		const uint uNumLayer = g_fGridSize * DEPTH_SCALE;
+		const uint numLayer = g_gridSize * DEPTH_SCALE;
 
-		bool bFill = false;
-		uint uDepthBeg = 0xffffffff, uDepthEnd;
+		bool needFill = false;
+		uint depthBeg = 0xffffffff, depthEnd;
 
-		for (uint i = 0; i < uNumLayer; ++i)
+		for (uint i = 0; i < numLayer; ++i)
 		{
 			const uint3 vTex = { DTid.xy, i };
-			uDepthEnd = g_txKBufDepth[vTex];
+			depthEnd = g_txKBufDepth[vTex];
 #if	USE_NORMAL
-			if (uDepthEnd > DTid.z) break;
+			if (depthEnd > DTid.z) break;
 #else
-			if (uDepthEnd == 0xffffffff)
+			if (depthEnd == 0xffffffff)
 			{
-				bFill = false;
+				needFill = false;
 				break;
 			}
-			if (uDepthEnd > DTid.z) break;
-			bFill = uDepthBeg == uDepthEnd - 1 ? bFill : !bFill;
+			if (depthEnd > DTid.z) break;
+			needFill = depthBeg == depthEnd - 1 ? needFill : !needFill;
 #endif
-			uDepthBeg = uDepthEnd;
+			depthBeg = depthEnd;
 		}
 
 #if	USE_NORMAL
-		if (uDepthBeg != 0xffffffff && uDepthEnd != 0xffffffff)
+		if (depthBeg != 0xffffffff && depthEnd != 0xffffffff)
 		{
 #if	USE_MUTEX
-			const min16float vNormBegZ = g_txGrids[2][uint3(DTid.xy, uDepthBeg)];
-			const min16float vNormEndZ = g_txGrids[2][uint3(DTid.xy, uDepthEnd)];
-			bFill = vNormBegZ < 0.0 || vNormEndZ > 0.0;
+			const float normBegZ = g_txGrids[2][uint3(DTid.xy, depthBeg)];
+			const float normEndZ = g_txGrids[2][uint3(DTid.xy, depthEnd)];
+			needFill = normBegZ < 0.0 || normEndZ > 0.0;
 #else
-			const float vNormBegZ = unpack(g_RWGrid[uint3(DTid.xy, uDepthBeg)]).z;
-			const float vNormEndZ = unpack(g_RWGrid[uint3(DTid.xy, uDepthEnd)]).z;
-			bFill = vNormBegZ < 0.5 || vNormEndZ > 0.5;
+			const float normBegZ = unpack(g_rwGrid[uint3(DTid.xy, depthBeg)]).z;
+			const float normEndZ = unpack(g_rwGrid[uint3(DTid.xy, depthEnd)]).z;
+			needFill = normBegZ < 0.5 || normEndZ > 0.5;
 #endif
 		}
 #endif
 
-		if (bFill)
+		if (needFill)
 		{
 #if	USE_MUTEX
-			g_RWGrid[DTid] = 1.0;
+			g_rwGrid[DTid] = 1.0;
 #else
-			g_RWGrid[DTid] = pack(float4(vData.xyz, 1.0));
+			g_rwGrid[DTid] = pack(float4(data.xyz, 1.0));
 #endif
 		}
 	}

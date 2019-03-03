@@ -10,8 +10,8 @@
 //--------------------------------------------------------------------------------------
 void main(const PSIn input)
 {
-	const uint3 vLoc = input.TexLoc * g_fGridSize;
+	const uint3 loc = input.TexLoc * g_gridSize;
 	
-	PSTriProj(input, vLoc);
-	DepthPeel(vLoc.z, vLoc.xy, g_fGridSize * DEPTH_SCALE);
+	PSTriProj(input, loc);
+	DepthPeel(loc.z, loc.xy, g_gridSize * DEPTH_SCALE);
 }

@@ -41,20 +41,20 @@ static const min16float g_fLStepScale = g_fMaxDist / NUM_LIGHT_SAMPLES;
 // Textures
 //--------------------------------------------------------------------------------------
 #if	USE_MUTEX
-Texture3D<min16float>		g_txGrid;
+Texture3D<float>	g_txGrid;
 #else
-Texture3D<min16float4>		g_txGrid;
+Texture3D			g_txGrid;
 #endif
 
 //--------------------------------------------------------------------------------------
 // Unordered access textures
 //--------------------------------------------------------------------------------------
-RWTexture2D<min16float4>	g_rwPresent;
+RWTexture2D<float4>	g_rwPresent;
 
 //--------------------------------------------------------------------------------------
 // Texture samplers
 //--------------------------------------------------------------------------------------
-SamplerState				g_smpLinear;
+SamplerState		g_smpLinear;
 
 //--------------------------------------------------------------------------------------
 // Screen space to loacal space
@@ -104,9 +104,9 @@ bool ComputeStartPoint(inout float3 vPos, const float3 vRayDir)
 min16float GetSample(const float3 vTex)
 {
 #if	USE_MUTEX
-	const min16float fDens = g_txGrid.SampleLevel(g_smpLinear, vTex, SHOW_MIP).x;
+	const min16float fDens = min16float(g_txGrid.SampleLevel(g_smpLinear, vTex, SHOW_MIP).x);
 #else
-	const min16float fDens = g_txGrid.SampleLevel(g_smpLinear, vTex, SHOW_MIP).w;
+	const min16float fDens = min16float(g_txGrid.SampleLevel(g_smpLinear, vTex, SHOW_MIP).w);
 #endif
 
 	return min(fDens * 8.0, 16.0);

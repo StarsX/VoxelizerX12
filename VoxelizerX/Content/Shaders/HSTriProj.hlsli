@@ -20,40 +20,40 @@ struct HSOut
 float3 PrimSize(VSOut ip[NUM_CONTROL_POINTS])
 {
 	// Calculate projected edges of 3-views respectively
-	const float3 vEdge1 = ip[1].Pos - ip[0].Pos;
-	const float3 vEdge2 = ip[2].Pos - ip[1].Pos;
+	const float3 edge1 = ip[1].Pos - ip[0].Pos;
+	const float3 edge2 = ip[2].Pos - ip[1].Pos;
 
 	// Calculate projected triangle sizes (equivalent to area) for 3 views
-	const float fSizeXY = abs(determinant(float2x2(vEdge1.xy, vEdge2.xy)));
-	const float fSizeYZ = abs(determinant(float2x2(vEdge1.yz, vEdge2.yz)));
-	const float fSizeZX = abs(determinant(float2x2(vEdge1.zx, vEdge2.zx)));
+	const float sizeXY = abs(determinant(float2x2(edge1.xy, edge2.xy)));
+	const float sizeYZ = abs(determinant(float2x2(edge1.yz, edge2.yz)));
+	const float sizeZX = abs(determinant(float2x2(edge1.zx, edge2.zx)));
 
-	return float3(fSizeXY, fSizeYZ, fSizeZX);
+	return float3(sizeXY, sizeYZ, sizeZX);
 }
 
 //--------------------------------------------------------------------------------------
 // Project to 3-views
 //--------------------------------------------------------------------------------------
-float2 Project(const float3 vPos, const float3 vPrimSize)
+float2 Project(const float3 pos, const float3 primSize)
 {
-	const float fSizeXY = vPrimSize.x;
-	const float fSizeYZ = vPrimSize.y;
-	const float fSizeZX = vPrimSize.z;
+	const float sizeXY = primSize.x;
+	const float sizeYZ = primSize.y;
+	const float sizeZX = primSize.z;
 
-	return fSizeXY > fSizeYZ ?
-		(fSizeXY > fSizeZX ? vPos.xy : vPos.zx) :
-		(fSizeYZ > fSizeZX ? vPos.yz : vPos.zx);
+	return sizeXY > sizeYZ ?
+		(sizeXY > sizeZX ? pos.xy : pos.zx) :
+		(sizeYZ > sizeZX ? pos.yz : pos.zx);
 }
 
 //--------------------------------------------------------------------------------------
 // Select the view with maximal projected AABB
 //--------------------------------------------------------------------------------------
-HSOut HSMain(const float2 vPos, const InputPatch<VSOut, NUM_CONTROL_POINTS> ip, const uint i)
+HSOut HSMain(const float2 pos, const InputPatch<VSOut, NUM_CONTROL_POINTS> ip, const uint i)
 {
 	HSOut output;
 
 	// Select the view with maximal projected AABB
-	output.Pos = vPos;
+	output.Pos = pos;
 
 	// Other attributes
 	output.PosLoc = ip[i].PosLoc;

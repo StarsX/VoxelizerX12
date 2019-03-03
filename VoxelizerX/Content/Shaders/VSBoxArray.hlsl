@@ -19,21 +19,21 @@ struct VSOut
 //--------------------------------------------------------------------------------------
 cbuffer cbMatrices
 {
-	matrix	g_mWorldViewProj;
-	matrix	g_mWorld;
-	matrix	g_mWorldIT;
+	matrix	g_worldViewProj;
+	matrix	g_world;
+	matrix	g_worldIT;
 };
 
 //--------------------------------------------------------------------------------------
 // Textures
 //--------------------------------------------------------------------------------------
 #if	USE_MUTEX
-Texture3D<min16float> g_txGrids[4];
+Texture3D<float>	g_txGrids[4];
 #else
-Texture3D<min16float4> g_txGrid;
+Texture3D			g_txGrid;
 #endif
 
-static const float3x3 mPlane[6] =
+static const float3x3 plane[6] =
 {
 	// back plane
 	float3x3(-1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f),
@@ -52,41 +52,41 @@ static const float3x3 mPlane[6] =
 //--------------------------------------------------------------------------------------
 // Generate boxes
 //--------------------------------------------------------------------------------------
-VSOut main(const uint vID : SV_VertexID, const uint InstID : SV_InstanceID)
+VSOut main(const uint vID : SV_VertexID, const uint instID : SV_InstanceID)
 {
 	VSOut output;
 
-	const uint boxID = InstID / 6;
-	const uint planeID = InstID % 6;
+	const uint boxID = instID / 6;
+	const uint planeID = instID % 6;
 
-	const float2 vPos2D = float2(vID & 1, vID >> 1) * 2.0 - 1.0;
-	float3 vPerBoxPos = float3(vPos2D.x, -vPos2D.y, 1.0);
-	vPerBoxPos = mul(vPerBoxPos, mPlane[planeID]);
+	const float2 pos2D = float2(vID & 1, vID >> 1) * 2.0 - 1.0;
+	float3 perBoxPos = float3(pos2D.x, -pos2D.y, 1.0);
+	perBoxPos = mul(perBoxPos, plane[planeID]);
 
-	const uint uGridSize = GRID_SIZE >> SHOW_MIP;
-	const uint uSliceSize = uGridSize * uGridSize;
-	const uint uPerSliceID = boxID % uSliceSize;
-	const uint3 vLoc = { uPerSliceID % uGridSize, uPerSliceID / uGridSize, boxID / uSliceSize };
-	float3 vPos = (vLoc * 2 + 1) / (uGridSize * 2.0);
-	vPos = vPos * float3(2.0, -2.0, 2.0) + float3(-1.0, 1.0, -1.0);
-	vPos += vPerBoxPos / uGridSize;
+	const uint gridSize = GRID_SIZE >> SHOW_MIP;
+	const uint sliceSize = gridSize * gridSize;
+	const uint perSliceID = boxID % sliceSize;
+	const uint3 loc = { perSliceID % gridSize, perSliceID / gridSize, boxID / sliceSize };
+	float3 pos = (loc * 2 + 1) / (gridSize * 2.0);
+	pos = pos * float3(2.0, -2.0, 2.0) + float3(-1.0, 1.0, -1.0);
+	pos += perBoxPos / gridSize;
 	
 #if	USE_MUTEX
-	min16float4 vGrid;
-	vGrid.x = g_txGrids[0].mips[SHOW_MIP][vLoc];
-	vGrid.y = g_txGrids[1].mips[SHOW_MIP][vLoc];
-	vGrid.z = g_txGrids[2].mips[SHOW_MIP][vLoc];
-	vGrid.w = g_txGrids[3].mips[SHOW_MIP][vLoc];
+	min16float4 grid;
+	grid.x = g_txGrids[0].mips[SHOW_MIP][vLoc];
+	grid.y = g_txGrids[1].mips[SHOW_MIP][vLoc];
+	grid.z = g_txGrids[2].mips[SHOW_MIP][vLoc];
+	grid.w = g_txGrids[3].mips[SHOW_MIP][vLoc];
 #else
-	min16float4 vGrid = g_txGrid.mips[SHOW_MIP][vLoc];
-	vGrid.xyz -= 0.5;
+	min16float4 grid = min16float4(g_txGrid.mips[SHOW_MIP][loc]);
+	grid.xyz -= 0.5;
 #endif
 	
-	output.Pos = mul(float4(vPos, 1.0), g_mWorldViewProj);
-	output.NrmMesh = min16float4(mul(normalize(vGrid.xyz), (float3x3)g_mWorldIT), vGrid.w);
-	output.NrmCube = min16float3(mul(mPlane[planeID][2], (float3x3)g_mWorldIT));
+	output.Pos = mul(float4(pos, 1.0), g_worldViewProj);
+	output.NrmMesh = min16float4(mul(normalize(grid.xyz), (float3x3)g_worldIT), grid.w);
+	output.NrmCube = min16float3(mul(plane[planeID][2], (float3x3)g_worldIT));
 
-	output.Pos.w = vGrid.w > 0.0 ? output.Pos.w : 0.0;
+	output.Pos.w = grid.w > 0.0 ? output.Pos.w : 0.0;
 
 	return output;
 }

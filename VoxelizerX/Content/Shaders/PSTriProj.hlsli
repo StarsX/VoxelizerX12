@@ -28,7 +28,7 @@ struct PSIn
 //--------------------------------------------------------------------------------------
 cbuffer cbPerMipLevel
 {
-	float g_fGridSize;
+	float g_gridSize;
 };
 
 //--------------------------------------------------------------------------------------
@@ -36,52 +36,49 @@ cbuffer cbPerMipLevel
 //--------------------------------------------------------------------------------------
 #if	USE_MUTEX
 globallycoherent
-RWTexture3D<min16float>	g_RWGrids[4]	: register (u0);
+RWTexture3D<float>	g_rwGrids[4]	: register (u0);
 #else
-RWTexture3D<uint>		g_RWGrid		: register (u0);
+RWTexture3D<uint>	g_rwGrid		: register (u0);
 #endif
 
 //--------------------------------------------------------------------------------------
 // Surface voxelization, writing to grid
 //--------------------------------------------------------------------------------------
-void PSTriProj(const PSIn input, const uint3 vLoc)
+void PSTriProj(const PSIn input, const uint3 loc)
 {
-#if	USE_MUTEX
-	const min16float3 vNorm = min16float3(normalize(input.Nrm));
-#else
-	const float3 vNorm = normalize(input.Nrm);
-	const float4 vData = { vNorm * 0.5 + 0.5, 1.0 };
-	uint uData = D3DX_FLOAT4_to_R10G10B10A2_UNORM(vData);
-
+	const float3 normal = normalize(input.Nrm);
+#if	!USE_MUTEX
+	const float4 data = { normal * 0.5 + 0.5, 1.0 };
+	uint packedData = D3DX_FLOAT4_to_R10G10B10A2_UNORM(data);
 #endif
 	
 #ifdef _CONSERVATIVE_
-	const float4 vBound = input.Bound * g_fGridSize;
-	const bool bWrite = input.Pos.x + 1.0 > vBound.x && input.Pos.y + 1.0 > vBound.y &&
-		input.Pos.x < vBound.z + 1.0 && input.Pos.y < vBound.w + 1.0;
+	const float4 bound = input.Bound * g_gridSize;
+	const bool needWrite = input.Pos.x + 1.0 > bound.x && input.Pos.y + 1.0 > bound.y &&
+		input.Pos.x < bound.z + 1.0 && input.Pos.y < bound.w + 1.0;
 #endif
 
 #if	USE_MUTEX
 
-	mutexLock(vLoc);
+	mutexLock(loc);
 	// Critical section
 #ifdef _CONSERVATIVE_
-	if (bWrite)
+	if (needWrite)
 #endif
 	{
-		g_RWGrids[0][vLoc] += vNorm.x;
-		g_RWGrids[1][vLoc] += vNorm.y;
-		g_RWGrids[2][vLoc] += vNorm.z;
-		g_RWGrids[3][vLoc] = 1.0;
+		g_RWGrids[0][loc] += normal.x;
+		g_RWGrids[1][loc] += normal.y;
+		g_RWGrids[2][loc] += normal.z;
+		g_RWGrids[3][loc] = 1.0;
 	}
-	mutexUnlock(vLoc);
+	mutexUnlock(loc);
 
 #else
 
 #ifdef _CONSERVATIVE_
-	if (bWrite)
+	if (needWrite)
 #endif
-		InterlockedMax(g_RWGrid[vLoc], uData, uData);
+		InterlockedMax(g_rwGrid[loc], packedData, packedData);
 
 #endif
 }

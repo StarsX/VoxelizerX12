@@ -13,32 +13,32 @@
 //--------------------------------------------------------------------------------------
 // Unordered access texture
 //--------------------------------------------------------------------------------------
-RWTexture2DArray<uint>	g_RWKBufDepth : register(U_DEPTH);
+RWTexture2DArray<uint>	g_rwKBufDepth : register(U_DEPTH);
 
 //--------------------------------------------------------------------------------------
 // Depth peeling
 //--------------------------------------------------------------------------------------
-void DepthPeel(uint uDepth, const uint2 vLoc, const uint uNumLayer)
+void DepthPeel(uint depth, const uint2 loc, const uint numLayer)
 {
-	uint uDepthPrev;
+	uint depthPrev;
 
 	//[allow_uav_condition]
-	for (uint i = 0; i < uNumLayer; ++i)
+	for (uint i = 0; i < numLayer; ++i)
 	{
-		const uint3 vTex = { vLoc, i };
-		InterlockedMin(g_RWKBufDepth[vTex], uDepth, uDepthPrev);
+		const uint3 tex = { loc, i };
+		InterlockedMin(g_rwKBufDepth[tex], depth, depthPrev);
 
 #if	USE_NORMAL
-		if (uDepthPrev == 0xffffffff) return;
+		if (depthPrev == 0xffffffff) return;
 
-		const uint uDepthMax = max(uDepth, uDepthPrev);
-		const uint uDepthMin = min(uDepth, uDepthPrev);
-		if (uDepthMax - uDepthMin <= 1) return;
+		const uint depthMax = max(depth, depthPrev);
+		const uint depthMin = min(depth, depthPrev);
+		if (depthMax - depthMin <= 1) return;
 #else
-		if (uDepthPrev == uDepth || uDepthPrev == 0xffffffff) return;
-		const uint uDepthMax = max(uDepth, uDepthPrev);
+		if (depthPrev == depth || depthPrev == 0xffffffff) return;
+		const uint depthMax = max(depth, depthPrev);
 #endif
 
-		uDepth = uDepthMax;
+		depth = depthMax;
 	}
 }

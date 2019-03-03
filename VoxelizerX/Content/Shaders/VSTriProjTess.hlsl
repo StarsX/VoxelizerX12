@@ -23,8 +23,8 @@ struct VSOut
 //--------------------------------------------------------------------------------------
 cbuffer cbPerObject
 {
-	float3	g_vCenter	: packoffset(c0);
-	float	g_fRadius	: packoffset(c0.w);
+	float3	g_center	: packoffset(c0);
+	float	g_radius	: packoffset(c0.w);
 };
 
 //--------------------------------------------------------------------------------------
@@ -34,7 +34,7 @@ VSOut main(const VSIn input)
 {
 	VSOut output;
 
-	output.Pos = (input.Pos - g_vCenter) / g_fRadius;
+	output.Pos = (input.Pos - g_center) / g_radius;
 	output.PosLoc = input.Pos;
 	output.Nrm = input.Nrm;
 

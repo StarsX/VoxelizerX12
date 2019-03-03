@@ -29,7 +29,7 @@ struct DSOut
 //--------------------------------------------------------------------------------------
 cbuffer cbPerMipLevel
 {
-	float g_fGridSize;
+	float g_gridSize;
 };
 
 //--------------------------------------------------------------------------------------
@@ -40,13 +40,13 @@ DSOut DSMain(float3 domain, const OutputPatch<DSIn, NUM_CONTROL_POINTS> patch)
 	DSOut output;
 
 	// Distance to centroid in rasterizer space
-	const float2 vVertex = patch[0].Pos * domain.x + patch[1].Pos * domain.y + patch[2].Pos * domain.z;
-	const float2 vCentroid = (patch[0].Pos + patch[1].Pos + patch[2].Pos) / 3.0;
-	const float fDistance = distance(vVertex, vCentroid) * g_fGridSize * 0.5;
+	const float2 vertex = patch[0].Pos * domain.x + patch[1].Pos * domain.y + patch[2].Pos * domain.z;
+	const float2 centroidPos = (patch[0].Pos + patch[1].Pos + patch[2].Pos) / 3.0;
+	const float dist = distance(vertex, centroidPos) * g_gridSize * 0.5;
 
 	// Change domain location with offset for extrapolation
-	const float3 f1PixelOffset = (domain - 1.0 / 3.0) / fDistance;
-	domain += CONSERVATION_AMT * f1PixelOffset;
+	const float3 onePixelOffset = (domain - 1.0 / 3.0) / dist;
+	domain += CONSERVATION_AMT * onePixelOffset;
 
 	// Extrapolations
 	output.Pos.xy = patch[0].Pos * domain.x + patch[1].Pos * domain.y + patch[2].Pos * domain.z;

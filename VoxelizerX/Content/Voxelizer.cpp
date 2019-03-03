@@ -314,7 +314,7 @@ void Voxelizer::renderBoxArray(uint32_t frameIndex, const RenderTargetTable &rtv
 	m_commandList.RSSetViewports(1, &viewport);
 	m_commandList.RSSetScissorRects(1, &scissorRect);
 
-	m_commandList.OMSetRenderTargets(1, rtvs, dsv);
+	m_commandList.OMSetRenderTargets(1, rtvs, &dsv);
 
 	// Record commands.
 	m_commandList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);

@@ -24,8 +24,8 @@ struct VSOut
 //--------------------------------------------------------------------------------------
 cbuffer cbPerObject
 {
-	float3	g_vCenter	: packoffset(c0);
-	float	g_fRadius	: packoffset(c0.w);
+	float3	g_center	: packoffset(c0);
+	float	g_radius	: packoffset(c0.w);
 };
 
 //--------------------------------------------------------------------------------------
@@ -36,16 +36,16 @@ VSOut main(const VSIn input, const uint viewID : SV_InstanceID)
 	VSOut output;
 
 	// Normalize
-	const float3 vPos = (input.Pos - g_vCenter) / g_fRadius;
+	const float3 pos = (input.Pos - g_center) / g_radius;
 
 	// Select the view
-	output.Pos.xy = viewID == 0 ? vPos.xy : (viewID == 1 ? vPos.yz : vPos.zx);
+	output.Pos.xy = viewID == 0 ? pos.xy : (viewID == 1 ? pos.yz : pos.zx);
 	output.Pos.zw = float2(0.5, 1.0);
 
 	// Other attributes
 	output.PosLoc = input.Pos;
 	output.Nrm = input.Nrm;
-	output.TexLoc = vPos * 0.5 + 0.5;
+	output.TexLoc = pos * 0.5 + 0.5;
 	output.TexLoc.y = 1.0 - output.TexLoc.y;
 
 	return output;

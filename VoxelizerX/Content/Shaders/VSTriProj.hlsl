@@ -20,37 +20,37 @@ StructuredBuffer<VSIn> g_roVertices;
 //--------------------------------------------------------------------------------------
 // Load IA
 //--------------------------------------------------------------------------------------
-VSIn LoadVSIn(const uint uIdx)
+VSIn LoadVSIn(const uint i)
 {
-	const uint uVid = g_roIndices[uIdx];
+	const uint vid = g_roIndices[i];
 
-	return g_roVertices[uVid];
+	return g_roVertices[vid];
 }
 
 //--------------------------------------------------------------------------------------
 // Emulate the behaviors of VS, HS, and DS
 //--------------------------------------------------------------------------------------
-DSOut main(const uint vID : SV_VertexID, const uint vPrimID : SV_InstanceID)
+DSOut main(const uint vID : SV_VertexID, const uint primID : SV_InstanceID)
 {
 	DSOut output;
 
 	// Call vertex shaders
 	VSOut ip[] =
 	{
-		VertShader(LoadVSIn(vPrimID * NUM_CONTROL_POINTS)),
-		VertShader(LoadVSIn(vPrimID * NUM_CONTROL_POINTS + 1)),
-		VertShader(LoadVSIn(vPrimID * NUM_CONTROL_POINTS + 2))
+		VertShader(LoadVSIn(primID * NUM_CONTROL_POINTS)),
+		VertShader(LoadVSIn(primID * NUM_CONTROL_POINTS + 1)),
+		VertShader(LoadVSIn(primID * NUM_CONTROL_POINTS + 2))
 	};
 
 	// Calculate projected triangle sizes (equivalent to area) for 3 views
-	const float3 vPrimSize = PrimSize(ip);
+	const float3 primSize = PrimSize(ip);
 
 	// Select the view with maximal projected AABB
 	float2 v[] =
 	{
-		Project(ip[0].Pos, vPrimSize),
-		Project(ip[1].Pos, vPrimSize),
-		Project(ip[2].Pos, vPrimSize),
+		Project(ip[0].Pos, primSize),
+		Project(ip[1].Pos, primSize),
+		Project(ip[2].Pos, primSize),
 	};
 	
 	// Call hull shaders

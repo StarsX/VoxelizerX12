@@ -9,7 +9,7 @@
 //--------------------------------------------------------------------------------------
 void main(const PSIn input)
 {
-	const uint3 vLoc = input.TexLoc * g_fGridSize;
+	const uint3 loc = input.TexLoc * g_gridSize;
 	
-	PSTriProj(input, vLoc);
+	PSTriProj(input, loc);
 }

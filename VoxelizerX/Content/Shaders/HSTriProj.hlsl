@@ -33,7 +33,7 @@ HSConstDataOut CalcHSPatchConstants()
 
 	// Insert code to compute Output here
 	Output.EdgeTessFactor[0] = Output.EdgeTessFactor[1] =
-		Output.EdgeTessFactor[2] = Output.InsideTessFactor = 1.0f; // e.g. could calculate dynamic tessellation factors instead
+		Output.EdgeTessFactor[2] = Output.InsideTessFactor = 1.0; // e.g. could calculate dynamic tessellation factors instead
 
 	return Output;
 }
@@ -49,10 +49,10 @@ HSConstDataOut CalcHSPatchConstants()
 HSOut main(const InputPatch<VSOut, NUM_CONTROL_POINTS> ip, const uint i : SV_OutputControlPointID)
 {
 	// Calculate projected triangle sizes (equivalent to area) for 3 views
-	const float3 vPrimSize = PrimSize(ip);
+	const float3 primSize = PrimSize(ip);
 
 	// Select the view with maximal projected AABB
-	const float2 vPos = Project(ip[i].Pos, vPrimSize);
+	const float2 pos = Project(ip[i].Pos, primSize);
 
-	return HSMain(vPos, ip, i);
+	return HSMain(pos, ip, i);
 }
