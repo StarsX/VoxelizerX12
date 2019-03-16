@@ -109,35 +109,17 @@ void VoxelizerX::LoadPipeline()
 
 	m_descriptorTableCache.SetDevice(m_device);
 
-	// Create descriptor heaps.
-	{
-		// Describe and create a render target view (RTV) descriptor heap.
-		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = Voxelizer::FrameCount;
-		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvPool)));
-	}
-
 	// Create frame resources.
+	// Create a RTV and a command allocator for each frame.
+	for (auto n = 0u; n < Voxelizer::FrameCount; n++)
 	{
-		const auto strideRtv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		Descriptor rtv(m_rtvPool->GetCPUDescriptorHandleForHeapStart());
+		m_renderTargets[n].CreateFromSwapChain(m_device, m_swapChain, n);
 
-		// Create a RTV and a command allocator for each frame.
-		for (auto n = 0u; n < Voxelizer::FrameCount; n++)
-		{
-			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
-			m_device->CreateRenderTargetView(m_renderTargets[n].get(), nullptr, rtv);
+		Util::DescriptorTable rtvTable;
+		rtvTable.SetDescriptors(0, 1, &m_renderTargets[n].GetRTV());
+		m_rtvTables[n] = rtvTable.GetRtvTable(m_descriptorTableCache);
 
-			Util::DescriptorTable rtvTable;
-			rtvTable.SetDescriptors(0, 1, &rtv);
-			m_rtvTables[n] = rtvTable.GetRtvTable(m_descriptorTableCache);
-
-			rtv.Offset(strideRtv);
-
-			ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
-		}
+		ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
 	}
 
 	// Create a DSV
@@ -155,7 +137,7 @@ void VoxelizerX::LoadAssets()
 	if (!m_voxelizer) ThrowIfFailed(E_FAIL);
 
 	Resource vbUpload, ibUpload;
-	if (!m_voxelizer->Init(m_width, m_height, m_renderTargets[0]->GetDesc().Format,
+	if (!m_voxelizer->Init(m_width, m_height, m_renderTargets[0].GetResource()->GetDesc().Format,
 		m_depth.GetResource()->GetDesc().Format, vbUpload, ibUpload))
 		ThrowIfFailed(E_FAIL);
 
@@ -324,8 +306,7 @@ void VoxelizerX::PopulateCommandList()
 	ThrowIfFailed(m_commandList.Reset(m_commandAllocators[m_frameIndex], nullptr));
 
 	// Indicate that the back buffer will be used as a render target.
-	m_commandList.Barrier(1, &ResourceBarrier::Transition(m_renderTargets[m_frameIndex].get(),
-		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	m_renderTargets[m_frameIndex].Barrier(m_commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	// Record commands.
 	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
@@ -333,11 +314,10 @@ void VoxelizerX::PopulateCommandList()
 	m_commandList.ClearDepthStencilView(m_depth.GetDSV(), D3D12_CLEAR_FLAG_DEPTH, 1.0f);
 
 	// Voxelizer rendering
-	m_voxelizer->Render(m_frameIndex, m_rtvTables[m_frameIndex], m_depth.GetDSV());
+	m_voxelizer->RenderSolid(m_frameIndex, m_rtvTables[m_frameIndex], m_depth.GetDSV());
 
 	// Indicate that the back buffer will now be used to present.
-	m_commandList.Barrier(1, &ResourceBarrier::Transition(m_renderTargets[m_frameIndex].get(),
-		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	m_renderTargets[m_frameIndex].Barrier(m_commandList, D3D12_RESOURCE_STATE_PRESENT);
 
 	ThrowIfFailed(m_commandList.Close());
 }

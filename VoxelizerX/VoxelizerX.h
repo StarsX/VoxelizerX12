@@ -47,12 +47,11 @@ private:
 	XUSG::CommandQueue		m_commandQueue;
 
 	XUSG::Device			m_device;
-	XUSG::Resource			m_renderTargets[Voxelizer::FrameCount];
+	XUSG::RenderTarget		m_renderTargets[Voxelizer::FrameCount];
 	XUSG::CommandList		m_commandList;
 	
 	// App resources.
 	std::unique_ptr<Voxelizer> m_voxelizer;
-	XUSG::DescriptorPool	m_rtvPool;
 	XUSG::RenderTargetTable	m_rtvTables[Voxelizer::FrameCount];
 	XUSG::DepthStencil		m_depth;
 	DirectX::XMFLOAT4X4		m_proj;

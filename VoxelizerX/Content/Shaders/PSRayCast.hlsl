@@ -22,20 +22,17 @@
 
 cbuffer cbPerObject
 {
-	float3	g_vLocalSpaceLightPt;
-	float3	g_vLocalSpaceEyePt;
-	matrix	g_mScreenToLocal;
+	float3	g_localSpaceLightPt;
+	float3	g_localSpaceEyePt;
+	matrix	g_screenToLocal;
 };
-
-static const min16float3 g_vCornflowerBlue = { 0.392156899, 0.584313750, 0.929411829 };
-static const min16float3 g_vClear = g_vCornflowerBlue * g_vCornflowerBlue;
 
 //static const float3 g_vLightRad = g_vDirectional.xyz * g_vDirectional.w;	// 4.0
 //static const float3 g_vAmbientRad = g_vAmbient.xyz * g_vAmbient.w;			// 1.0
 
-static const min16float g_fMaxDist = 2.0 * sqrt(3.0);
-static const min16float g_fStepScale = g_fMaxDist / NUM_SAMPLES;
-static const min16float g_fLStepScale = g_fMaxDist / NUM_LIGHT_SAMPLES;
+static const min16float g_maxDist = 2.0 * sqrt(3.0);
+static const min16float g_stepScale = g_maxDist / NUM_SAMPLES;
+static const min16float g_lightStepScale = g_maxDist / NUM_LIGHT_SAMPLES;
 
 //--------------------------------------------------------------------------------------
 // Textures
@@ -61,7 +58,7 @@ SamplerState		g_smpLinear;
 //--------------------------------------------------------------------------------------
 float3 ScreenToLocal(const float3 vLoc)
 {
-	float4 vPos = mul(float4(vLoc, 1.0), g_mScreenToLocal);
+	float4 vPos = mul(float4(vLoc, 1.0), g_screenToLocal);
 	
 	return vPos.xyz / vPos.w;
 }
@@ -115,75 +112,73 @@ min16float GetSample(const float3 vTex)
 //--------------------------------------------------------------------------------------
 // Pixel Shader
 //--------------------------------------------------------------------------------------
-[numthreads(32, 32, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+min16float4 main(float4 sspos : SV_POSITION) : SV_TARGET
 {
-	float3 vPos = ScreenToLocal(float3(DTid.xy, 0.0));	// The point on the near plane
-	const float3 vRayDir = normalize(vPos - g_vLocalSpaceEyePt);
-	if (!ComputeStartPoint(vPos, vRayDir)) return;
+	float3 pos = ScreenToLocal(float3(sspos.xy, 0.0));	// The point on the near plane
+	const float3 rayDir = normalize(pos - g_localSpaceEyePt);
+	if (!ComputeStartPoint(pos, rayDir)) discard;
 
-	const float3 vStep = vRayDir * g_fStepScale;
+	const float3 step = rayDir * g_stepScale;
 
 #ifndef _POINT_LIGHT_
-	const float3 vLRStep = normalize(g_vLocalSpaceLightPt) * g_fLStepScale;
+	const float3 lightStep = normalize(g_localSpaceLightPt) * g_lightStepScale;
 #endif
 
 	// Transmittance
-	min16float fTransmit = 1.0;
+	min16float transmit = 1.0;
 	// In-scattered radiance
-	min16float fScatter = 0.0;
+	min16float scatter = 0.0;
 
 	for (uint i = 0; i < NUM_SAMPLES; ++i)
 	{
-		if (abs(vPos.x) > 1.0 || abs(vPos.y) > 1.0 || abs(vPos.z) > 1.0) break;
-		float3 vTex = float3(0.5, -0.5, 0.5) * vPos + 0.5;
+		if (abs(pos.x) > 1.0 || abs(pos.y) > 1.0 || abs(pos.z) > 1.0) break;
+		float3 tex = float3(0.5, -0.5, 0.5) * pos + 0.5;
 
 		// Get a sample
-		const min16float fDens = GetSample(vTex);
+		const min16float density = GetSample(tex);
 
 		// Skip empty space
-		if (fDens > ZERO_THRESHOLD)
+		if (density > ZERO_THRESHOLD)
 		{
 			// Attenuate ray-throughput
-			const min16float fScaledDens = fDens * g_fStepScale;
-			fTransmit *= saturate(1.0 - fScaledDens * ABSORPTION);
-			if (fTransmit < ZERO_THRESHOLD) break;
+			const min16float scaledDens = density * g_stepScale;
+			transmit *= saturate(1.0 - scaledDens * ABSORPTION);
+			if (transmit < ZERO_THRESHOLD) break;
 
 			// Point light direction in texture space
 #ifdef _POINT_LIGHT_
-			const float3 vLRStep = normalize(g_vLocalSpaceLightPt - vPos) * g_fLStepScale;
+			const float3 lightStep = normalize(g_localSpaceLightPt - pos) * g_lightStepScale;
 #endif
 
 			// Sample light
-			min16float fLRTrans = 1.0;	// Transmittance along light ray
-			float3 vLRPos = vPos + vLRStep;
+			min16float lightTrans = 1.0;	// Transmittance along light ray
+			float3 lightPos = pos + lightStep;
 
 			for (uint j = 0; j < NUM_LIGHT_SAMPLES; ++j)
 			{
-				if (abs(vLRPos.x) > 1.0 || abs(vLRPos.y) > 1.0 || abs(vLRPos.z) > 1.0) break;
-				vTex = min16float3(0.5, -0.5, 0.5) * vLRPos + 0.5;
+				if (abs(lightPos.x) > 1.0 || abs(lightPos.y) > 1.0 || abs(lightPos.z) > 1.0) break;
+				tex = min16float3(0.5, -0.5, 0.5) * lightPos + 0.5;
 
 				// Get a sample along light ray
-				const min16float fLRDens = GetSample(vTex);
+				const min16float lightDens = GetSample(tex);
 
 				// Attenuate ray-throughput along light direction
-				fLRTrans *= saturate(1.0 - ABSORPTION * g_fLStepScale * fLRDens);
-				if (fLRTrans < ZERO_THRESHOLD) break;
+				lightTrans *= saturate(1.0 - ABSORPTION * g_lightStepScale * lightDens);
+				if (lightTrans < ZERO_THRESHOLD) break;
 
 				// Update position along light ray
-				vLRPos += vLRStep;
+				lightPos += lightStep;
 			}
 
-			fScatter += fLRTrans * fTransmit * fScaledDens;
+			scatter += lightTrans * transmit * scaledDens;
 		}
 
-		vPos += vStep;
+		pos += step;
 	}
 
-	//clip(ONE_THRESHOLD - fTransmit);
+	//clip(ONE_THRESHOLD - transmit);
 
-	min16float3 vResult = fScatter * 1.0 + 0.3;
-	vResult = lerp(vResult, g_vClear, fTransmit);
-
-	g_rwPresent[DTid.xy] = min16float4(sqrt(vResult), 1.0);
+	const min16float3 result = scatter * 1.0 + 0.3;
+	
+	return min16float4(sqrt(result), 1.0 - transmit);
 }
