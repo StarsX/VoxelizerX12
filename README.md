@@ -7,3 +7,11 @@ DirectX 12 sample: real-time voxelization making use of tessellation for primiti
 Real-time solid voxelization using the surface voxelization method above and then filled with fast GPU depth peeling.
 
 ![Solid voxelization result](https://github.com/StarsX/VoxelizerX12/blob/master/Doc/Images/SolidVoxelization.jpg "Voxelization result")
+
+Hot keys:
+
+[F1] show/hide FPS
+
+[V] change voxelization method
+
+[S] surface/solid voxelization
