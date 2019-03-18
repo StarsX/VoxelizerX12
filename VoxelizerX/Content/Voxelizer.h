@@ -169,7 +169,6 @@ protected:
 
 	DirectX::XMFLOAT4		m_bound;
 	DirectX::XMFLOAT2		m_viewport;
-	DirectX::XMUINT2		m_windowSize;
 
 	uint32_t				m_numLevels;
 	uint32_t				m_numIndices;

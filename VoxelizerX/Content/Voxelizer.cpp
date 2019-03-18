@@ -22,8 +22,6 @@ Voxelizer::~Voxelizer()
 bool Voxelizer::Init(uint32_t width, uint32_t height, Format rtFormat, Format dsFormat,
 	Resource &vbUpload, Resource &ibUpload, const char *fileName)
 {
-	m_windowSize.x = width;
-	m_windowSize.y = height;
 	m_viewport.x = static_cast<float>(width);
 	m_viewport.y = static_cast<float>(height);
 
