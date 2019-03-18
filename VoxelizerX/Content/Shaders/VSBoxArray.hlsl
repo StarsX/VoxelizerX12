@@ -52,7 +52,7 @@ static const float3x3 plane[6] =
 //--------------------------------------------------------------------------------------
 // Generate boxes
 //--------------------------------------------------------------------------------------
-VSOut main(const uint vID : SV_VertexID, const uint instID : SV_InstanceID)
+VSOut main(uint vID : SV_VertexID, uint instID : SV_InstanceID)
 {
 	VSOut output;
 

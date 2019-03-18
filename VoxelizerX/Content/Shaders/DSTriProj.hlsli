@@ -35,7 +35,7 @@ cbuffer cbPerMipLevel
 //--------------------------------------------------------------------------------------
 // Perform triangle extrapolations
 //--------------------------------------------------------------------------------------
-DSOut DSMain(float3 domain, const OutputPatch<DSIn, NUM_CONTROL_POINTS> patch)
+DSOut DSMain(float3 domain, OutputPatch<DSIn, NUM_CONTROL_POINTS> patch)
 {
 	DSOut output;
 

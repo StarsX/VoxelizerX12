@@ -14,11 +14,28 @@
 using namespace std;
 using namespace XUSG;
 
+const wchar_t *VoxelizerX::VoxMethodDescs[] =
+{
+	L"Axis-aligned projection of max projected area",
+	L"Tessellation for axis-aligned projection view of max projected area",
+	L"Union of 3 axis-aligned projection views"
+};
+
+const wchar_t *VoxelizerX::SolidDescs[] =
+{
+	L"Render surface voxels as box array",
+	L"Render solid voxels with raycasting"
+};
+
 VoxelizerX::VoxelizerX(uint32_t width, uint32_t height, std::wstring name) :
 	DXFramework(width, height, name),
 	m_frameIndex(0),
+	m_solid(false),
 	m_pausing(false),
-	m_tracking(false)
+	m_tracking(false),
+	m_voxMethod(Voxelizer::TRI_PROJ),
+	m_voxMethodDesc(VoxMethodDescs[m_voxMethod]),
+	m_solidDesc(SolidDescs[m_solid])
 {
 }
 
@@ -228,6 +245,14 @@ void VoxelizerX::OnKeyUp(uint8_t key)
 	case 0x20:	// case VK_SPACE:
 		m_pausing = !m_pausing;
 		break;
+	case 'V':
+		m_voxMethod = static_cast<Voxelizer::Method>((m_voxMethod + 1) % Voxelizer::NUM_METHOD);
+		m_voxMethodDesc = VoxMethodDescs[m_voxMethod];
+		break;
+	case 'S':
+		m_solid = !m_solid;
+		m_solidDesc = SolidDescs[m_solid];
+		break;
 	}
 }
 
@@ -314,7 +339,7 @@ void VoxelizerX::PopulateCommandList()
 	m_commandList.ClearDepthStencilView(m_depth.GetDSV(), D3D12_CLEAR_FLAG_DEPTH, 1.0f);
 
 	// Voxelizer rendering
-	m_voxelizer->RenderSolid(m_frameIndex, m_rtvTables[m_frameIndex], m_depth.GetDSV());
+	m_voxelizer->Render(m_solid, m_voxMethod, m_frameIndex, m_rtvTables[m_frameIndex], m_depth.GetDSV());
 
 	// Indicate that the back buffer will now be used to present.
 	m_renderTargets[m_frameIndex].Barrier(m_commandList, D3D12_RESOURCE_STATE_PRESENT);
@@ -376,7 +401,7 @@ double VoxelizerX::CalculateFrameStats(float *pTimeStep)
 		elapsedTime = totalTime;
 
 		wstringstream windowText;
-		windowText << setprecision(2) << fixed << L"    fps: " << fps;
+		windowText << setprecision(2) << fixed << L"    fps: " << fps << L"    [V] " << m_voxMethodDesc << L"    [S] " << m_solidDesc;
 		SetCustomWindowText(windowText.str().c_str());
 	}
 

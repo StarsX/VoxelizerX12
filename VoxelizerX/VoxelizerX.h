@@ -66,8 +66,12 @@ private:
 	uint64_t	m_fenceValues[Voxelizer::FrameCount];
 
 	// Application state
+	bool		m_solid;
 	bool		m_pausing;
 	StepTimer	m_timer;
+	Voxelizer::Method m_voxMethod;
+	std::wstring m_voxMethodDesc;
+	std::wstring m_solidDesc;
 
 	// User camera interactions
 	bool m_tracking;
@@ -80,4 +84,7 @@ private:
 	void WaitForGpu();
 	void MoveToNextFrame();
 	double CalculateFrameStats(float *fTimeStep = nullptr);
+
+	static const wchar_t *VoxMethodDescs[];
+	static const wchar_t *SolidDescs[];
 };

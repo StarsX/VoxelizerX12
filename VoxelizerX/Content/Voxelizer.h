@@ -7,6 +7,15 @@
 class Voxelizer
 {
 public:
+	enum Method : uint8_t
+	{
+		TRI_PROJ,
+		TRI_PROJ_TESS,
+		TRI_PROJ_UNION,
+
+		NUM_METHOD
+	};
+
 	Voxelizer(const XUSG::Device &device, const XUSG::CommandList &commandList);
 	virtual ~Voxelizer();
 
@@ -14,8 +23,8 @@ public:
 		XUSG::Resource &vbUpload, XUSG::Resource &ibUpload,
 		const char *fileName = "Media\\bunny.obj");
 	void UpdateFrame(uint32_t frameIndex, DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
-	void Render(uint32_t frameIndex, const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
-	void RenderSolid(uint32_t frameIndex, const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
+	void Render(bool solid, Method voxMethod, uint32_t frameIndex,
+		const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
 
 	static const uint32_t FrameCount = FRAME_COUNT;
 
@@ -24,6 +33,10 @@ protected:
 	{
 		PASS_VOXELIZE,
 		PASS_VOXELIZE_SOLID,
+		PASS_VOXELIZE_TESS,
+		PASS_VOXELIZE_TESS_SOLID,
+		PASS_VOXELIZE_UNION,
+		PASS_VOXELIZE_UNION_SOLID,
 		PASS_FILL_SOLID,
 		PASS_DRAW_AS_BOX,
 		PASS_RAY_CAST,
@@ -31,7 +44,7 @@ protected:
 		NUM_PASS
 	};
 
-	enum CBVTable
+	enum CBVTable : uint8_t
 	{
 		CBV_TABLE_VOXELIZE,
 		CBV_TABLE_PER_MIP,
@@ -41,7 +54,7 @@ protected:
 		NUM_CBV_TABLE = CBV_TABLE_PER_OBJ + FrameCount
 	};
 
-	enum SRVTable
+	enum SRVTable : uint8_t
 	{
 		SRV_TABLE_VB_IB,
 		SRV_K_DEPTH,
@@ -50,7 +63,7 @@ protected:
 		NUM_SRV_TABLE = SRV_TABLE_GRID + FrameCount
 	};
 
-	enum UAVTable
+	enum UAVTable : uint8_t
 	{
 		UAV_TABLE_VOXELIZE,
 		UAV_TABLE_KBUFFER,
@@ -61,14 +74,28 @@ protected:
 	enum VertexShaderID : uint8_t
 	{
 		VS_TRI_PROJ,
+		VS_TRI_PROJ_TESS,
+		VS_TRI_PROJ_UNION,
 		VS_BOX_ARRAY,
 		VS_SCREEN_QUAD
+	};
+
+	enum HullShaderID : uint8_t
+	{
+		HS_TRI_PROJ
+	};
+
+	enum DomainShaderID : uint8_t
+	{
+		DS_TRI_PROJ
 	};
 
 	enum PixelShaderID : uint8_t
 	{
 		PS_TRI_PROJ,
 		PS_TRI_PROJ_SOLID,
+		PS_TRI_PROJ_UNION,
+		PS_TRI_PROJ_UNION_SOLID,
 		PS_SIMPLE,
 		PS_RAY_CAST
 	};
@@ -105,8 +132,8 @@ protected:
 	bool prevoxelize(uint8_t mipLevel = 0);
 	bool prerenderBoxArray(XUSG::Format rtFormat, XUSG::Format dsFormat);
 	bool prerayCast(XUSG::Format rtFormat, XUSG::Format dsFormat);
-	void voxelize(uint32_t frameIndex, bool depthPeel = false, uint8_t mipLevel = 0);
-	void voxelizeSolid(uint32_t frameIndex, uint8_t mipLevel = 0);
+	void voxelize(Method voxMethod, uint32_t frameIndex, bool depthPeel = false, uint8_t mipLevel = 0);
+	void voxelizeSolid(Method voxMethod, uint32_t frameIndex, uint8_t mipLevel = 0);
 	void renderBoxArray(uint32_t frameIndex, const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
 	void renderRayCast(uint32_t frameIndex, const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
 

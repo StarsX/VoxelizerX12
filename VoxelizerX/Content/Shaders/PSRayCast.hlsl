@@ -56,7 +56,7 @@ SamplerState		g_smpLinear;
 //--------------------------------------------------------------------------------------
 // Screen space to loacal space
 //--------------------------------------------------------------------------------------
-float3 ScreenToLocal(const float3 vLoc)
+float3 ScreenToLocal(float3 vLoc)
 {
 	float4 vPos = mul(float4(vLoc, 1.0), g_screenToLocal);
 	
@@ -66,7 +66,7 @@ float3 ScreenToLocal(const float3 vLoc)
 //--------------------------------------------------------------------------------------
 // Compute start point of the ray
 //--------------------------------------------------------------------------------------
-bool ComputeStartPoint(inout float3 vPos, const float3 vRayDir)
+bool ComputeStartPoint(inout float3 vPos, float3 vRayDir)
 {
 	if (abs(vPos.x) <= 1.0 && abs(vPos.y) <= 1.0 && abs(vPos.z) <= 1.0) return true;
 
@@ -98,7 +98,7 @@ bool ComputeStartPoint(inout float3 vPos, const float3 vRayDir)
 //--------------------------------------------------------------------------------------
 // Sample density field
 //--------------------------------------------------------------------------------------
-min16float GetSample(const float3 vTex)
+min16float GetSample(float3 vTex)
 {
 #if	USE_MUTEX
 	const min16float fDens = min16float(g_txGrid.SampleLevel(g_smpLinear, vTex, SHOW_MIP).x);

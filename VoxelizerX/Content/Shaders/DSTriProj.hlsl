@@ -22,7 +22,7 @@ struct HSConstDataOut
 [domain("tri")]
 DSOut main(HSConstDataOut input,
 	float3 domain : SV_DomainLocation,
-	const OutputPatch<DSIn, NUM_CONTROL_POINTS> patch)
+	OutputPatch<DSIn, NUM_CONTROL_POINTS> patch)
 {
 	return DSMain(domain, patch);
 }

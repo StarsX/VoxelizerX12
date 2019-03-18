@@ -34,7 +34,7 @@ bool Voxelizer::Init(uint32_t width, uint32_t height, Format rtFormat, Format ds
 	ObjLoader objLoader;
 	if (!objLoader.Import(fileName, true, true)) return false;
 
-	//createInputLayout();
+	createInputLayout();
 	N_RETURN(createVB(objLoader.GetNumVertices(), objLoader.GetVertexStride(), objLoader.GetVertices(), vbUpload), false);
 	N_RETURN(createIB(objLoader.GetNumIndices(), objLoader.GetIndices(), ibUpload), false);
 
@@ -93,37 +93,46 @@ void Voxelizer::UpdateFrame(uint32_t frameIndex, CXMVECTOR eyePt, CXMMATRIX view
 	XMStoreFloat4(&pCbPerFrame->eyePos, eyePt);
 }
 
-void Voxelizer::Render(uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
+void Voxelizer::Render(bool solid, Method voxMethod, uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
 {
-	const DescriptorPool descriptorPools[] =
-	{ m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL) };
-	m_commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
+	if (solid)
+	{
+		const DescriptorPool descriptorPools[] =
+		{
+			m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL),
+			m_descriptorTableCache.GetDescriptorPool(SAMPLER_POOL)
+		};
+		m_commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
 
-	voxelize(frameIndex);
-	renderBoxArray(frameIndex, rtvs, dsv);
-}
+		voxelizeSolid(voxMethod, frameIndex);
+		renderRayCast(frameIndex, rtvs, dsv);
+	}
+	else
+	{
+		const DescriptorPool descriptorPools[] =
+		{ m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL) };
+		m_commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
 
-void Voxelizer::RenderSolid(uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
-{
-	const DescriptorPool descriptorPools[] =
-	{ 
-		m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL),
-		m_descriptorTableCache.GetDescriptorPool(SAMPLER_POOL)
-	};
-	m_commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
-
-	voxelizeSolid(frameIndex);
-	renderRayCast(frameIndex, rtvs, dsv);
+		voxelize(voxMethod, frameIndex);
+		renderBoxArray(frameIndex, rtvs, dsv);
+	}
 }
 
 bool Voxelizer::createShaders()
 {
 	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::VS, VS_TRI_PROJ, L"VSTriProj.cso"), false);
+	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::VS, VS_TRI_PROJ_TESS, L"VSTriProjTess.cso"), false);
+	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::VS, VS_TRI_PROJ_UNION, L"VSTriProjUnion.cso"), false);
 	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::VS, VS_BOX_ARRAY, L"VSBoxArray.cso"), false);
 	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::VS, VS_SCREEN_QUAD, L"VSScreenQuad.cso"), false);
 
+	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::HS, HS_TRI_PROJ, L"HSTriProj.cso"), false);
+	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::DS, DS_TRI_PROJ, L"DSTriProj.cso"), false);
+
 	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::PS, PS_TRI_PROJ, L"PSTriProj.cso"), false);
 	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::PS, PS_TRI_PROJ_SOLID, L"PSTriProjSolid.cso"), false);
+	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::PS, PS_TRI_PROJ_UNION, L"PSTriProjUnion.cso"), false);
+	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::PS, PS_TRI_PROJ_UNION_SOLID, L"PSTriProjUnionSolid.cso"), false);
 	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::PS, PS_SIMPLE, L"PSSimple.cso"), false);
 	N_RETURN(m_shaderPool.CreateShader(Shader::Stage::PS, PS_RAY_CAST, L"PSRayCast.cso"), false);
 
@@ -190,7 +199,7 @@ void Voxelizer::createInputLayout()
 	InputElementTable inputElementDescs =
 	{
 		{ "POSITION",	0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	{ "NORMAL",		0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		{ "NORMAL",		0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 
 	m_inputLayout = m_graphicsPipelineCache.CreateInputLayout(inputElementDescs);
@@ -201,7 +210,6 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 	// Get CBVs
 	Util::DescriptorTable utilCbvTable;
 	utilCbvTable.SetDescriptors(0, 1, &m_cbBound.GetCBV());
-	utilCbvTable.SetDescriptors(1, 1, &m_cbPerMipLevels[mipLevel].GetCBV());
 	X_RETURN(m_cbvTables[CBV_TABLE_VOXELIZE], utilCbvTable.GetCbvSrvUavTable(m_descriptorTableCache), false);
 
 	Util::DescriptorTable utilCbvPerMipLevelTable;
@@ -231,19 +239,47 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		X_RETURN(m_uavTables[i][UAV_TABLE_KBUFFER], utilUavKBufferTable.GetCbvSrvUavTable(m_descriptorTableCache), false);
 	}
 
-	// Get graphics pipeline layout
+	// Get graphics pipeline layouts
 	{
 		Util::PipelineLayout utilPipelineLayout;
 		utilPipelineLayout.SetRange(0, DescriptorType::CBV, 2, 0);
 		utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0);
-		utilPipelineLayout.SetRange(2, DescriptorType::SRV, static_cast<uint32_t>(size(srvs)), 0);
-		utilPipelineLayout.SetRange(3, DescriptorType::UAV, 2, 0);
+		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 2, 0);
+		utilPipelineLayout.SetRange(3, DescriptorType::SRV, static_cast<uint32_t>(size(srvs)), 0);
 		utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
 		utilPipelineLayout.SetShaderStage(1, Shader::Stage::PS);
-		utilPipelineLayout.SetShaderStage(2, Shader::Stage::VS);
-		utilPipelineLayout.SetShaderStage(3, Shader::Stage::PS);
+		utilPipelineLayout.SetShaderStage(2, Shader::Stage::PS);
+		utilPipelineLayout.SetShaderStage(3, Shader::Stage::VS);
 		X_RETURN(m_pipelineLayouts[PASS_VOXELIZE], utilPipelineLayout.GetPipelineLayout(
 			m_pipelineLayoutCache, D3D12_ROOT_SIGNATURE_FLAG_NONE, L"VoxelizationPass"), false);
+	}
+
+	{
+		Util::PipelineLayout utilPipelineLayout;
+		utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0);
+		utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0);
+		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 2, 0);
+		utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
+		utilPipelineLayout.SetShaderStage(1, Shader::Stage::PS);
+		utilPipelineLayout.SetShaderStage(2, Shader::Stage::PS);
+		X_RETURN(m_pipelineLayouts[PASS_VOXELIZE_UNION], utilPipelineLayout.GetPipelineLayout(
+			m_pipelineLayoutCache, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT,
+			L"VoxelizationByUnionPass"), false);
+	}
+
+	{
+		Util::PipelineLayout utilPipelineLayout;
+		utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0);
+		utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0);
+		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 2, 0);
+		utilPipelineLayout.SetRange(3, DescriptorType::CBV, 1, 0);
+		utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
+		utilPipelineLayout.SetShaderStage(1, Shader::Stage::PS);
+		utilPipelineLayout.SetShaderStage(2, Shader::Stage::PS);
+		utilPipelineLayout.SetShaderStage(3, Shader::Stage::DS);
+		X_RETURN(m_pipelineLayouts[PASS_VOXELIZE_TESS], utilPipelineLayout.GetPipelineLayout(
+			m_pipelineLayoutCache, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT,
+			L"VoxelizationByTessellationPass"), false);
 	}
 
 	// Get graphics pipelines
@@ -260,6 +296,26 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 
 		state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_TRI_PROJ_SOLID));
 		X_RETURN(m_pipelines[PASS_VOXELIZE_SOLID], state.GetPipeline(m_graphicsPipelineCache, L"VoxelizationSolid"), false);
+
+		state.IASetInputLayout(m_inputLayout);
+		state.SetPipelineLayout(m_pipelineLayouts[PASS_VOXELIZE_UNION]);
+		state.SetShader(Shader::Stage::VS, m_shaderPool.GetShader(Shader::Stage::VS, VS_TRI_PROJ_UNION));
+		state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_TRI_PROJ_UNION));
+		X_RETURN(m_pipelines[PASS_VOXELIZE_UNION], state.GetPipeline(m_graphicsPipelineCache, L"VoxelizationUnion"), false);
+
+		state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_TRI_PROJ_UNION_SOLID));
+		X_RETURN(m_pipelines[PASS_VOXELIZE_UNION_SOLID], state.GetPipeline(m_graphicsPipelineCache, L"VoxelizationUnionSolid"), false);
+
+		state.SetPipelineLayout(m_pipelineLayouts[PASS_VOXELIZE_TESS]);
+		state.SetShader(Shader::Stage::VS, m_shaderPool.GetShader(Shader::Stage::VS, VS_TRI_PROJ_TESS));
+		state.SetShader(Shader::Stage::HS, m_shaderPool.GetShader(Shader::Stage::HS, HS_TRI_PROJ));
+		state.SetShader(Shader::Stage::DS, m_shaderPool.GetShader(Shader::Stage::DS, DS_TRI_PROJ));
+		state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_TRI_PROJ));
+		state.IASetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH);
+		X_RETURN(m_pipelines[PASS_VOXELIZE_TESS], state.GetPipeline(m_graphicsPipelineCache, L"VoxelizationTess"), false);
+
+		state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_TRI_PROJ_SOLID));
+		X_RETURN(m_pipelines[PASS_VOXELIZE_TESS_SOLID], state.GetPipeline(m_graphicsPipelineCache, L"VoxelizatioTessSolid"), false);
 	}
 
 	// Get compute pipeline layout
@@ -371,19 +427,45 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 	return true;
 }
 
-void Voxelizer::voxelize(uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
+void Voxelizer::voxelize(Method voxMethod, uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
 {
+	auto layoutIdx = PASS_VOXELIZE;
+	auto pipeIdx = depthPeel ? PASS_VOXELIZE_SOLID : PASS_VOXELIZE;
+	auto instanceCount = m_numIndices / 3;
+
+	switch (voxMethod)
+	{
+	case TRI_PROJ_TESS:
+		layoutIdx = PASS_VOXELIZE_TESS;
+		pipeIdx = depthPeel ? PASS_VOXELIZE_TESS_SOLID : PASS_VOXELIZE_TESS;
+		instanceCount = 1;
+		break;
+	case TRI_PROJ_UNION:
+		layoutIdx = PASS_VOXELIZE_UNION;
+		pipeIdx = depthPeel ? PASS_VOXELIZE_UNION_SOLID : PASS_VOXELIZE_UNION;
+		instanceCount = 3;
+		break;
+	}
+
 	// Set descriptor tables
-	m_commandList.SetGraphicsPipelineLayout(m_pipelineLayouts[PASS_VOXELIZE]);
+	m_commandList.SetGraphicsPipelineLayout(m_pipelineLayouts[layoutIdx]);
 	m_grids[frameIndex].Barrier(m_commandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	if (depthPeel) m_KBufferDepths[frameIndex].Barrier(m_commandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	m_commandList.SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_VOXELIZE]);
 	m_commandList.SetGraphicsDescriptorTable(1, m_cbvTables[CBV_TABLE_PER_MIP]);
-	m_commandList.SetGraphicsDescriptorTable(2, m_srvTables[SRV_TABLE_VB_IB]);
-	m_commandList.SetGraphicsDescriptorTable(3, m_uavTables[frameIndex][UAV_TABLE_VOXELIZE]);
+	m_commandList.SetGraphicsDescriptorTable(2, m_uavTables[frameIndex][UAV_TABLE_VOXELIZE]);
+	switch (voxMethod)
+	{
+	case TRI_PROJ:
+		m_commandList.SetGraphicsDescriptorTable(3, m_srvTables[SRV_TABLE_VB_IB]);
+		break;
+	case TRI_PROJ_TESS:
+		m_commandList.SetGraphicsDescriptorTable(3, m_cbvTables[CBV_TABLE_PER_MIP]);
+		break;
+	}
 
 	// Set pipeline state
-	m_commandList.SetPipelineState(m_pipelines[depthPeel ? PASS_VOXELIZE_SOLID : PASS_VOXELIZE]);
+	m_commandList.SetPipelineState(m_pipelines[pipeIdx]);
 
 	// Set viewport
 	const auto gridSize = GRID_SIZE >> mipLevel;
@@ -399,14 +481,26 @@ void Voxelizer::voxelize(uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
 	if (depthPeel) m_commandList.ClearUnorderedAccessViewUint(*m_uavTables[frameIndex][UAV_TABLE_KBUFFER], m_KBufferDepths[frameIndex].GetUAV(),
 		m_KBufferDepths[frameIndex].GetResource(), XMVECTORU32{ UINT32_MAX }.u);
 
-	m_commandList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_commandList.Draw(3, m_numIndices / 3, 0, 0);
+	// Set IA
+	if (voxMethod != TRI_PROJ)
+	{
+		m_commandList.IASetVertexBuffers(0, 1, &m_vertexBuffer.GetVBV());
+		m_commandList.IASetIndexBuffer(m_indexbuffer.GetIBV());
+	}
+
+	m_commandList.IASetPrimitiveTopology(voxMethod == TRI_PROJ_TESS ?
+		D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	if (voxMethod == TRI_PROJ)
+		m_commandList.Draw(3, instanceCount, 0, 0);
+	else
+		m_commandList.DrawIndexed(m_numIndices, instanceCount, 0, 0, 0);
 }
 
-void Voxelizer::voxelizeSolid(uint32_t frameIndex, uint8_t mipLevel)
+void Voxelizer::voxelizeSolid(Method voxMethod, uint32_t frameIndex, uint8_t mipLevel)
 {
 	// Surface voxelization with depth peeling
-	voxelize(frameIndex, true, mipLevel);
+	voxelize(voxMethod, frameIndex, true, mipLevel);
 
 	// Set descriptor tables
 	m_commandList.SetComputePipelineLayout(m_pipelineLayouts[PASS_FILL_SOLID]);

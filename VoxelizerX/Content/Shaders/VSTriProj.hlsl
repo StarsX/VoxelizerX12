@@ -20,7 +20,7 @@ StructuredBuffer<VSIn> g_roVertices;
 //--------------------------------------------------------------------------------------
 // Load IA
 //--------------------------------------------------------------------------------------
-VSIn LoadVSIn(const uint i)
+VSIn LoadVSIn(uint i)
 {
 	const uint vid = g_roIndices[i];
 
@@ -30,7 +30,7 @@ VSIn LoadVSIn(const uint i)
 //--------------------------------------------------------------------------------------
 // Emulate the behaviors of VS, HS, and DS
 //--------------------------------------------------------------------------------------
-DSOut main(const uint vID : SV_VertexID, const uint primID : SV_InstanceID)
+DSOut main(uint vID : SV_VertexID, uint primID : SV_InstanceID)
 {
 	DSOut output;
 

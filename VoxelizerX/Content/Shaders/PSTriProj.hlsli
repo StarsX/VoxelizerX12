@@ -44,7 +44,7 @@ RWTexture3D<uint>	g_rwGrid		: register (u0);
 //--------------------------------------------------------------------------------------
 // Surface voxelization, writing to grid
 //--------------------------------------------------------------------------------------
-void PSTriProj(const PSIn input, const uint3 loc)
+void PSTriProj(PSIn input, uint3 loc)
 {
 	const float3 normal = normalize(input.Nrm);
 #if	!USE_MUTEX

@@ -18,7 +18,7 @@ RWTexture2DArray<uint>	g_rwKBufDepth : register(U_DEPTH);
 //--------------------------------------------------------------------------------------
 // Depth peeling
 //--------------------------------------------------------------------------------------
-void DepthPeel(uint depth, const uint2 loc, const uint numLayer)
+void DepthPeel(uint depth, uint2 loc, uint numLayer)
 {
 	uint depthPrev;
 

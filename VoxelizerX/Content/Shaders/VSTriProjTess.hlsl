@@ -30,7 +30,7 @@ cbuffer cbPerObject
 //--------------------------------------------------------------------------------------
 // Position normalization
 //--------------------------------------------------------------------------------------
-VSOut main(const VSIn input)
+VSOut main(VSIn input)
 {
 	VSOut output;
 

@@ -8,7 +8,7 @@
 //--------------------------------------------------------------------------------------
 // Surface voxelization and depth peeling for solid voxelization
 //--------------------------------------------------------------------------------------
-void main(const PSIn input)
+void main(PSIn input)
 {
 	const uint3 loc = input.TexLoc * g_gridSize;
 	

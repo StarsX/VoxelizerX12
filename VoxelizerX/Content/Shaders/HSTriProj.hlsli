@@ -34,7 +34,7 @@ float3 PrimSize(VSOut ip[NUM_CONTROL_POINTS])
 //--------------------------------------------------------------------------------------
 // Project to 3-views
 //--------------------------------------------------------------------------------------
-float2 Project(const float3 pos, const float3 primSize)
+float2 Project(float3 pos, float3 primSize)
 {
 	const float sizeXY = primSize.x;
 	const float sizeYZ = primSize.y;
@@ -48,7 +48,7 @@ float2 Project(const float3 pos, const float3 primSize)
 //--------------------------------------------------------------------------------------
 // Select the view with maximal projected AABB
 //--------------------------------------------------------------------------------------
-HSOut HSMain(const float2 pos, const InputPatch<VSOut, NUM_CONTROL_POINTS> ip, const uint i)
+HSOut HSMain(float2 pos, VSOut ip[NUM_CONTROL_POINTS], uint i)
 {
 	HSOut output;
 

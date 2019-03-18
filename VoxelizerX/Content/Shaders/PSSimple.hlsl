@@ -17,7 +17,7 @@ struct PSIn
 //--------------------------------------------------------------------------------------
 // Perform simple lighting
 //--------------------------------------------------------------------------------------
-min16float4 main(const PSIn input) : SV_TARGET
+min16float4 main(PSIn input) : SV_TARGET
 {
 	const float3 lightPt = 1.0;
 	const min16float3 lightDir = min16float3(normalize(lightPt));

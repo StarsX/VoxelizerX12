@@ -46,13 +46,14 @@ HSConstDataOut CalcHSPatchConstants()
 [outputtopology("triangle_cw")]
 [outputcontrolpoints(NUM_CONTROL_POINTS)]
 [patchconstantfunc("CalcHSPatchConstants")]
-HSOut main(const InputPatch<VSOut, NUM_CONTROL_POINTS> ip, const uint i : SV_OutputControlPointID)
+HSOut main(InputPatch<VSOut, NUM_CONTROL_POINTS> ip, uint i : SV_OutputControlPointID)
 {
 	// Calculate projected triangle sizes (equivalent to area) for 3 views
-	const float3 primSize = PrimSize(ip);
+	const VSOut vertices[] = { ip[0], ip[1], ip[2] };
+	const float3 primSize = PrimSize(vertices);
 
 	// Select the view with maximal projected AABB
 	const float2 pos = Project(ip[i].Pos, primSize);
 
-	return HSMain(pos, ip, i);
+	return HSMain(pos, vertices, i);
 }

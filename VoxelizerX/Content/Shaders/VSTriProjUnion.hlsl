@@ -31,7 +31,7 @@ cbuffer cbPerObject
 //--------------------------------------------------------------------------------------
 // Position normalization and projection to 3 views
 //--------------------------------------------------------------------------------------
-VSOut main(const VSIn input, const uint viewID : SV_InstanceID)
+VSOut main(VSIn input, uint viewID : SV_InstanceID)
 {
 	VSOut output;
 
