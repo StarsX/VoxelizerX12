@@ -67,6 +67,7 @@ private:
 
 	// Application state
 	bool		m_solid;
+	bool		m_showFPS;
 	bool		m_pausing;
 	StepTimer	m_timer;
 	Voxelizer::Method m_voxMethod;

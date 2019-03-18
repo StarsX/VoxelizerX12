@@ -31,6 +31,7 @@ VoxelizerX::VoxelizerX(uint32_t width, uint32_t height, std::wstring name) :
 	DXFramework(width, height, name),
 	m_frameIndex(0),
 	m_solid(false),
+	m_showFPS(false),
 	m_pausing(false),
 	m_tracking(false),
 	m_voxMethod(Voxelizer::TRI_PROJ),
@@ -245,6 +246,9 @@ void VoxelizerX::OnKeyUp(uint8_t key)
 	case 0x20:	// case VK_SPACE:
 		m_pausing = !m_pausing;
 		break;
+	case 0x70:	//case VK_F1:
+		m_showFPS = !m_showFPS;
+		break;
 	case 'V':
 		m_voxMethod = static_cast<Voxelizer::Method>((m_voxMethod + 1) % Voxelizer::NUM_METHOD);
 		m_voxMethodDesc = VoxMethodDescs[m_voxMethod];
@@ -401,7 +405,10 @@ double VoxelizerX::CalculateFrameStats(float *pTimeStep)
 		elapsedTime = totalTime;
 
 		wstringstream windowText;
-		windowText << setprecision(2) << fixed << L"    fps: " << fps << L"    [V] " << m_voxMethodDesc << L"    [S] " << m_solidDesc;
+		windowText << L"    fps: ";
+		if (m_showFPS) windowText << setprecision(2) << fixed << fps;
+		else windowText << L"[F1]";
+		windowText << L"    [V] " << m_voxMethodDesc << L"    [S] " << m_solidDesc;
 		SetCustomWindowText(windowText.str().c_str());
 	}
 
