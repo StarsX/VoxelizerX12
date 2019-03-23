@@ -96,6 +96,8 @@ COPY /Y "$(OutDir)*.exe" "$(ProjectDir)..\Bin\"</Command>
       <SDLCheck>true</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Content;$(ProjectDir)XUSG;$(ProjectDir)Common</AdditionalIncludeDirectories>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -140,6 +142,8 @@ COPY /Y "$(OutDir)*.exe" "$(ProjectDir)..\Bin\"</Command>
       <SDLCheck>true</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Content;$(ProjectDir)XUSG;$(ProjectDir)Common</AdditionalIncludeDirectories>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
