@@ -34,6 +34,8 @@ static const min16float g_maxDist = 2.0 * sqrt(3.0);
 static const min16float g_stepScale = g_maxDist / NUM_SAMPLES;
 static const min16float g_lightStepScale = g_maxDist / NUM_LIGHT_SAMPLES;
 
+static const min16float3 g_clearColor = min16float3(CLEAR_COLOR);
+
 //--------------------------------------------------------------------------------------
 // Textures
 //--------------------------------------------------------------------------------------
@@ -116,7 +118,7 @@ min16float4 main(float4 sspos : SV_POSITION) : SV_TARGET
 {
 	float3 pos = ScreenToLocal(float3(sspos.xy, 0.0));	// The point on the near plane
 	const float3 rayDir = normalize(pos - g_localSpaceEyePt);
-	if (!ComputeStartPoint(pos, rayDir)) discard;
+	if (!ComputeStartPoint(pos, rayDir)) return min16float4(g_clearColor, 0.0);
 
 	const float3 step = rayDir * g_stepScale;
 
@@ -178,7 +180,8 @@ min16float4 main(float4 sspos : SV_POSITION) : SV_TARGET
 
 	//clip(ONE_THRESHOLD - transmit);
 
-	const min16float3 result = scatter * 1.0 + 0.3;
+	min16float3 result = scatter * 0.8 + 0.2;
+	result = lerp(result, g_clearColor * g_clearColor, transmit);
 	
-	return min16float4(sqrt(result), 1.0 - transmit);
+	return min16float4(sqrt(result), 1.0);
 }

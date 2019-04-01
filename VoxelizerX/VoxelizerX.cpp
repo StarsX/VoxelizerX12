@@ -338,8 +338,11 @@ void VoxelizerX::PopulateCommandList()
 	m_renderTargets[m_frameIndex].Barrier(m_commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	// Record commands.
-	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-	m_commandList.ClearRenderTargetView(*m_rtvTables[m_frameIndex], clearColor);
+	if (!m_solid)
+	{
+		const float clearColor[] = { CLEAR_COLOR, 0.0f };
+		m_commandList.ClearRenderTargetView(*m_rtvTables[m_frameIndex], clearColor);
+	}
 	m_commandList.ClearDepthStencilView(m_depth.GetDSV(), D3D12_CLEAR_FLAG_DEPTH, 1.0f);
 
 	// Voxelizer rendering

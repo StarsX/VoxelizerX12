@@ -19,6 +19,8 @@
 #define	DEPTH_SCALE	0.5
 #endif
 
+#define CLEAR_COLOR	0.0f, 0.2f, 0.4f
+
 #define	PIDIV4		0.785398163f
 
 static const float g_FOVAngleY = PIDIV4;

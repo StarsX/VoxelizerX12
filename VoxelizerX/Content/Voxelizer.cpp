@@ -419,7 +419,6 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 	state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_RAY_CAST));
 	state.DSSetState(Graphics::DepthStencilPreset::DEPTH_STENCIL_NONE, m_graphicsPipelineCache);
 	state.IASetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-	state.OMSetBlendState(Graphics::BlendPreset::NON_PRE_MUL, m_graphicsPipelineCache);
 	state.OMSetRTVFormats(&rtFormat, 1);
 	X_RETURN(m_pipelines[PASS_RAY_CAST], state.GetPipeline(m_graphicsPipelineCache, L"RayCast"), false);
 
