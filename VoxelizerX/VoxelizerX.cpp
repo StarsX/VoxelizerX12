@@ -31,7 +31,7 @@ VoxelizerX::VoxelizerX(uint32_t width, uint32_t height, std::wstring name) :
 	DXFramework(width, height, name),
 	m_frameIndex(0),
 	m_solid(false),
-	m_showFPS(false),
+	m_showFPS(true),
 	m_pausing(false),
 	m_tracking(false),
 	m_voxMethod(Voxelizer::TRI_PROJ),
