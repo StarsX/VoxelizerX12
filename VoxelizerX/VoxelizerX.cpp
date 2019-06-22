@@ -154,9 +154,9 @@ void VoxelizerX::LoadAssets()
 	m_voxelizer = make_unique<Voxelizer>(m_device, m_commandList);
 	if (!m_voxelizer) ThrowIfFailed(E_FAIL);
 
-	Resource vbUpload, ibUpload;
+	vector<Resource> uploaders(0);
 	if (!m_voxelizer->Init(m_width, m_height, m_renderTargets[0].GetResource()->GetDesc().Format,
-		m_depth.GetResource()->GetDesc().Format, vbUpload, ibUpload))
+		m_depth.GetResource()->GetDesc().Format, uploaders))
 		ThrowIfFailed(E_FAIL);
 
 	// Close the command list and execute it to begin the initial GPU setup.
@@ -335,7 +335,9 @@ void VoxelizerX::PopulateCommandList()
 	ThrowIfFailed(m_commandList.Reset(m_commandAllocators[m_frameIndex], nullptr));
 
 	// Indicate that the back buffer will be used as a render target.
-	m_renderTargets[m_frameIndex].Barrier(m_commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	ResourceBarrier barrier;
+	auto numBarriers = m_renderTargets[m_frameIndex].SetBarrier(&barrier, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	m_commandList.Barrier(numBarriers, &barrier);
 
 	// Record commands.
 	if (!m_solid)
@@ -349,7 +351,8 @@ void VoxelizerX::PopulateCommandList()
 	m_voxelizer->Render(m_solid, m_voxMethod, m_frameIndex, m_rtvTables[m_frameIndex], m_depth.GetDSV());
 
 	// Indicate that the back buffer will now be used to present.
-	m_renderTargets[m_frameIndex].Barrier(m_commandList, D3D12_RESOURCE_STATE_PRESENT);
+	numBarriers = m_renderTargets[m_frameIndex].SetBarrier(&barrier, D3D12_RESOURCE_STATE_PRESENT);
+	m_commandList.Barrier(numBarriers, &barrier);
 
 	ThrowIfFailed(m_commandList.Close());
 }
