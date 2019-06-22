@@ -250,8 +250,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		Util::PipelineLayout utilPipelineLayout;
 		utilPipelineLayout.SetRange(0, DescriptorType::CBV, 2, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 		utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 2, 0,
-			0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE |
+		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 2, 0, 0,
 			D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		utilPipelineLayout.SetRange(3, DescriptorType::SRV, static_cast<uint32_t>(size(srvs)), 0,
 			0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
@@ -267,8 +266,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		Util::PipelineLayout utilPipelineLayout;
 		utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 		utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 2, 0,
-			0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE |
+		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 2, 0, 0,
 			D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
 		utilPipelineLayout.SetShaderStage(1, Shader::Stage::PS);
@@ -282,8 +280,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		Util::PipelineLayout utilPipelineLayout;
 		utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 		utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 2, 0,
-			0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE |
+		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 2, 0, 0,
 			D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		utilPipelineLayout.SetRange(3, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
 		utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
@@ -373,7 +370,7 @@ bool Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 	// Get pipeline layout
 	Util::PipelineLayout utilPipelineLayout;
 	utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-	utilPipelineLayout.SetRange(1, DescriptorType::SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	utilPipelineLayout.SetRange(1, DescriptorType::SRV, 1, 0);
 	utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
 	utilPipelineLayout.SetShaderStage(1, Shader::Stage::VS);
 	X_RETURN(m_pipelineLayouts[PASS_DRAW_AS_BOX], utilPipelineLayout.GetPipelineLayout(
@@ -419,7 +416,7 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 	// Get pipeline layout
 	Util::PipelineLayout utilPipelineLayout;
 	utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-	utilPipelineLayout.SetRange(1, DescriptorType::SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	utilPipelineLayout.SetRange(1, DescriptorType::SRV, 1, 0);
 	utilPipelineLayout.SetRange(2, DescriptorType::SAMPLER, 1, 0);
 	utilPipelineLayout.SetShaderStage(0, Shader::Stage::PS);
 	utilPipelineLayout.SetShaderStage(1, Shader::Stage::PS);
