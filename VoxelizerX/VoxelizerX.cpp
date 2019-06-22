@@ -151,11 +151,12 @@ void VoxelizerX::LoadAssets()
 	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
 		m_commandAllocators[m_frameIndex].get(), nullptr, IID_PPV_ARGS(&m_commandList.GetCommandList())));
 
-	m_voxelizer = make_unique<Voxelizer>(m_device, m_commandList);
+	m_voxelizer = make_unique<Voxelizer>(m_device);
 	if (!m_voxelizer) ThrowIfFailed(E_FAIL);
 
 	vector<Resource> uploaders(0);
-	if (!m_voxelizer->Init(m_width, m_height, m_renderTargets[0].GetResource()->GetDesc().Format,
+	if (!m_voxelizer->Init(m_commandList, m_width, m_height,
+		m_renderTargets[0].GetResource()->GetDesc().Format,
 		m_depth.GetResource()->GetDesc().Format, uploaders))
 		ThrowIfFailed(E_FAIL);
 
@@ -348,7 +349,7 @@ void VoxelizerX::PopulateCommandList()
 	m_commandList.ClearDepthStencilView(m_depth.GetDSV(), D3D12_CLEAR_FLAG_DEPTH, 1.0f);
 
 	// Voxelizer rendering
-	m_voxelizer->Render(m_solid, m_voxMethod, m_frameIndex, m_rtvTables[m_frameIndex], m_depth.GetDSV());
+	m_voxelizer->Render(m_commandList, m_solid, m_voxMethod, m_frameIndex, m_rtvTables[m_frameIndex], m_depth.GetDSV());
 
 	// Indicate that the back buffer will now be used to present.
 	numBarriers = m_renderTargets[m_frameIndex].SetBarrier(&barrier, D3D12_RESOURCE_STATE_PRESENT);

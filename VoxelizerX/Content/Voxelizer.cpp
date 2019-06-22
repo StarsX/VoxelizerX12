@@ -9,9 +9,8 @@ using namespace std;
 using namespace DirectX;
 using namespace XUSG;
 
-Voxelizer::Voxelizer(const Device &device, const CommandList &commandList) :
-	m_device(device),
-	m_commandList(commandList)
+Voxelizer::Voxelizer(const Device &device) :
+	m_device(device)
 {
 	m_graphicsPipelineCache.SetDevice(device);
 	m_computePipelineCache.SetDevice(device);
@@ -23,8 +22,8 @@ Voxelizer::~Voxelizer()
 {
 }
 
-bool Voxelizer::Init(uint32_t width, uint32_t height, Format rtFormat, Format dsFormat,
-	vector<Resource> &uploaders, const char *fileName)
+bool Voxelizer::Init(const CommandList &commandList, uint32_t width, uint32_t height,
+	Format rtFormat, Format dsFormat, vector<Resource> &uploaders, const char *fileName)
 {
 	m_viewport.x = static_cast<float>(width);
 	m_viewport.y = static_cast<float>(height);
@@ -37,15 +36,15 @@ bool Voxelizer::Init(uint32_t width, uint32_t height, Format rtFormat, Format ds
 	if (!objLoader.Import(fileName, true, true)) return false;
 
 	createInputLayout();
-	N_RETURN(createVB(objLoader.GetNumVertices(), objLoader.GetVertexStride(), objLoader.GetVertices(), uploaders), false);
-	N_RETURN(createIB(objLoader.GetNumIndices(), objLoader.GetIndices(), uploaders), false);
+	N_RETURN(createVB(commandList, objLoader.GetNumVertices(), objLoader.GetVertexStride(), objLoader.GetVertices(), uploaders), false);
+	N_RETURN(createIB(commandList, objLoader.GetNumIndices(), objLoader.GetIndices(), uploaders), false);
 
 	// Extract boundary
 	const auto center = objLoader.GetCenter();
 	m_bound = XMFLOAT4(center.x, center.y, center.z, objLoader.GetRadius());
 
 	m_numLevels = max(static_cast<uint32_t>(log2(GRID_SIZE)), 1);
-	N_RETURN(createCBs(uploaders), false);
+	N_RETURN(createCBs(commandList, uploaders), false);
 
 	for (auto &grid : m_grids)
 		N_RETURN(grid.Create(m_device, GRID_SIZE, GRID_SIZE, GRID_SIZE, DXGI_FORMAT_R10G10B10A2_UNORM, BIND_PACKED_UAV), false);
@@ -95,7 +94,8 @@ void Voxelizer::UpdateFrame(uint32_t frameIndex, CXMVECTOR eyePt, CXMMATRIX view
 	XMStoreFloat4(&pCbPerFrame->eyePos, eyePt);
 }
 
-void Voxelizer::Render(bool solid, Method voxMethod, uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
+void Voxelizer::Render(const CommandList &commandList, bool solid, Method voxMethod,
+	uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
 {
 	if (solid)
 	{
@@ -104,19 +104,19 @@ void Voxelizer::Render(bool solid, Method voxMethod, uint32_t frameIndex, const 
 			m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL),
 			m_descriptorTableCache.GetDescriptorPool(SAMPLER_POOL)
 		};
-		m_commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
+		commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
 
-		voxelizeSolid(voxMethod, frameIndex);
-		renderRayCast(frameIndex, rtvs, dsv);
+		voxelizeSolid(commandList, voxMethod, frameIndex);
+		renderRayCast(commandList, frameIndex, rtvs, dsv);
 	}
 	else
 	{
 		const DescriptorPool descriptorPools[] =
 		{ m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL) };
-		m_commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
+		commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
 
-		voxelize(voxMethod, frameIndex);
-		renderBoxArray(frameIndex, rtvs, dsv);
+		voxelize(commandList, voxMethod, frameIndex);
+		renderBoxArray(commandList, frameIndex, rtvs, dsv);
 	}
 }
 
@@ -143,17 +143,19 @@ bool Voxelizer::createShaders()
 	return true;
 }
 
-bool Voxelizer::createVB(uint32_t numVert, uint32_t stride, const uint8_t *pData, vector<Resource> &uploaders)
+bool Voxelizer::createVB(const CommandList &commandList, uint32_t numVert, uint32_t stride,
+	const uint8_t *pData, vector<Resource> &uploaders)
 {
 	N_RETURN(m_vertexBuffer.Create(m_device, numVert, stride, D3D12_RESOURCE_FLAG_NONE,
 		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST), false);
 	uploaders.push_back(nullptr);
 
-	return m_vertexBuffer.Upload(m_commandList, uploaders.back(), pData, stride * numVert,
+	return m_vertexBuffer.Upload(commandList, uploaders.back(), pData, stride * numVert,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
 
-bool Voxelizer::createIB(uint32_t numIndices, const uint32_t *pData, vector<Resource> &uploaders)
+bool Voxelizer::createIB(const CommandList &commandList, uint32_t numIndices,
+	const uint32_t *pData, vector<Resource> &uploaders)
 {
 	m_numIndices = numIndices;
 	const uint32_t byteWidth = sizeof(uint32_t) * numIndices;
@@ -161,11 +163,11 @@ bool Voxelizer::createIB(uint32_t numIndices, const uint32_t *pData, vector<Reso
 		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST), false);
 	uploaders.push_back(nullptr);
 
-	return m_indexbuffer.Upload(m_commandList, uploaders.back(), pData,
+	return m_indexbuffer.Upload(commandList, uploaders.back(), pData,
 		byteWidth, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
 
-bool Voxelizer::createCBs(vector<Resource> &uploaders)
+bool Voxelizer::createCBs(const CommandList &commandList, vector<Resource> &uploaders)
 {
 	// Common CBs
 	{
@@ -178,7 +180,7 @@ bool Voxelizer::createCBs(vector<Resource> &uploaders)
 	{
 		N_RETURN(m_cbBound.Create(m_device, sizeof(XMFLOAT4), 1, nullptr, D3D12_HEAP_TYPE_DEFAULT), false);
 		uploaders.push_back(nullptr);
-		m_cbBound.Upload(m_commandList, uploaders.back(), &m_bound, sizeof(XMFLOAT4));
+		m_cbBound.Upload(commandList, uploaders.back(), &m_bound, sizeof(XMFLOAT4));
 	}
 
 	m_cbPerMipLevels.resize(m_numLevels);
@@ -189,7 +191,7 @@ bool Voxelizer::createCBs(vector<Resource> &uploaders)
 		N_RETURN(cb.Create(m_device, sizeof(XMFLOAT4), 1, nullptr, D3D12_HEAP_TYPE_DEFAULT), false);
 
 		uploaders.push_back(nullptr);
-		cb.Upload(m_commandList, uploaders.back(), &gridSize, sizeof(float));
+		cb.Upload(commandList, uploaders.back(), &gridSize, sizeof(float));
 	}
 
 	return true;
@@ -438,7 +440,7 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 	return true;
 }
 
-void Voxelizer::voxelize(Method voxMethod, uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
+void Voxelizer::voxelize(const CommandList &commandList, Method voxMethod, uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
 {
 	auto layoutIdx = PASS_VOXELIZE;
 	auto pipeIdx = depthPeel ? PASS_VOXELIZE_SOLID : PASS_VOXELIZE;
@@ -462,137 +464,137 @@ void Voxelizer::voxelize(Method voxMethod, uint32_t frameIndex, bool depthPeel, 
 	ResourceBarrier barriers[2];
 	auto numBarriers = m_grids[frameIndex].SetBarrier(barriers, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	if (depthPeel) numBarriers = m_KBufferDepths[frameIndex].SetBarrier(barriers, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, numBarriers);
-	m_commandList.Barrier(numBarriers, barriers);
+	commandList.Barrier(numBarriers, barriers);
 
 	// Set descriptor tables
-	m_commandList.SetGraphicsPipelineLayout(m_pipelineLayouts[layoutIdx]);
-	m_commandList.SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_VOXELIZE]);
-	m_commandList.SetGraphicsDescriptorTable(1, m_cbvTables[CBV_TABLE_PER_MIP]);
-	m_commandList.SetGraphicsDescriptorTable(2, m_uavTables[frameIndex][UAV_TABLE_VOXELIZE]);
+	commandList.SetGraphicsPipelineLayout(m_pipelineLayouts[layoutIdx]);
+	commandList.SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_VOXELIZE]);
+	commandList.SetGraphicsDescriptorTable(1, m_cbvTables[CBV_TABLE_PER_MIP]);
+	commandList.SetGraphicsDescriptorTable(2, m_uavTables[frameIndex][UAV_TABLE_VOXELIZE]);
 	switch (voxMethod)
 	{
 	case TRI_PROJ:
-		m_commandList.SetGraphicsDescriptorTable(3, m_srvTables[SRV_TABLE_VB_IB]);
+		commandList.SetGraphicsDescriptorTable(3, m_srvTables[SRV_TABLE_VB_IB]);
 		break;
 	case TRI_PROJ_TESS:
-		m_commandList.SetGraphicsDescriptorTable(3, m_cbvTables[CBV_TABLE_PER_MIP]);
+		commandList.SetGraphicsDescriptorTable(3, m_cbvTables[CBV_TABLE_PER_MIP]);
 		break;
 	}
 
 	// Set pipeline state
-	m_commandList.SetPipelineState(m_pipelines[pipeIdx]);
+	commandList.SetPipelineState(m_pipelines[pipeIdx]);
 
 	// Set viewport
 	const auto gridSize = GRID_SIZE >> mipLevel;
 	const auto fGridSize = static_cast<float>(gridSize);
 	Viewport viewport(0.0f, 0.0f, fGridSize, fGridSize);
 	RectRange scissorRect(0, 0, gridSize, gridSize);
-	m_commandList.RSSetViewports(1, &viewport);
-	m_commandList.RSSetScissorRects(1, &scissorRect);
+	commandList.RSSetViewports(1, &viewport);
+	commandList.RSSetScissorRects(1, &scissorRect);
 
 	// Record commands.
-	m_commandList.ClearUnorderedAccessViewUint(*m_uavTables[frameIndex][UAV_TABLE_VOXELIZE], m_grids[frameIndex].GetUAV(),
+	commandList.ClearUnorderedAccessViewUint(*m_uavTables[frameIndex][UAV_TABLE_VOXELIZE], m_grids[frameIndex].GetUAV(),
 		m_grids[frameIndex].GetResource(), XMVECTORU32{ 0 }.u);
-	if (depthPeel) m_commandList.ClearUnorderedAccessViewUint(*m_uavTables[frameIndex][UAV_TABLE_KBUFFER], m_KBufferDepths[frameIndex].GetUAV(),
+	if (depthPeel) commandList.ClearUnorderedAccessViewUint(*m_uavTables[frameIndex][UAV_TABLE_KBUFFER], m_KBufferDepths[frameIndex].GetUAV(),
 		m_KBufferDepths[frameIndex].GetResource(), XMVECTORU32{ UINT32_MAX }.u);
 
 	// Set IA
 	if (voxMethod != TRI_PROJ)
 	{
-		m_commandList.IASetVertexBuffers(0, 1, &m_vertexBuffer.GetVBV());
-		m_commandList.IASetIndexBuffer(m_indexbuffer.GetIBV());
+		commandList.IASetVertexBuffers(0, 1, &m_vertexBuffer.GetVBV());
+		commandList.IASetIndexBuffer(m_indexbuffer.GetIBV());
 	}
 
-	m_commandList.IASetPrimitiveTopology(voxMethod == TRI_PROJ_TESS ?
+	commandList.IASetPrimitiveTopology(voxMethod == TRI_PROJ_TESS ?
 		D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	if (voxMethod == TRI_PROJ)
-		m_commandList.Draw(3, instanceCount, 0, 0);
+		commandList.Draw(3, instanceCount, 0, 0);
 	else
-		m_commandList.DrawIndexed(m_numIndices, instanceCount, 0, 0, 0);
+		commandList.DrawIndexed(m_numIndices, instanceCount, 0, 0, 0);
 }
 
-void Voxelizer::voxelizeSolid(Method voxMethod, uint32_t frameIndex, uint8_t mipLevel)
+void Voxelizer::voxelizeSolid(const CommandList &commandList, Method voxMethod, uint32_t frameIndex, uint8_t mipLevel)
 {
 	// Surface voxelization with depth peeling
-	voxelize(voxMethod, frameIndex, true, mipLevel);
+	voxelize(commandList, voxMethod, frameIndex, true, mipLevel);
 
 	// Set resource barriers
 	ResourceBarrier barriers[2];
 	auto numBarriers = m_grids[frameIndex].SetBarrier(barriers, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	numBarriers = m_KBufferDepths[frameIndex].SetBarrier(barriers, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	m_commandList.Barrier(numBarriers, barriers);
+	commandList.Barrier(numBarriers, barriers);
 
 	// Set descriptor tables
-	m_commandList.SetComputePipelineLayout(m_pipelineLayouts[PASS_FILL_SOLID]);
+	commandList.SetComputePipelineLayout(m_pipelineLayouts[PASS_FILL_SOLID]);
 	
-	m_commandList.SetComputeDescriptorTable(0, m_cbvTables[CBV_TABLE_PER_MIP]);
-	m_commandList.SetComputeDescriptorTable(1, m_srvTables[SRV_K_DEPTH + frameIndex]);
-	m_commandList.SetComputeDescriptorTable(2, m_uavTables[frameIndex][UAV_TABLE_VOXELIZE]);
+	commandList.SetComputeDescriptorTable(0, m_cbvTables[CBV_TABLE_PER_MIP]);
+	commandList.SetComputeDescriptorTable(1, m_srvTables[SRV_K_DEPTH + frameIndex]);
+	commandList.SetComputeDescriptorTable(2, m_uavTables[frameIndex][UAV_TABLE_VOXELIZE]);
 
 	// Set pipeline state
-	m_commandList.SetPipelineState(m_pipelines[PASS_FILL_SOLID]);
+	commandList.SetPipelineState(m_pipelines[PASS_FILL_SOLID]);
 
 	// Record commands.
-	m_commandList.Dispatch(GRID_SIZE / 32, GRID_SIZE / 16, GRID_SIZE);
+	commandList.Dispatch(GRID_SIZE / 32, GRID_SIZE / 16, GRID_SIZE);
 }
 
-void Voxelizer::renderBoxArray(uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
+void Voxelizer::renderBoxArray(const CommandList &commandList, uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
 {
 	// Set resource barrier
 	ResourceBarrier barrier;
 	const auto numBarriers = m_grids[frameIndex].SetBarrier(&barrier, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	m_commandList.Barrier(numBarriers, &barrier);
+	commandList.Barrier(numBarriers, &barrier);
 
 	// Set descriptor tables
-	m_commandList.SetGraphicsPipelineLayout(m_pipelineLayouts[PASS_DRAW_AS_BOX]);
+	commandList.SetGraphicsPipelineLayout(m_pipelineLayouts[PASS_DRAW_AS_BOX]);
 	
-	m_commandList.SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_MATRICES + frameIndex]);
-	m_commandList.SetGraphicsDescriptorTable(1, m_srvTables[SRV_TABLE_GRID + frameIndex]);
+	commandList.SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_MATRICES + frameIndex]);
+	commandList.SetGraphicsDescriptorTable(1, m_srvTables[SRV_TABLE_GRID + frameIndex]);
 
 	// Set pipeline state
-	m_commandList.SetPipelineState(m_pipelines[PASS_DRAW_AS_BOX]);
+	commandList.SetPipelineState(m_pipelines[PASS_DRAW_AS_BOX]);
 
 	// Set viewport
 	const auto gridSize = GRID_SIZE >> SHOW_MIP;
 	Viewport viewport(0.0f, 0.0f, m_viewport.x, m_viewport.y);
 	RectRange scissorRect(0, 0, static_cast<long>(m_viewport.x), static_cast<long>(m_viewport.y));
-	m_commandList.RSSetViewports(1, &viewport);
-	m_commandList.RSSetScissorRects(1, &scissorRect);
+	commandList.RSSetViewports(1, &viewport);
+	commandList.RSSetScissorRects(1, &scissorRect);
 
-	m_commandList.OMSetRenderTargets(1, rtvs, &dsv);
+	commandList.OMSetRenderTargets(1, rtvs, &dsv);
 
 	// Record commands.
-	m_commandList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-	m_commandList.Draw(4, 6 * gridSize * gridSize * gridSize, 0, 0);
+	commandList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	commandList.Draw(4, 6 * gridSize * gridSize * gridSize, 0, 0);
 }
 
-void Voxelizer::renderRayCast(uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
+void Voxelizer::renderRayCast(const CommandList &commandList, uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
 {
 	// Set resource barriers
 	ResourceBarrier barrier;
 	const auto numBarriers = m_grids[frameIndex].SetBarrier(&barrier, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	m_commandList.Barrier(numBarriers, &barrier);
+	commandList.Barrier(numBarriers, &barrier);
 
 	// Set descriptor tables
-	m_commandList.SetGraphicsPipelineLayout(m_pipelineLayouts[PASS_RAY_CAST]);
+	commandList.SetGraphicsPipelineLayout(m_pipelineLayouts[PASS_RAY_CAST]);
 	
-	m_commandList.SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_PER_OBJ + frameIndex]);
-	m_commandList.SetGraphicsDescriptorTable(1, m_srvTables[SRV_TABLE_GRID + frameIndex]);
-	m_commandList.SetGraphicsDescriptorTable(2, m_samplerTable);
+	commandList.SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_PER_OBJ + frameIndex]);
+	commandList.SetGraphicsDescriptorTable(1, m_srvTables[SRV_TABLE_GRID + frameIndex]);
+	commandList.SetGraphicsDescriptorTable(2, m_samplerTable);
 
 	// Set pipeline state
-	m_commandList.SetPipelineState(m_pipelines[PASS_RAY_CAST]);
+	commandList.SetPipelineState(m_pipelines[PASS_RAY_CAST]);
 
 	// Set viewport
 	Viewport viewport(0.0f, 0.0f, m_viewport.x, m_viewport.y);
 	RectRange scissorRect(0, 0, static_cast<long>(m_viewport.x), static_cast<long>(m_viewport.y));
-	m_commandList.RSSetViewports(1, &viewport);
-	m_commandList.RSSetScissorRects(1, &scissorRect);
+	commandList.RSSetViewports(1, &viewport);
+	commandList.RSSetScissorRects(1, &scissorRect);
 
-	m_commandList.OMSetRenderTargets(1, rtvs, nullptr);
+	commandList.OMSetRenderTargets(1, rtvs, nullptr);
 
 	// Record commands.
-	m_commandList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-	m_commandList.Draw(3, 1, 0, 0);
+	commandList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	commandList.Draw(3, 1, 0, 0);
 }
