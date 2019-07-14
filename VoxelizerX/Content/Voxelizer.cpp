@@ -9,7 +9,7 @@ using namespace std;
 using namespace DirectX;
 using namespace XUSG;
 
-Voxelizer::Voxelizer(const Device &device) :
+Voxelizer::Voxelizer(const Device& device) :
 	m_device(device)
 {
 	m_graphicsPipelineCache.SetDevice(device);
@@ -22,8 +22,8 @@ Voxelizer::~Voxelizer()
 {
 }
 
-bool Voxelizer::Init(const CommandList &commandList, uint32_t width, uint32_t height,
-	Format rtFormat, Format dsFormat, vector<Resource> &uploaders, const char *fileName)
+bool Voxelizer::Init(const CommandList& commandList, uint32_t width, uint32_t height,
+	Format rtFormat, Format dsFormat, vector<Resource>& uploaders, const char* fileName)
 {
 	m_viewport.x = static_cast<float>(width);
 	m_viewport.y = static_cast<float>(height);
@@ -46,10 +46,10 @@ bool Voxelizer::Init(const CommandList &commandList, uint32_t width, uint32_t he
 	m_numLevels = max(static_cast<uint32_t>(log2(GRID_SIZE)), 1);
 	N_RETURN(createCBs(commandList, uploaders), false);
 
-	for (auto &grid : m_grids)
+	for (auto& grid : m_grids)
 		N_RETURN(grid.Create(m_device, GRID_SIZE, GRID_SIZE, GRID_SIZE, DXGI_FORMAT_R10G10B10A2_UNORM, BIND_PACKED_UAV), false);
 
-	for (auto &KBufferDepth : m_KBufferDepths)
+	for (auto& KBufferDepth : m_KBufferDepths)
 		N_RETURN(KBufferDepth.Create(m_device, GRID_SIZE, GRID_SIZE, DXGI_FORMAT_R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
 			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), false);
 
@@ -72,7 +72,7 @@ void Voxelizer::UpdateFrame(uint32_t frameIndex, CXMVECTOR eyePt, CXMMATRIX view
 	pCbMatrices->worldViewProj = XMMatrixTranspose(worldViewProj);
 	pCbMatrices->world = world;
 	pCbMatrices->worldIT = XMMatrixIdentity();
-	
+
 	// Screen space matrices
 	const auto pCbPerObject = reinterpret_cast<CBPerObject*>(m_cbPerObject.Map(frameIndex));
 	pCbPerObject->localSpaceLightPt = XMVector3TransformCoord(XMVectorSet(10.0f, 45.0f, 75.0f, 0.0f), worldI);
@@ -94,8 +94,8 @@ void Voxelizer::UpdateFrame(uint32_t frameIndex, CXMVECTOR eyePt, CXMMATRIX view
 	XMStoreFloat4(&pCbPerFrame->eyePos, eyePt);
 }
 
-void Voxelizer::Render(const CommandList &commandList, bool solid, Method voxMethod,
-	uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
+void Voxelizer::Render(const CommandList& commandList, bool solid, Method voxMethod,
+	uint32_t frameIndex, const RenderTargetTable& rtvs, const Descriptor& dsv)
 {
 	if (solid)
 	{
@@ -143,8 +143,8 @@ bool Voxelizer::createShaders()
 	return true;
 }
 
-bool Voxelizer::createVB(const CommandList &commandList, uint32_t numVert, uint32_t stride,
-	const uint8_t *pData, vector<Resource> &uploaders)
+bool Voxelizer::createVB(const CommandList& commandList, uint32_t numVert, uint32_t stride,
+	const uint8_t* pData, vector<Resource>& uploaders)
 {
 	N_RETURN(m_vertexBuffer.Create(m_device, numVert, stride, D3D12_RESOURCE_FLAG_NONE,
 		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST), false);
@@ -154,8 +154,8 @@ bool Voxelizer::createVB(const CommandList &commandList, uint32_t numVert, uint3
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
 
-bool Voxelizer::createIB(const CommandList &commandList, uint32_t numIndices,
-	const uint32_t *pData, vector<Resource> &uploaders)
+bool Voxelizer::createIB(const CommandList& commandList, uint32_t numIndices,
+	const uint32_t* pData, vector<Resource>& uploaders)
 {
 	m_numIndices = numIndices;
 	const uint32_t byteWidth = sizeof(uint32_t) * numIndices;
@@ -167,7 +167,7 @@ bool Voxelizer::createIB(const CommandList &commandList, uint32_t numIndices,
 		byteWidth, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
 
-bool Voxelizer::createCBs(const CommandList &commandList, vector<Resource> &uploaders)
+bool Voxelizer::createCBs(const CommandList& commandList, vector<Resource>& uploaders)
 {
 	// Common CBs
 	{
@@ -186,7 +186,7 @@ bool Voxelizer::createCBs(const CommandList &commandList, vector<Resource> &uplo
 	m_cbPerMipLevels.resize(m_numLevels);
 	for (auto i = 0u; i < m_numLevels; ++i)
 	{
-		auto &cb = m_cbPerMipLevels[i];
+		auto& cb = m_cbPerMipLevels[i];
 		const auto gridSize = static_cast<float>(GRID_SIZE >> i);
 		N_RETURN(cb.Create(m_device, sizeof(XMFLOAT4), 1, nullptr, D3D12_HEAP_TYPE_DEFAULT), false);
 
@@ -437,7 +437,7 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 	return true;
 }
 
-void Voxelizer::voxelize(const CommandList &commandList, Method voxMethod, uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
+void Voxelizer::voxelize(const CommandList& commandList, Method voxMethod, uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
 {
 	auto layoutIdx = PASS_VOXELIZE;
 	auto pipeIdx = depthPeel ? PASS_VOXELIZE_SOLID : PASS_VOXELIZE;
@@ -511,7 +511,7 @@ void Voxelizer::voxelize(const CommandList &commandList, Method voxMethod, uint3
 		commandList.DrawIndexed(m_numIndices, instanceCount, 0, 0, 0);
 }
 
-void Voxelizer::voxelizeSolid(const CommandList &commandList, Method voxMethod, uint32_t frameIndex, uint8_t mipLevel)
+void Voxelizer::voxelizeSolid(const CommandList& commandList, Method voxMethod, uint32_t frameIndex, uint8_t mipLevel)
 {
 	// Surface voxelization with depth peeling
 	voxelize(commandList, voxMethod, frameIndex, true, mipLevel);
@@ -524,7 +524,7 @@ void Voxelizer::voxelizeSolid(const CommandList &commandList, Method voxMethod, 
 
 	// Set descriptor tables
 	commandList.SetComputePipelineLayout(m_pipelineLayouts[PASS_FILL_SOLID]);
-	
+
 	commandList.SetComputeDescriptorTable(0, m_cbvTables[CBV_TABLE_PER_MIP]);
 	commandList.SetComputeDescriptorTable(1, m_srvTables[SRV_K_DEPTH + frameIndex]);
 	commandList.SetComputeDescriptorTable(2, m_uavTables[frameIndex][UAV_TABLE_VOXELIZE]);
@@ -536,7 +536,7 @@ void Voxelizer::voxelizeSolid(const CommandList &commandList, Method voxMethod, 
 	commandList.Dispatch(GRID_SIZE / 32, GRID_SIZE / 16, GRID_SIZE);
 }
 
-void Voxelizer::renderBoxArray(const CommandList &commandList, uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
+void Voxelizer::renderBoxArray(const CommandList& commandList, uint32_t frameIndex, const RenderTargetTable& rtvs, const Descriptor& dsv)
 {
 	// Set resource barrier
 	ResourceBarrier barrier;
@@ -545,7 +545,7 @@ void Voxelizer::renderBoxArray(const CommandList &commandList, uint32_t frameInd
 
 	// Set descriptor tables
 	commandList.SetGraphicsPipelineLayout(m_pipelineLayouts[PASS_DRAW_AS_BOX]);
-	
+
 	commandList.SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_MATRICES + frameIndex]);
 	commandList.SetGraphicsDescriptorTable(1, m_srvTables[SRV_TABLE_GRID + frameIndex]);
 
@@ -566,7 +566,7 @@ void Voxelizer::renderBoxArray(const CommandList &commandList, uint32_t frameInd
 	commandList.Draw(4, 6 * gridSize * gridSize * gridSize, 0, 0);
 }
 
-void Voxelizer::renderRayCast(const CommandList &commandList, uint32_t frameIndex, const RenderTargetTable &rtvs, const Descriptor &dsv)
+void Voxelizer::renderRayCast(const CommandList& commandList, uint32_t frameIndex, const RenderTargetTable& rtvs, const Descriptor& dsv)
 {
 	// Set resource barriers
 	ResourceBarrier barrier;
@@ -575,7 +575,7 @@ void Voxelizer::renderRayCast(const CommandList &commandList, uint32_t frameInde
 
 	// Set descriptor tables
 	commandList.SetGraphicsPipelineLayout(m_pipelineLayouts[PASS_RAY_CAST]);
-	
+
 	commandList.SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_PER_OBJ + frameIndex]);
 	commandList.SetGraphicsDescriptorTable(1, m_srvTables[SRV_TABLE_GRID + frameIndex]);
 	commandList.SetGraphicsDescriptorTable(2, m_samplerTable);

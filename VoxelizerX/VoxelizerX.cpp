@@ -14,14 +14,14 @@
 using namespace std;
 using namespace XUSG;
 
-const wchar_t *VoxelizerX::VoxMethodDescs[] =
+const wchar_t* VoxelizerX::VoxMethodDescs[] =
 {
 	L"Axis-aligned projection of max projected area",
 	L"Tessellation for axis-aligned projection view of max projected area",
 	L"Union of 3 axis-aligned projection views"
 };
 
-const wchar_t *VoxelizerX::SolidDescs[] =
+const wchar_t* VoxelizerX::SolidDescs[] =
 {
 	L"Render surface voxels as box array",
 	L"Render solid voxels with raycasting"
@@ -109,7 +109,7 @@ void VoxelizerX::LoadPipeline()
 		nullptr,
 		nullptr,
 		&swapChain
-		));
+	));
 
 	// This sample does not support fullscreen transitions.
 	ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
@@ -155,13 +155,13 @@ void VoxelizerX::LoadAssets()
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList.Close());
-	ID3D12CommandList *const ppCommandLists[] = { m_commandList.GetCommandList().get() };
+	ID3D12CommandList* const ppCommandLists[] = { m_commandList.GetCommandList().get() };
 	m_commandQueue->ExecuteCommandLists(static_cast<uint32_t>(size(ppCommandLists)), ppCommandLists);
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
 		ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex]++, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-		
+
 		// Create an event handle to use for frame synchronization.
 		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 		if (m_fenceEvent == nullptr)
@@ -202,7 +202,7 @@ void VoxelizerX::OnUpdate()
 
 	// View
 	const auto eyePt = XMLoadFloat3(&m_eyePt);
-	const auto view = XMLoadFloat4x4(&m_view); 
+	const auto view = XMLoadFloat4x4(&m_view);
 	const auto proj = XMLoadFloat4x4(&m_proj);
 	m_voxelizer->UpdateFrame(m_frameIndex, eyePt, view * proj);
 }
@@ -214,7 +214,7 @@ void VoxelizerX::OnRender()
 	PopulateCommandList();
 
 	// Execute the command list.
-	ID3D12CommandList *const ppCommandLists[] = { m_commandList.GetCommandList().get() };
+	ID3D12CommandList* const ppCommandLists[] = { m_commandList.GetCommandList().get() };
 	m_commandQueue->ExecuteCommandLists(static_cast<uint32_t>(size(ppCommandLists)), ppCommandLists);
 
 	// Present the frame.
@@ -271,7 +271,7 @@ void VoxelizerX::OnMouseMove(float posX, float posY)
 	if (m_tracking)
 	{
 		const auto dPos = XMFLOAT2(m_mousePt.x - posX, m_mousePt.y - posY);
-		
+
 		XMFLOAT2 radians;
 		radians.x = XM_2PI * dPos.y / m_height;
 		radians.y = XM_2PI * dPos.x / m_width;
@@ -302,7 +302,7 @@ void VoxelizerX::OnMouseWheel(float deltaZ, float posX, float posY)
 
 	const auto len = XMVectorGetX(XMVector3Length(focusPt - eyePt));
 	const auto transform = XMMatrixTranslation(0.0f, 0.0f, -len * deltaZ / 16.0f);
-	
+
 	const auto view = XMLoadFloat4x4(&m_view) * transform;
 	const auto viewInv = XMMatrixInverse(nullptr, view);
 	eyePt = viewInv.r[3];
@@ -386,7 +386,7 @@ void VoxelizerX::MoveToNextFrame()
 	m_fenceValues[m_frameIndex] = currentFenceValue + 1;
 }
 
-double VoxelizerX::CalculateFrameStats(float *pTimeStep)
+double VoxelizerX::CalculateFrameStats(float* pTimeStep)
 {
 	static int frameCnt = 0;
 	static double elapsedTime = 0.0;
@@ -412,7 +412,7 @@ double VoxelizerX::CalculateFrameStats(float *pTimeStep)
 		SetCustomWindowText(windowText.str().c_str());
 	}
 
-	if (pTimeStep) *pTimeStep = static_cast<float>(totalTime - previousTime);
+	if (pTimeStep)* pTimeStep = static_cast<float>(totalTime - previousTime);
 	previousTime = totalTime;
 
 	return totalTime;

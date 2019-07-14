@@ -20,15 +20,15 @@ public:
 		NUM_METHOD
 	};
 
-	Voxelizer(const XUSG::Device &device);
+	Voxelizer(const XUSG::Device& device);
 	virtual ~Voxelizer();
 
-	bool Init(const XUSG::CommandList &commandList, uint32_t width, uint32_t height,
-		XUSG::Format rtFormat, XUSG::Format dsFormat, std::vector<XUSG::Resource> &uploaders,
-		const char *fileName = "Media\\bunny.obj");
+	bool Init(const XUSG::CommandList& commandList, uint32_t width, uint32_t height,
+		XUSG::Format rtFormat, XUSG::Format dsFormat, std::vector<XUSG::Resource>& uploaders,
+		const char* fileName = "Media\\bunny.obj");
 	void UpdateFrame(uint32_t frameIndex, DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
-	void Render(const XUSG::CommandList &commandList, bool solid, Method voxMethod, uint32_t frameIndex,
-		const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
+	void Render(const XUSG::CommandList& commandList, bool solid, Method voxMethod, uint32_t frameIndex,
+		const XUSG::RenderTargetTable& rtvs, const XUSG::Descriptor& dsv);
 
 	static const uint32_t FrameCount = FRAME_COUNT;
 
@@ -129,23 +129,23 @@ protected:
 	};
 
 	bool createShaders();
-	bool createVB(const XUSG::CommandList &commandList, uint32_t numVert, uint32_t stride,
-		const uint8_t *pData, std::vector<XUSG::Resource> &uploaders);
-	bool createIB(const XUSG::CommandList &commandList, uint32_t numIndices,
-		const uint32_t *pData, std::vector<XUSG::Resource> &uploaders);
-	bool createCBs(const XUSG::CommandList &commandList, std::vector<XUSG::Resource> &uploaders);
+	bool createVB(const XUSG::CommandList& commandList, uint32_t numVert, uint32_t stride,
+		const uint8_t* pData, std::vector<XUSG::Resource>& uploaders);
+	bool createIB(const XUSG::CommandList& commandList, uint32_t numIndices,
+		const uint32_t* pData, std::vector<XUSG::Resource>& uploaders);
+	bool createCBs(const XUSG::CommandList& commandList, std::vector<XUSG::Resource>& uploaders);
 	void createInputLayout();
 	bool prevoxelize(uint8_t mipLevel = 0);
 	bool prerenderBoxArray(XUSG::Format rtFormat, XUSG::Format dsFormat);
 	bool prerayCast(XUSG::Format rtFormat, XUSG::Format dsFormat);
-	void voxelize(const XUSG::CommandList &commandList, Method voxMethod, uint32_t frameIndex,
+	void voxelize(const XUSG::CommandList& commandList, Method voxMethod, uint32_t frameIndex,
 		bool depthPeel = false, uint8_t mipLevel = 0);
-	void voxelizeSolid(const XUSG::CommandList &commandList, Method voxMethod,
+	void voxelizeSolid(const XUSG::CommandList& commandList, Method voxMethod,
 		uint32_t frameIndex, uint8_t mipLevel = 0);
-	void renderBoxArray(const XUSG::CommandList &commandList, uint32_t frameIndex,
-		const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
-	void renderRayCast(const XUSG::CommandList &commandList, uint32_t frameIndex,
-		const XUSG::RenderTargetTable &rtvs, const XUSG::Descriptor &dsv);
+	void renderBoxArray(const XUSG::CommandList& commandList, uint32_t frameIndex,
+		const XUSG::RenderTargetTable& rtvs, const XUSG::Descriptor& dsv);
+	void renderRayCast(const XUSG::CommandList& commandList, uint32_t frameIndex,
+		const XUSG::RenderTargetTable& rtvs, const XUSG::Descriptor& dsv);
 
 	XUSG::Device m_device;
 

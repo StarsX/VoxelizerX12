@@ -49,7 +49,7 @@ private:
 	XUSG::Device			m_device;
 	XUSG::RenderTarget		m_renderTargets[Voxelizer::FrameCount];
 	XUSG::CommandList		m_commandList;
-	
+
 	// App resources.
 	std::unique_ptr<Voxelizer> m_voxelizer;
 	XUSG::RenderTargetTable	m_rtvTables[Voxelizer::FrameCount];
@@ -84,8 +84,8 @@ private:
 	void PopulateCommandList();
 	void WaitForGpu();
 	void MoveToNextFrame();
-	double CalculateFrameStats(float *fTimeStep = nullptr);
+	double CalculateFrameStats(float* fTimeStep = nullptr);
 
-	static const wchar_t *VoxMethodDescs[];
-	static const wchar_t *SolidDescs[];
+	static const wchar_t* VoxMethodDescs[];
+	static const wchar_t* SolidDescs[];
 };
