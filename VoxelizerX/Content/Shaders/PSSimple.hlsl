@@ -19,7 +19,7 @@ struct PSIn
 //--------------------------------------------------------------------------------------
 min16float4 main(PSIn input) : SV_TARGET
 {
-	const float3 lightPt = 1.0;
+	const float3 lightPt = float3(-1.0, 1.0, -1.0);
 	const min16float3 lightDir = min16float3(normalize(lightPt));
 
 	const min16float lightAmtMesh = saturate(dot(input.NrmMesh.xyz, lightDir));

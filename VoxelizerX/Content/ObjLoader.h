@@ -29,7 +29,8 @@ public:
 	ObjLoader();
 	virtual ~ObjLoader();
 
-	bool Import(const char* pszFilename, const bool recomputeNorm = true, const bool needBound = true);
+	bool Import(const char* pszFilename, bool recomputeNorm = true,
+		bool needBound = true, bool forDX = true);
 
 	const uint32_t GetNumVertices() const;
 	const uint32_t GetNumIndices() const;
@@ -42,9 +43,9 @@ public:
 
 protected:
 	void importGeometryFirstPass(FILE* pFile);
-	void importGeometrySecondPass(FILE* pFile);
+	void importGeometrySecondPass(FILE* pFile, bool forDX);
 	void loadIndex(FILE* pFile, uint32_t& numTri);
-	void computeNormal();
+	void computeNormal(bool forDX);
 	void computeBound();
 
 	std::vector<Vertex>		m_vertices;

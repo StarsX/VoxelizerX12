@@ -16,7 +16,7 @@ ObjLoader::~ObjLoader()
 {
 }
 
-bool ObjLoader::Import(const char* pszFilename, const bool recomputeNorm, const bool needBound)
+bool ObjLoader::Import(const char* pszFilename, bool recomputeNorm, bool needBound, bool forDX)
 {
 	FILE* pFile;
 	fopen_s(&pFile, pszFilename, "r");
@@ -26,12 +26,39 @@ bool ObjLoader::Import(const char* pszFilename, const bool recomputeNorm, const 
 	// Import the OBJ file.
 	importGeometryFirstPass(pFile);
 	rewind(pFile);
-	importGeometrySecondPass(pFile);
+	importGeometrySecondPass(pFile, forDX);
 	fclose(pFile);
 
 	// Perform post import tasks.
-	if (recomputeNorm) computeNormal();
+	if (recomputeNorm) computeNormal(forDX);
 	if (needBound) computeBound();
+
+	if (forDX)
+	{
+		auto numTri = static_cast<uint32_t>(m_indices.size()) / 3;
+		for (auto i = 0u; i < numTri; ++i)
+		{
+			const auto tmp = m_indices[i * 3];
+			m_indices[i * 3] = m_indices[i * 3 + 2];
+			m_indices[i * 3 + 2] = tmp;
+		}
+
+		numTri = static_cast<uint32_t>(m_nIndices.size()) / 3;
+		for (auto i = 0u; i < numTri; ++i)
+		{
+			const auto tmp = m_nIndices[i * 3];
+			m_nIndices[i * 3] = m_nIndices[i * 3 + 2];
+			m_nIndices[i * 3 + 2] = tmp;
+		}
+
+		numTri = static_cast<uint32_t>(m_tIndices.size()) / 3;
+		for (auto i = 0u; i < numTri; ++i)
+		{
+			const auto tmp = m_tIndices[i * 3];
+			m_tIndices[i * 3] = m_tIndices[i * 3 + 2];
+			m_tIndices[i * 3 + 2] = tmp;
+		}
+	}
 
 	return true;
 }
@@ -159,7 +186,7 @@ void ObjLoader::importGeometryFirstPass(FILE* pFile)
 	if (hasNormal) VEC_ALLOC(m_nIndices, numIdx);
 }
 
-void ObjLoader::importGeometrySecondPass(FILE* pFile)
+void ObjLoader::importGeometrySecondPass(FILE* pFile, bool forDX)
 {
 	auto numVert = 0u;
 	auto numTri = 0u;
@@ -180,6 +207,9 @@ void ObjLoader::importGeometrySecondPass(FILE* pFile)
 					&m_vertices[numVert].m_position.x,
 					&m_vertices[numVert].m_position.y,
 					&m_vertices[numVert].m_position.z);
+				m_vertices[numVert].m_position.z = forDX ?
+					-m_vertices[numVert].m_position.z :
+					m_vertices[numVert].m_position.z;
 				++numVert;
 				break;
 			default:
@@ -202,7 +232,7 @@ void ObjLoader::loadIndex(FILE* pFile, uint32_t& numTri)
 
 	const auto numVert = static_cast<uint32_t>(m_vertices.size());
 
-	for (auto i = 0ui8; i < 3u; ++i)
+	for (auto i = 0ui8; i < 3; ++i)
 	{
 		fscanf_s(pFile, "%u", &v[i]);
 		v[i] = (v[i] < 0) ? v[i] + numVert - 1 : v[i] - 1;
@@ -262,12 +292,12 @@ void ObjLoader::loadIndex(FILE* pFile, uint32_t& numTri)
 	}
 }
 
-void ObjLoader::computeNormal()
+void ObjLoader::computeNormal(bool forDX)
 {
 	float3 e1, e2, n;
 
-	const auto uNumTri = static_cast<uint32_t>(m_indices.size()) / 3;
-	for (auto i = 0u; i < uNumTri; i++)
+	const auto numTri = static_cast<uint32_t>(m_indices.size()) / 3;
+	for (auto i = 0u; i < numTri; i++)
 	{
 		const auto pv0 = &m_vertices[m_indices[i * 3]].m_position;
 		const auto pv1 = &m_vertices[m_indices[i * 3 + 1]].m_position;
@@ -304,7 +334,8 @@ void ObjLoader::computeNormal()
 	for (auto i = 0u; i < uNumVert; ++i)
 	{
 		const auto pn = &m_vertices[i].m_normal;
-		const auto l = sqrt(pn->x * pn->x + pn->y * pn->y + pn->z * pn->z);
+		auto l = sqrt(pn->x * pn->x + pn->y * pn->y + pn->z * pn->z);
+		l = forDX ? -l : l;
 		pn->x /= l;
 		pn->y /= l;
 		pn->z /= l;
