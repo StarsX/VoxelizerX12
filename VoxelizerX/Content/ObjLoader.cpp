@@ -30,35 +30,8 @@ bool ObjLoader::Import(const char* pszFilename, bool recomputeNorm, bool needBou
 	fclose(pFile);
 
 	// Perform post import tasks.
-	if (recomputeNorm) computeNormal(forDX);
+	if (recomputeNorm) computeNormal();
 	if (needBound) computeBound();
-
-	if (forDX)
-	{
-		auto numTri = static_cast<uint32_t>(m_indices.size()) / 3;
-		for (auto i = 0u; i < numTri; ++i)
-		{
-			const auto tmp = m_indices[i * 3];
-			m_indices[i * 3] = m_indices[i * 3 + 2];
-			m_indices[i * 3 + 2] = tmp;
-		}
-
-		numTri = static_cast<uint32_t>(m_nIndices.size()) / 3;
-		for (auto i = 0u; i < numTri; ++i)
-		{
-			const auto tmp = m_nIndices[i * 3];
-			m_nIndices[i * 3] = m_nIndices[i * 3 + 2];
-			m_nIndices[i * 3 + 2] = tmp;
-		}
-
-		numTri = static_cast<uint32_t>(m_tIndices.size()) / 3;
-		for (auto i = 0u; i < numTri; ++i)
-		{
-			const auto tmp = m_tIndices[i * 3];
-			m_tIndices[i * 3] = m_tIndices[i * 3 + 2];
-			m_tIndices[i * 3 + 2] = tmp;
-		}
-	}
 
 	return true;
 }
@@ -222,6 +195,13 @@ void ObjLoader::importGeometrySecondPass(FILE* pFile, bool forDX)
 			break;
 		}
 	}
+
+	if (forDX)
+	{
+		reverse(m_indices.begin(), m_indices.end());
+		reverse(m_nIndices.begin(), m_nIndices.end());
+		reverse(m_tIndices.begin(), m_tIndices.end());
+	}
 }
 
 void ObjLoader::loadIndex(FILE* pFile, uint32_t& numTri)
@@ -292,7 +272,7 @@ void ObjLoader::loadIndex(FILE* pFile, uint32_t& numTri)
 	}
 }
 
-void ObjLoader::computeNormal(bool forDX)
+void ObjLoader::computeNormal()
 {
 	float3 e1, e2, n;
 
@@ -334,8 +314,7 @@ void ObjLoader::computeNormal(bool forDX)
 	for (auto i = 0u; i < uNumVert; ++i)
 	{
 		const auto pn = &m_vertices[i].m_normal;
-		auto l = sqrt(pn->x * pn->x + pn->y * pn->y + pn->z * pn->z);
-		l = forDX ? -l : l;
+		const auto l = sqrt(pn->x * pn->x + pn->y * pn->y + pn->z * pn->z);
 		pn->x /= l;
 		pn->y /= l;
 		pn->z /= l;

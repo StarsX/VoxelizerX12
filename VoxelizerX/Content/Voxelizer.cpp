@@ -22,11 +22,12 @@ Voxelizer::~Voxelizer()
 {
 }
 
-bool Voxelizer::Init(const CommandList& commandList, uint32_t width, uint32_t height,
-	Format rtFormat, Format dsFormat, vector<Resource>& uploaders, const char* fileName)
+bool Voxelizer::Init(const CommandList& commandList, uint32_t width, uint32_t height, Format rtFormat,
+	Format dsFormat, vector<Resource>& uploaders, const char* fileName, const XMFLOAT4& posScale)
 {
 	m_viewport.x = static_cast<float>(width);
 	m_viewport.y = static_cast<float>(height);
+	m_posScale = posScale;
 
 	// Create shaders
 	N_RETURN(createShaders(), false);
@@ -64,8 +65,11 @@ bool Voxelizer::Init(const CommandList& commandList, uint32_t width, uint32_t he
 void Voxelizer::UpdateFrame(uint32_t frameIndex, CXMVECTOR eyePt, CXMMATRIX viewProj)
 {
 	// General matrices
+	const auto scl = 1.0f / m_bound.w;
 	const auto world = XMMatrixScaling(m_bound.w, m_bound.w, m_bound.w) *
-		XMMatrixTranslation(m_bound.x, m_bound.y, m_bound.z);
+		XMMatrixTranslation(m_bound.x, m_bound.y, m_bound.z) *
+		XMMatrixScaling(m_posScale.w, m_posScale.w, m_posScale.w) *
+		XMMatrixTranslation(m_posScale.x, m_posScale.y, m_posScale.z);
 	const auto worldI = XMMatrixInverse(nullptr, world);
 	const auto worldViewProj = world * viewProj;
 	const auto pCbMatrices = reinterpret_cast<CBMatrices*>(m_cbMatrices.Map(frameIndex));

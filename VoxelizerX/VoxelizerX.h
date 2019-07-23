@@ -39,6 +39,8 @@ public:
 	virtual void OnMouseWheel(float deltaZ, float posX, float posY);
 	virtual void OnMouseLeave();
 
+	virtual void ParseCommandLineArgs(wchar_t* argv[], int argc);
+
 private:
 	XUSG::DescriptorTableCache m_descriptorTableCache;
 
@@ -77,6 +79,10 @@ private:
 	// User camera interactions
 	bool m_tracking;
 	XMFLOAT2 m_mousePt;
+
+	// User external settings
+	std::string m_meshFileName;
+	XMFLOAT4 m_meshPosScale;
 
 	void LoadPipeline();
 	void LoadAssets();

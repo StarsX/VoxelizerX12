@@ -35,6 +35,8 @@ VoxelizerX::VoxelizerX(uint32_t width, uint32_t height, std::wstring name) :
 	m_pausing(false),
 	m_tracking(false),
 	m_voxMethod(Voxelizer::TRI_PROJ),
+	m_meshFileName("Media/bunny.obj"),
+	m_meshPosScale(0.0f, 0.0f, 0.0f, 1.0f),
 	m_voxMethodDesc(VoxMethodDescs[m_voxMethod]),
 	m_solidDesc(SolidDescs[m_solid])
 {
@@ -150,8 +152,8 @@ void VoxelizerX::LoadAssets()
 	vector<Resource> uploaders(0);
 	if (!m_voxelizer->Init(m_commandList, m_width, m_height,
 		m_renderTargets[0].GetResource()->GetDesc().Format,
-		m_depth.GetResource()->GetDesc().Format, uploaders))
-		ThrowIfFailed(E_FAIL);
+		m_depth.GetResource()->GetDesc().Format, uploaders,
+		m_meshFileName.c_str(), m_meshPosScale)) ThrowIfFailed(E_FAIL);
 
 	// Close the command list and execute it to begin the initial GPU setup.
 	ThrowIfFailed(m_commandList.Close());
@@ -314,6 +316,26 @@ void VoxelizerX::OnMouseWheel(float deltaZ, float posX, float posY)
 void VoxelizerX::OnMouseLeave()
 {
 	m_tracking = false;
+}
+
+void VoxelizerX::ParseCommandLineArgs(wchar_t* argv[], int argc)
+{
+	wstring_convert<codecvt_utf8<wchar_t>> converter;
+	DXFramework::ParseCommandLineArgs(argv, argc);
+
+	for (auto i = 1; i < argc; ++i)
+	{
+		if (_wcsnicmp(argv[i], L"-mesh", wcslen(argv[i])) == 0 ||
+			_wcsnicmp(argv[i], L"/mesh", wcslen(argv[i])) == 0)
+		{
+			if (i + 1 < argc) m_meshFileName = converter.to_bytes(argv[i + 1]);
+			m_meshPosScale.x = i + 2 < argc ? static_cast<float>(_wtof(argv[i + 2])) : m_meshPosScale.x;
+			m_meshPosScale.y = i + 3 < argc ? static_cast<float>(_wtof(argv[i + 3])) : m_meshPosScale.y;
+			m_meshPosScale.z = i + 4 < argc ? static_cast<float>(_wtof(argv[i + 4])) : m_meshPosScale.z;
+			m_meshPosScale.w = i + 5 < argc ? static_cast<float>(_wtof(argv[i + 5])) : m_meshPosScale.w;
+			break;
+		}
+	}
 }
 
 void VoxelizerX::PopulateCommandList()

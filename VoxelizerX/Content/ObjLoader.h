@@ -45,7 +45,7 @@ protected:
 	void importGeometryFirstPass(FILE* pFile);
 	void importGeometrySecondPass(FILE* pFile, bool forDX);
 	void loadIndex(FILE* pFile, uint32_t& numTri);
-	void computeNormal(bool forDX);
+	void computeNormal();
 	void computeBound();
 
 	std::vector<Vertex>		m_vertices;

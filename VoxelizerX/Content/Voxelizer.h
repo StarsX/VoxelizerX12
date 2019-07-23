@@ -23,9 +23,9 @@ public:
 	Voxelizer(const XUSG::Device& device);
 	virtual ~Voxelizer();
 
-	bool Init(const XUSG::CommandList& commandList, uint32_t width, uint32_t height,
-		XUSG::Format rtFormat, XUSG::Format dsFormat, std::vector<XUSG::Resource>& uploaders,
-		const char* fileName = "Media\\bunny.obj");
+	bool Init(const XUSG::CommandList& commandList, uint32_t width, uint32_t height, XUSG::Format rtFormat,
+		XUSG::Format dsFormat, std::vector<XUSG::Resource>& uploaders, const char* fileName,
+		const DirectX::XMFLOAT4& posScale);
 	void UpdateFrame(uint32_t frameIndex, DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
 	void Render(const XUSG::CommandList& commandList, bool solid, Method voxMethod, uint32_t frameIndex,
 		const XUSG::RenderTargetTable& rtvs, const XUSG::Descriptor& dsv);
@@ -178,6 +178,7 @@ protected:
 
 	DirectX::XMFLOAT4		m_bound;
 	DirectX::XMFLOAT2		m_viewport;
+	DirectX::XMFLOAT4		m_posScale;
 
 	uint32_t				m_numLevels;
 	uint32_t				m_numIndices;
