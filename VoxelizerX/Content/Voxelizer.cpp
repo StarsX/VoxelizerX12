@@ -99,7 +99,7 @@ void Voxelizer::UpdateFrame(uint32_t frameIndex, CXMVECTOR eyePt, CXMMATRIX view
 }
 
 void Voxelizer::Render(const CommandList& commandList, bool solid, Method voxMethod,
-	uint32_t frameIndex, const RenderTargetTable& rtvs, const Descriptor& dsv)
+	uint32_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
 {
 	if (solid)
 	{
@@ -111,7 +111,7 @@ void Voxelizer::Render(const CommandList& commandList, bool solid, Method voxMet
 		commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
 
 		voxelizeSolid(commandList, voxMethod, frameIndex);
-		renderRayCast(commandList, frameIndex, rtvs, dsv);
+		renderRayCast(commandList, frameIndex, rtv, dsv);
 	}
 	else
 	{
@@ -120,7 +120,7 @@ void Voxelizer::Render(const CommandList& commandList, bool solid, Method voxMet
 		commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
 
 		voxelize(commandList, voxMethod, frameIndex);
-		renderBoxArray(commandList, frameIndex, rtvs, dsv);
+		renderBoxArray(commandList, frameIndex, rtv, dsv);
 	}
 }
 
@@ -540,7 +540,7 @@ void Voxelizer::voxelizeSolid(const CommandList& commandList, Method voxMethod, 
 	commandList.Dispatch(GRID_SIZE / 32, GRID_SIZE / 16, GRID_SIZE);
 }
 
-void Voxelizer::renderBoxArray(const CommandList& commandList, uint32_t frameIndex, const RenderTargetTable& rtvs, const Descriptor& dsv)
+void Voxelizer::renderBoxArray(const CommandList& commandList, uint32_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
 {
 	// Set resource barrier
 	ResourceBarrier barrier;
@@ -563,14 +563,14 @@ void Voxelizer::renderBoxArray(const CommandList& commandList, uint32_t frameInd
 	commandList.RSSetViewports(1, &viewport);
 	commandList.RSSetScissorRects(1, &scissorRect);
 
-	commandList.OMSetRenderTargets(1, rtvs, &dsv);
+	commandList.OMSetRenderTargets(1, &rtv, &dsv);
 
 	// Record commands.
 	commandList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	commandList.Draw(4, 6 * gridSize * gridSize * gridSize, 0, 0);
 }
 
-void Voxelizer::renderRayCast(const CommandList& commandList, uint32_t frameIndex, const RenderTargetTable& rtvs, const Descriptor& dsv)
+void Voxelizer::renderRayCast(const CommandList& commandList, uint32_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
 {
 	// Set resource barriers
 	ResourceBarrier barrier;
@@ -593,7 +593,7 @@ void Voxelizer::renderRayCast(const CommandList& commandList, uint32_t frameInde
 	commandList.RSSetViewports(1, &viewport);
 	commandList.RSSetScissorRects(1, &scissorRect);
 
-	commandList.OMSetRenderTargets(1, rtvs, nullptr);
+	commandList.OMSetRenderTargets(1, &rtv);
 
 	// Record commands.
 	commandList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);

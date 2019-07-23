@@ -28,7 +28,7 @@ public:
 		const DirectX::XMFLOAT4& posScale);
 	void UpdateFrame(uint32_t frameIndex, DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
 	void Render(const XUSG::CommandList& commandList, bool solid, Method voxMethod, uint32_t frameIndex,
-		const XUSG::RenderTargetTable& rtvs, const XUSG::Descriptor& dsv);
+		const XUSG::Descriptor& rtv, const XUSG::Descriptor& dsv);
 
 	static const uint32_t FrameCount = FRAME_COUNT;
 
@@ -143,9 +143,9 @@ protected:
 	void voxelizeSolid(const XUSG::CommandList& commandList, Method voxMethod,
 		uint32_t frameIndex, uint8_t mipLevel = 0);
 	void renderBoxArray(const XUSG::CommandList& commandList, uint32_t frameIndex,
-		const XUSG::RenderTargetTable& rtvs, const XUSG::Descriptor& dsv);
+		const XUSG::Descriptor& rtv, const XUSG::Descriptor& dsv);
 	void renderRayCast(const XUSG::CommandList& commandList, uint32_t frameIndex,
-		const XUSG::RenderTargetTable& rtvs, const XUSG::Descriptor& dsv);
+		const XUSG::Descriptor& rtv, const XUSG::Descriptor& dsv);
 
 	XUSG::Device m_device;
 

@@ -42,8 +42,6 @@ public:
 	virtual void ParseCommandLineArgs(wchar_t* argv[], int argc);
 
 private:
-	XUSG::DescriptorTableCache m_descriptorTableCache;
-
 	XUSG::SwapChain			m_swapChain;
 	XUSG::CommandAllocator	m_commandAllocators[Voxelizer::FrameCount];
 	XUSG::CommandQueue		m_commandQueue;
@@ -54,7 +52,6 @@ private:
 
 	// App resources.
 	std::unique_ptr<Voxelizer> m_voxelizer;
-	XUSG::RenderTargetTable	m_rtvTables[Voxelizer::FrameCount];
 	XUSG::DepthStencil	m_depth;
 	XMFLOAT4X4			m_proj;
 	XMFLOAT4X4	m_view;

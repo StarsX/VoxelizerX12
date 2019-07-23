@@ -119,18 +119,11 @@ void VoxelizerX::LoadPipeline()
 	ThrowIfFailed(swapChain.As(&m_swapChain));
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-	m_descriptorTableCache.SetDevice(m_device);
-
 	// Create frame resources.
 	// Create a RTV and a command allocator for each frame.
 	for (auto n = 0u; n < Voxelizer::FrameCount; n++)
 	{
 		N_RETURN(m_renderTargets[n].CreateFromSwapChain(m_device, m_swapChain, n), ThrowIfFailed(E_FAIL));
-
-		Util::DescriptorTable rtvTable;
-		rtvTable.SetDescriptors(0, 1, &m_renderTargets[n].GetRTV());
-		m_rtvTables[n] = rtvTable.GetRtvTable(m_descriptorTableCache);
-
 		ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
 	}
 
@@ -359,12 +352,12 @@ void VoxelizerX::PopulateCommandList()
 	if (!m_solid)
 	{
 		const float clearColor[] = { CLEAR_COLOR, 0.0f };
-		m_commandList.ClearRenderTargetView(*m_rtvTables[m_frameIndex], clearColor);
+		m_commandList.ClearRenderTargetView(m_renderTargets[m_frameIndex].GetRTV(), clearColor);
 	}
 	m_commandList.ClearDepthStencilView(m_depth.GetDSV(), D3D12_CLEAR_FLAG_DEPTH, 1.0f);
 
 	// Voxelizer rendering
-	m_voxelizer->Render(m_commandList, m_solid, m_voxMethod, m_frameIndex, m_rtvTables[m_frameIndex], m_depth.GetDSV());
+	m_voxelizer->Render(m_commandList, m_solid, m_voxMethod, m_frameIndex, m_renderTargets[m_frameIndex].GetRTV(), m_depth.GetDSV());
 
 	// Indicate that the back buffer will now be used to present.
 	numBarriers = m_renderTargets[m_frameIndex].SetBarrier(&barrier, D3D12_RESOURCE_STATE_PRESENT);
