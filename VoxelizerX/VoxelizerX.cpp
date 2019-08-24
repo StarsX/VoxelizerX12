@@ -128,8 +128,8 @@ void VoxelizerX::LoadPipeline()
 	}
 
 	// Create a DSV
-	N_RETURN(m_depth.Create(m_device, m_width, m_height, DXGI_FORMAT_D24_UNORM_S8_UINT,
-		D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE), ThrowIfFailed(E_FAIL));
+	N_RETURN(m_depth.Create(m_device, m_width, m_height, Format::D24_UNORM_S8_UINT,
+		ResourceFlag::DENY_SHADER_RESOURCE), ThrowIfFailed(E_FAIL));
 }
 
 // Load the sample assets.
@@ -144,8 +144,8 @@ void VoxelizerX::LoadAssets()
 
 	vector<Resource> uploaders(0);
 	if (!m_voxelizer->Init(m_commandList, m_width, m_height,
-		m_renderTargets[0].GetResource()->GetDesc().Format,
-		m_depth.GetResource()->GetDesc().Format, uploaders,
+		static_cast<Format>(m_renderTargets[0].GetResource()->GetDesc().Format),
+		static_cast<Format>(m_depth.GetResource()->GetDesc().Format), uploaders,
 		m_meshFileName.c_str(), m_meshPosScale)) ThrowIfFailed(E_FAIL);
 
 	// Close the command list and execute it to begin the initial GPU setup.
@@ -345,7 +345,7 @@ void VoxelizerX::PopulateCommandList()
 
 	// Indicate that the back buffer will be used as a render target.
 	ResourceBarrier barrier;
-	auto numBarriers = m_renderTargets[m_frameIndex].SetBarrier(&barrier, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	auto numBarriers = m_renderTargets[m_frameIndex].SetBarrier(&barrier, ResourceState::RENDER_TARGET);
 	m_commandList.Barrier(numBarriers, &barrier);
 
 	// Record commands.
@@ -354,13 +354,13 @@ void VoxelizerX::PopulateCommandList()
 		const float clearColor[] = { CLEAR_COLOR, 0.0f };
 		m_commandList.ClearRenderTargetView(m_renderTargets[m_frameIndex].GetRTV(), clearColor);
 	}
-	m_commandList.ClearDepthStencilView(m_depth.GetDSV(), D3D12_CLEAR_FLAG_DEPTH, 1.0f);
+	m_commandList.ClearDepthStencilView(m_depth.GetDSV(), ClearFlag::DEPTH, 1.0f);
 
 	// Voxelizer rendering
 	m_voxelizer->Render(m_commandList, m_solid, m_voxMethod, m_frameIndex, m_renderTargets[m_frameIndex].GetRTV(), m_depth.GetDSV());
 
 	// Indicate that the back buffer will now be used to present.
-	numBarriers = m_renderTargets[m_frameIndex].SetBarrier(&barrier, D3D12_RESOURCE_STATE_PRESENT);
+	numBarriers = m_renderTargets[m_frameIndex].SetBarrier(&barrier, ResourceState::PRESENT);
 	m_commandList.Barrier(numBarriers, &barrier);
 
 	ThrowIfFailed(m_commandList.Close());

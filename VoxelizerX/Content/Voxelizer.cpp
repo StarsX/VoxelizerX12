@@ -48,11 +48,11 @@ bool Voxelizer::Init(const CommandList& commandList, uint32_t width, uint32_t he
 	N_RETURN(createCBs(commandList, uploaders), false);
 
 	for (auto& grid : m_grids)
-		N_RETURN(grid.Create(m_device, GRID_SIZE, GRID_SIZE, GRID_SIZE, DXGI_FORMAT_R10G10B10A2_UNORM, BIND_PACKED_UAV), false);
+		N_RETURN(grid.Create(m_device, GRID_SIZE, GRID_SIZE, GRID_SIZE, Format::R10G10B10A2_UNORM, ResourceFlag::BIND_PACKED_UAV), false);
 
 	for (auto& KBufferDepth : m_KBufferDepths)
-		N_RETURN(KBufferDepth.Create(m_device, GRID_SIZE, GRID_SIZE, DXGI_FORMAT_R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
-			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), false);
+		N_RETURN(KBufferDepth.Create(m_device, GRID_SIZE, GRID_SIZE, Format::R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
+			ResourceFlag::ALLOW_UNORDERED_ACCESS), false);
 
 	// Prepare for rendering
 	N_RETURN(prevoxelize(), false);
@@ -150,12 +150,12 @@ bool Voxelizer::createShaders()
 bool Voxelizer::createVB(const CommandList& commandList, uint32_t numVert, uint32_t stride,
 	const uint8_t* pData, vector<Resource>& uploaders)
 {
-	N_RETURN(m_vertexBuffer.Create(m_device, numVert, stride, D3D12_RESOURCE_FLAG_NONE,
-		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST), false);
+	N_RETURN(m_vertexBuffer.Create(m_device, numVert, stride, ResourceFlag::NONE,
+		MemoryType::DEFAULT, ResourceState::COPY_DEST), false);
 	uploaders.push_back(nullptr);
 
 	return m_vertexBuffer.Upload(commandList, uploaders.back(), pData, stride * numVert,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		ResourceState::NON_PIXEL_SHADER_RESOURCE);
 }
 
 bool Voxelizer::createIB(const CommandList& commandList, uint32_t numIndices,
@@ -163,12 +163,12 @@ bool Voxelizer::createIB(const CommandList& commandList, uint32_t numIndices,
 {
 	m_numIndices = numIndices;
 	const uint32_t byteWidth = sizeof(uint32_t) * numIndices;
-	N_RETURN(m_indexbuffer.Create(m_device, byteWidth, DXGI_FORMAT_R32_UINT, D3D12_RESOURCE_FLAG_NONE,
-		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST), false);
+	N_RETURN(m_indexbuffer.Create(m_device, byteWidth, Format::R32_UINT, ResourceFlag::NONE,
+		MemoryType::DEFAULT, ResourceState::COPY_DEST), false);
 	uploaders.push_back(nullptr);
 
 	return m_indexbuffer.Upload(commandList, uploaders.back(), pData,
-		byteWidth, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		byteWidth, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 }
 
 bool Voxelizer::createCBs(const CommandList& commandList, vector<Resource>& uploaders)
@@ -182,7 +182,7 @@ bool Voxelizer::createCBs(const CommandList& commandList, vector<Resource>& uplo
 
 	// Immutable CBs
 	{
-		N_RETURN(m_cbBound.Create(m_device, sizeof(XMFLOAT4), 1, nullptr, D3D12_HEAP_TYPE_DEFAULT), false);
+		N_RETURN(m_cbBound.Create(m_device, sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
 		uploaders.push_back(nullptr);
 		m_cbBound.Upload(commandList, uploaders.back(), &m_bound, sizeof(XMFLOAT4));
 	}
@@ -192,7 +192,7 @@ bool Voxelizer::createCBs(const CommandList& commandList, vector<Resource>& uplo
 	{
 		auto& cb = m_cbPerMipLevels[i];
 		const auto gridSize = static_cast<float>(GRID_SIZE >> i);
-		N_RETURN(cb.Create(m_device, sizeof(XMFLOAT4), 1, nullptr, D3D12_HEAP_TYPE_DEFAULT), false);
+		N_RETURN(cb.Create(m_device, sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
 
 		uploaders.push_back(nullptr);
 		cb.Upload(commandList, uploaders.back(), &gridSize, sizeof(float));
@@ -203,13 +203,11 @@ bool Voxelizer::createCBs(const CommandList& commandList, vector<Resource>& uplo
 
 void Voxelizer::createInputLayout()
 {
-	const auto offset = D3D12_APPEND_ALIGNED_ELEMENT;
-
 	// Define the vertex input layout.
 	InputElementTable inputElementDescs =
 	{
-		{ "POSITION",	0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL",		0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset,	D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		{ "POSITION",	0, Format::R32G32B32_FLOAT, 0, 0,								InputClassification::PER_VERTEX_DATA, 0 },
+		{ "NORMAL",		0, Format::R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,	InputClassification::PER_VERTEX_DATA, 0 }
 	};
 
 	m_inputLayout = m_graphicsPipelineCache.CreateInputLayout(inputElementDescs);
@@ -252,47 +250,47 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 	// Get graphics pipeline layouts
 	{
 		Util::PipelineLayout utilPipelineLayout;
-		utilPipelineLayout.SetRange(0, DescriptorType::CBV, 2, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		utilPipelineLayout.SetRange(0, DescriptorType::CBV, 2, 0, 0, DescriptorRangeFlag::DATA_STATIC);
+		utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
 		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 2, 0, 0,
-			D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
+			DescriptorRangeFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		utilPipelineLayout.SetRange(3, DescriptorType::SRV, static_cast<uint32_t>(size(srvs)), 0,
-			0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+			0, DescriptorRangeFlag::DATA_STATIC);
 		utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
 		utilPipelineLayout.SetShaderStage(1, Shader::Stage::PS);
 		utilPipelineLayout.SetShaderStage(2, Shader::Stage::PS);
 		utilPipelineLayout.SetShaderStage(3, Shader::Stage::VS);
 		X_RETURN(m_pipelineLayouts[PASS_VOXELIZE], utilPipelineLayout.GetPipelineLayout(
-			m_pipelineLayoutCache, D3D12_ROOT_SIGNATURE_FLAG_NONE, L"VoxelizationPass"), false);
+			m_pipelineLayoutCache, PipelineLayoutFlag::NONE, L"VoxelizationPass"), false);
 	}
 
 	{
 		Util::PipelineLayout utilPipelineLayout;
-		utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
+		utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
 		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 2, 0, 0,
-			D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
+			DescriptorRangeFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
 		utilPipelineLayout.SetShaderStage(1, Shader::Stage::PS);
 		utilPipelineLayout.SetShaderStage(2, Shader::Stage::PS);
 		X_RETURN(m_pipelineLayouts[PASS_VOXELIZE_UNION], utilPipelineLayout.GetPipelineLayout(
-			m_pipelineLayoutCache, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT,
+			m_pipelineLayoutCache, PipelineLayoutFlag::ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT,
 			L"VoxelizationByUnionPass"), false);
 	}
 
 	{
 		Util::PipelineLayout utilPipelineLayout;
-		utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
+		utilPipelineLayout.SetRange(1, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
 		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 2, 0, 0,
-			D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
-		utilPipelineLayout.SetRange(3, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+			DescriptorRangeFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
+		utilPipelineLayout.SetRange(3, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
 		utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
 		utilPipelineLayout.SetShaderStage(1, Shader::Stage::PS);
 		utilPipelineLayout.SetShaderStage(2, Shader::Stage::PS);
 		utilPipelineLayout.SetShaderStage(3, Shader::Stage::DS);
 		X_RETURN(m_pipelineLayouts[PASS_VOXELIZE_TESS], utilPipelineLayout.GetPipelineLayout(
-			m_pipelineLayoutCache, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT,
+			m_pipelineLayoutCache, PipelineLayoutFlag::ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT,
 			L"VoxelizationByTessellationPass"), false);
 	}
 
@@ -303,7 +301,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		state.SetShader(Shader::Stage::VS, m_shaderPool.GetShader(Shader::Stage::VS, VS_TRI_PROJ));
 		state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_TRI_PROJ));
 		state.DSSetState(Graphics::DepthStencilPreset::DEPTH_STENCIL_NONE, m_graphicsPipelineCache);
-		state.IASetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		state.IASetPrimitiveTopologyType(PrimitiveTopologyType::TRIANGLE);
 		state.RSSetState(Graphics::RasterizerPreset::CULL_NONE, m_graphicsPipelineCache);
 		state.OMSetNumRenderTargets(0);
 		X_RETURN(m_pipelines[PASS_VOXELIZE], state.GetPipeline(m_graphicsPipelineCache, L"Voxelization"), false);
@@ -325,7 +323,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		state.SetShader(Shader::Stage::HS, m_shaderPool.GetShader(Shader::Stage::HS, HS_TRI_PROJ));
 		state.SetShader(Shader::Stage::DS, m_shaderPool.GetShader(Shader::Stage::DS, DS_TRI_PROJ));
 		state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_TRI_PROJ));
-		state.IASetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH);
+		state.IASetPrimitiveTopologyType(PrimitiveTopologyType::PATCH);
 		X_RETURN(m_pipelines[PASS_VOXELIZE_TESS], state.GetPipeline(m_graphicsPipelineCache, L"VoxelizationTess"), false);
 
 		state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_TRI_PROJ_SOLID));
@@ -339,7 +337,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		utilPipelineLayout.SetRange(1, DescriptorType::SRV, 1, 0);
 		utilPipelineLayout.SetRange(2, DescriptorType::UAV, 1, 0);
 		X_RETURN(m_pipelineLayouts[PASS_FILL_SOLID], utilPipelineLayout.GetPipelineLayout(
-			m_pipelineLayoutCache, D3D12_ROOT_SIGNATURE_FLAG_NONE, L"SolidFillPass"), false);
+			m_pipelineLayoutCache, PipelineLayoutFlag::NONE, L"SolidFillPass"), false);
 	}
 
 	// Get compute pipeline
@@ -373,19 +371,19 @@ bool Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 
 	// Get pipeline layout
 	Util::PipelineLayout utilPipelineLayout;
-	utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
 	utilPipelineLayout.SetRange(1, DescriptorType::SRV, 1, 0);
 	utilPipelineLayout.SetShaderStage(0, Shader::Stage::VS);
 	utilPipelineLayout.SetShaderStage(1, Shader::Stage::VS);
 	X_RETURN(m_pipelineLayouts[PASS_DRAW_AS_BOX], utilPipelineLayout.GetPipelineLayout(
-		m_pipelineLayoutCache, D3D12_ROOT_SIGNATURE_FLAG_NONE, L"DrawAsBoxPass"), false);
+		m_pipelineLayoutCache, PipelineLayoutFlag::NONE, L"DrawAsBoxPass"), false);
 
 	// Get pipeline
 	Graphics::State state;
 	state.SetPipelineLayout(m_pipelineLayouts[PASS_DRAW_AS_BOX]);
 	state.SetShader(Shader::Stage::VS, m_shaderPool.GetShader(Shader::Stage::VS, VS_BOX_ARRAY));
 	state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_SIMPLE));
-	state.IASetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	state.IASetPrimitiveTopologyType(PrimitiveTopologyType::TRIANGLE);
 	state.OMSetRTVFormats(&rtFormat, 1);
 	state.OMSetDSVFormat(dsFormat);
 	X_RETURN(m_pipelines[PASS_DRAW_AS_BOX], state.GetPipeline(m_graphicsPipelineCache, L"DrawAsBox"), false);
@@ -419,14 +417,14 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 
 	// Get pipeline layout
 	Util::PipelineLayout utilPipelineLayout;
-	utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+	utilPipelineLayout.SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
 	utilPipelineLayout.SetRange(1, DescriptorType::SRV, 1, 0);
 	utilPipelineLayout.SetRange(2, DescriptorType::SAMPLER, 1, 0);
 	utilPipelineLayout.SetShaderStage(0, Shader::Stage::PS);
 	utilPipelineLayout.SetShaderStage(1, Shader::Stage::PS);
 	utilPipelineLayout.SetShaderStage(2, Shader::Stage::PS);
 	X_RETURN(m_pipelineLayouts[PASS_RAY_CAST], utilPipelineLayout.GetPipelineLayout(
-		m_pipelineLayoutCache, D3D12_ROOT_SIGNATURE_FLAG_NONE, L"RayCastPass"), false);
+		m_pipelineLayoutCache, PipelineLayoutFlag::NONE, L"RayCastPass"), false);
 
 	// Get pipeline
 	Graphics::State state;
@@ -434,7 +432,7 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 	state.SetShader(Shader::Stage::VS, m_shaderPool.GetShader(Shader::Stage::VS, VS_SCREEN_QUAD));
 	state.SetShader(Shader::Stage::PS, m_shaderPool.GetShader(Shader::Stage::PS, PS_RAY_CAST));
 	state.DSSetState(Graphics::DepthStencilPreset::DEPTH_STENCIL_NONE, m_graphicsPipelineCache);
-	state.IASetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	state.IASetPrimitiveTopologyType(PrimitiveTopologyType::TRIANGLE);
 	state.OMSetRTVFormats(&rtFormat, 1);
 	X_RETURN(m_pipelines[PASS_RAY_CAST], state.GetPipeline(m_graphicsPipelineCache, L"RayCast"), false);
 
@@ -463,8 +461,8 @@ void Voxelizer::voxelize(const CommandList& commandList, Method voxMethod, uint3
 
 	// Set resource barriers
 	ResourceBarrier barriers[2];
-	auto numBarriers = m_grids[frameIndex].SetBarrier(barriers, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	if (depthPeel) numBarriers = m_KBufferDepths[frameIndex].SetBarrier(barriers, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, numBarriers);
+	auto numBarriers = m_grids[frameIndex].SetBarrier(barriers, ResourceState::UNORDERED_ACCESS);
+	if (depthPeel) numBarriers = m_KBufferDepths[frameIndex].SetBarrier(barriers, ResourceState::UNORDERED_ACCESS, numBarriers);
 	commandList.Barrier(numBarriers, barriers);
 
 	// Set descriptor tables
@@ -507,7 +505,7 @@ void Voxelizer::voxelize(const CommandList& commandList, Method voxMethod, uint3
 	}
 
 	commandList.IASetPrimitiveTopology(voxMethod == TRI_PROJ_TESS ?
-		D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		PrimitiveTopology::CONTROL_POINT3_PATCHLIST : PrimitiveTopology::TRIANGLELIST);
 
 	if (voxMethod == TRI_PROJ)
 		commandList.Draw(3, instanceCount, 0, 0);
@@ -522,8 +520,8 @@ void Voxelizer::voxelizeSolid(const CommandList& commandList, Method voxMethod, 
 
 	// Set resource barriers
 	ResourceBarrier barriers[2];
-	auto numBarriers = m_grids[frameIndex].SetBarrier(barriers, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	numBarriers = m_KBufferDepths[frameIndex].SetBarrier(barriers, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	auto numBarriers = m_grids[frameIndex].SetBarrier(barriers, ResourceState::UNORDERED_ACCESS);
+	numBarriers = m_KBufferDepths[frameIndex].SetBarrier(barriers, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 	commandList.Barrier(numBarriers, barriers);
 
 	// Set descriptor tables
@@ -544,7 +542,7 @@ void Voxelizer::renderBoxArray(const CommandList& commandList, uint32_t frameInd
 {
 	// Set resource barrier
 	ResourceBarrier barrier;
-	const auto numBarriers = m_grids[frameIndex].SetBarrier(&barrier, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	const auto numBarriers = m_grids[frameIndex].SetBarrier(&barrier, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 	commandList.Barrier(numBarriers, &barrier);
 
 	// Set descriptor tables
@@ -566,7 +564,7 @@ void Voxelizer::renderBoxArray(const CommandList& commandList, uint32_t frameInd
 	commandList.OMSetRenderTargets(1, &rtv, &dsv);
 
 	// Record commands.
-	commandList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	commandList.IASetPrimitiveTopology(PrimitiveTopology::TRIANGLESTRIP);
 	commandList.Draw(4, 6 * gridSize * gridSize * gridSize, 0, 0);
 }
 
@@ -574,7 +572,7 @@ void Voxelizer::renderRayCast(const CommandList& commandList, uint32_t frameInde
 {
 	// Set resource barriers
 	ResourceBarrier barrier;
-	const auto numBarriers = m_grids[frameIndex].SetBarrier(&barrier, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	const auto numBarriers = m_grids[frameIndex].SetBarrier(&barrier, ResourceState::PIXEL_SHADER_RESOURCE);
 	commandList.Barrier(numBarriers, &barrier);
 
 	// Set descriptor tables
@@ -596,6 +594,6 @@ void Voxelizer::renderRayCast(const CommandList& commandList, uint32_t frameInde
 	commandList.OMSetRenderTargets(1, &rtv);
 
 	// Record commands.
-	commandList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	commandList.IASetPrimitiveTopology(PrimitiveTopology::TRIANGLESTRIP);
 	commandList.Draw(3, 1, 0, 0);
 }
