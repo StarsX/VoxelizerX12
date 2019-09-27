@@ -27,6 +27,7 @@ class VoxelizerX : public DXFramework
 {
 public:
 	VoxelizerX(uint32_t width, uint32_t height, std::wstring name);
+	virtual ~VoxelizerX();
 
 	virtual void OnInit();
 	virtual void OnUpdate();
