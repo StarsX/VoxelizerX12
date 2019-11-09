@@ -492,9 +492,9 @@ void Voxelizer::voxelize(const CommandList& commandList, Method voxMethod, uint3
 	commandList.RSSetScissorRects(1, &scissorRect);
 
 	// Record commands.
-	commandList.ClearUnorderedAccessViewUint(*m_uavTables[frameIndex][UAV_TABLE_VOXELIZE], m_grids[frameIndex].GetUAV(),
+	commandList.ClearUnorderedAccessViewUint(m_uavTables[frameIndex][UAV_TABLE_VOXELIZE], m_grids[frameIndex].GetUAV(),
 		m_grids[frameIndex].GetResource(), XMVECTORU32{ 0 }.u);
-	if (depthPeel) commandList.ClearUnorderedAccessViewUint(*m_uavTables[frameIndex][UAV_TABLE_KBUFFER], m_KBufferDepths[frameIndex].GetUAV(),
+	if (depthPeel) commandList.ClearUnorderedAccessViewUint(m_uavTables[frameIndex][UAV_TABLE_KBUFFER], m_KBufferDepths[frameIndex].GetUAV(),
 		m_KBufferDepths[frameIndex].GetResource(), XMVECTORU32{ UINT32_MAX }.u);
 
 	// Set IA
