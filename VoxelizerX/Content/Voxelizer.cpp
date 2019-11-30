@@ -238,9 +238,9 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		utilSrvTable.SetDescriptors(0, 1, &m_KBufferDepths[i].GetSRV());
 		X_RETURN(m_srvTables[SRV_K_DEPTH + i], utilSrvTable.GetCbvSrvUavTable(m_descriptorTableCache), false);
 
-		Util::DescriptorTable utilUavGridTable;
-		utilUavGridTable.SetDescriptors(0, 1, &m_grids[i].GetUAV());
-		X_RETURN(m_uavTables[i][UAV_TABLE_VOXELIZE], utilUavGridTable.GetCbvSrvUavTable(m_descriptorTableCache), false);
+		Util::DescriptorTable utilPackedUavGridTable;
+		utilPackedUavGridTable.SetDescriptors(0, 1, &m_grids[i].GetPackedUAV());
+		X_RETURN(m_uavTables[i][UAV_TABLE_VOXELIZE], utilPackedUavGridTable.GetCbvSrvUavTable(m_descriptorTableCache), false);
 
 		Util::DescriptorTable utilUavKBufferTable;
 		utilUavKBufferTable.SetDescriptors(0, 1, &m_KBufferDepths[i].GetUAV());
@@ -492,7 +492,7 @@ void Voxelizer::voxelize(const CommandList& commandList, Method voxMethod, uint3
 	commandList.RSSetScissorRects(1, &scissorRect);
 
 	// Record commands.
-	commandList.ClearUnorderedAccessViewUint(m_uavTables[frameIndex][UAV_TABLE_VOXELIZE], m_grids[frameIndex].GetUAV(),
+	commandList.ClearUnorderedAccessViewUint(m_uavTables[frameIndex][UAV_TABLE_VOXELIZE], m_grids[frameIndex].GetPackedUAV(),
 		m_grids[frameIndex].GetResource(), XMVECTORU32{ 0 }.u);
 	if (depthPeel) commandList.ClearUnorderedAccessViewUint(m_uavTables[frameIndex][UAV_TABLE_KBUFFER], m_KBufferDepths[frameIndex].GetUAV(),
 		m_KBufferDepths[frameIndex].GetResource(), XMVECTORU32{ UINT32_MAX }.u);
