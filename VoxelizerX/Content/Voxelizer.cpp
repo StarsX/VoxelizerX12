@@ -2,7 +2,7 @@
 // By XU, Tianchen
 //--------------------------------------------------------------------------------------
 
-#include "ObjLoader.h"
+#include "Optional/XUSGObjLoader.h"
 #include "Voxelizer.h"
 
 using namespace std;

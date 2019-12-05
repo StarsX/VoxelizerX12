@@ -43,6 +43,15 @@
     <Filter Include="Common\Shaders">
       <UniqueIdentifier>{6dd91738-67f0-4f61-b496-ce52037c557a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="XUSG\Optional">
+      <UniqueIdentifier>{39a871a6-0a7f-4d06-b83f-8b043b482455}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\Optional\Header Files">
+      <UniqueIdentifier>{f0963ddf-131d-469b-83fe-2bfa648c4f37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\Optional\Source Files">
+      <UniqueIdentifier>{8cc5eb4b-ccd3-4c12-a409-1b7a651747c4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common\d3dx12.h">
@@ -87,9 +96,6 @@
     <ClInclude Include="Content\Voxelizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Content\ObjLoader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Content\SharedConst.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -110,6 +116,9 @@
     </ClInclude>
     <ClInclude Include="XUSG\Core\XUSGReflector.h">
       <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Optional\XUSGObjLoader.h">
+      <Filter>XUSG\Optional\Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -149,9 +158,6 @@
     <ClCompile Include="Content\Voxelizer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Content\ObjLoader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="XUSG\Core\XUSGComputeState.cpp">
       <Filter>XUSG\Core\Source Files</Filter>
     </ClCompile>
@@ -160,6 +166,9 @@
     </ClCompile>
     <ClCompile Include="XUSG\Core\XUSGReflector.cpp">
       <Filter>XUSG\Core\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\Optional\XUSGObjLoader.cpp">
+      <Filter>XUSG\Optional\Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
