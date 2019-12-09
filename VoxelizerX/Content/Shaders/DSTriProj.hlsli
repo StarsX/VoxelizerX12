@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------------------------
-// By XU, Tianchen
+// Copyright (c) XU, Tianchen. All rights reserved.
 //--------------------------------------------------------------------------------------
 
 #define CONSERVATION_AMT	1.0 / 3.0	// Measured by pixels, e.g. 1.0 / 3.0 means 1/3 pixel size
