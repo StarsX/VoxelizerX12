@@ -33,20 +33,46 @@ cbuffer cbPerMipLevel
 };
 
 //--------------------------------------------------------------------------------------
+// Move the vertex by the pixel bias.
+//--------------------------------------------------------------------------------------
+float2 Scale(float2 pv, float2 cv, float2 nv, float pixelBias = 0.5)
+{
+	float3 plane0 = cross(float3(cv - pv, 0.0), float3(pv, 1.0));
+	float3 plane1 = cross(float3(nv - cv, 0.0), float3(cv, 1.0));
+
+	plane0.z -= dot(pixelBias, abs(plane0.xy));
+	plane1.z -= dot(pixelBias, abs(plane1.xy));
+
+	const float3 result = cross(plane0, plane1);
+
+	return result.xy / result.z;
+}
+
+//--------------------------------------------------------------------------------------
 // Perform triangle extrapolations
 //--------------------------------------------------------------------------------------
 DSOut DSMain(float3 domain, OutputPatch<DSIn, NUM_CONTROL_POINTS> patch)
 {
 	DSOut output;
 
+	const float gridHalfSize = g_gridSize * 0.5;
+	const float bias = 0.1 / gridHalfSize;
+#define V(i) patch[i].Pos
+	[unroll]
+	for (uint i = 0; domain[i] <= 0.0 && i < 3; ++i);
+	const float2 scaledVert = Scale(V(i < 1 ? 2 : i - 1), V(i), V(i > 1 ? 0 : i + 1), bias);
+#undef V
+
 	// Distance to centroid in rasterizer space
+	//const float2 vertex = patch[i].Pos;
 	const float2 vertex = patch[0].Pos * domain.x + patch[1].Pos * domain.y + patch[2].Pos * domain.z;
 	const float2 centroidPos = (patch[0].Pos + patch[1].Pos + patch[2].Pos) / 3.0;
-	const float dist = distance(vertex, centroidPos) * g_gridSize * 0.5;
+	const float dist = distance(vertex, centroidPos);
 
 	// Change domain location with offset for extrapolation
 	const float3 onePixelOffset = (domain - 1.0 / 3.0) / dist;
-	domain += CONSERVATION_AMT * onePixelOffset;
+	//domain += distance(scaledVert, vertex) * onePixelOffset;
+	domain += CONSERVATION_AMT / gridHalfSize * onePixelOffset;
 
 	// Extrapolations
 	output.Pos.xy = patch[0].Pos * domain.x + patch[1].Pos * domain.y + patch[2].Pos * domain.z;

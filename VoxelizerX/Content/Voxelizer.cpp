@@ -48,11 +48,12 @@ bool Voxelizer::Init(const CommandList& commandList, uint32_t width, uint32_t he
 	N_RETURN(createCBs(commandList, uploaders), false);
 
 	for (auto& grid : m_grids)
-		N_RETURN(grid.Create(m_device, GRID_SIZE, GRID_SIZE, GRID_SIZE, Format::R10G10B10A2_UNORM, ResourceFlag::BIND_PACKED_UAV), false);
+		N_RETURN(grid.Create(m_device, GRID_SIZE, GRID_SIZE, GRID_SIZE,
+			Format::R10G10B10A2_UNORM, ResourceFlag::BIND_PACKED_UAV), false);
 
 	for (auto& KBufferDepth : m_KBufferDepths)
 		N_RETURN(KBufferDepth.Create(m_device, GRID_SIZE, GRID_SIZE, Format::R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
-			ResourceFlag::ALLOW_UNORDERED_ACCESS), false);
+			ResourceFlag::ALLOW_UNORDERED_ACCESS | ResourceFlag::ALLOW_SIMULTANEOUS_ACCESS), false);
 
 	// Prepare for rendering
 	N_RETURN(prevoxelize(), false);
@@ -150,12 +151,11 @@ bool Voxelizer::createShaders()
 bool Voxelizer::createVB(const CommandList& commandList, uint32_t numVert, uint32_t stride,
 	const uint8_t* pData, vector<Resource>& uploaders)
 {
-	N_RETURN(m_vertexBuffer.Create(m_device, numVert, stride, ResourceFlag::NONE,
-		MemoryType::DEFAULT, ResourceState::COPY_DEST), false);
-	uploaders.push_back(nullptr);
+	N_RETURN(m_vertexBuffer.Create(m_device, numVert, stride,
+		ResourceFlag::NONE, MemoryType::DEFAULT), false);
+	uploaders.emplace_back();
 
-	return m_vertexBuffer.Upload(commandList, uploaders.back(), pData, stride * numVert,
-		ResourceState::NON_PIXEL_SHADER_RESOURCE);
+	return m_vertexBuffer.Upload(commandList, uploaders.back(), pData, stride * numVert);
 }
 
 bool Voxelizer::createIB(const CommandList& commandList, uint32_t numIndices,
@@ -163,12 +163,11 @@ bool Voxelizer::createIB(const CommandList& commandList, uint32_t numIndices,
 {
 	m_numIndices = numIndices;
 	const uint32_t byteWidth = sizeof(uint32_t) * numIndices;
-	N_RETURN(m_indexbuffer.Create(m_device, byteWidth, Format::R32_UINT, ResourceFlag::NONE,
-		MemoryType::DEFAULT, ResourceState::COPY_DEST), false);
-	uploaders.push_back(nullptr);
+	N_RETURN(m_indexbuffer.Create(m_device, byteWidth, Format::R32_UINT,
+		ResourceFlag::NONE, MemoryType::DEFAULT), false);
+	uploaders.emplace_back();
 
-	return m_indexbuffer.Upload(commandList, uploaders.back(), pData,
-		byteWidth, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+	return m_indexbuffer.Upload(commandList, uploaders.back(), pData, byteWidth);
 }
 
 bool Voxelizer::createCBs(const CommandList& commandList, vector<Resource>& uploaders)
@@ -183,7 +182,7 @@ bool Voxelizer::createCBs(const CommandList& commandList, vector<Resource>& uplo
 	// Immutable CBs
 	{
 		N_RETURN(m_cbBound.Create(m_device, sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
-		uploaders.push_back(nullptr);
+		uploaders.emplace_back();
 		m_cbBound.Upload(commandList, uploaders.back(), &m_bound, sizeof(XMFLOAT4));
 	}
 
@@ -194,7 +193,7 @@ bool Voxelizer::createCBs(const CommandList& commandList, vector<Resource>& uplo
 		const auto gridSize = static_cast<float>(GRID_SIZE >> i);
 		N_RETURN(cb.Create(m_device, sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
 
-		uploaders.push_back(nullptr);
+		uploaders.emplace_back();
 		cb.Upload(commandList, uploaders.back(), &gridSize, sizeof(float));
 	}
 
@@ -462,8 +461,8 @@ void Voxelizer::voxelize(const CommandList& commandList, Method voxMethod, uint3
 	// Set resource barriers
 	ResourceBarrier barriers[2];
 	auto numBarriers = m_grids[frameIndex].SetBarrier(barriers, ResourceState::UNORDERED_ACCESS);
-	if (depthPeel) numBarriers = m_KBufferDepths[frameIndex].SetBarrier(barriers, ResourceState::UNORDERED_ACCESS, numBarriers);
 	commandList.Barrier(numBarriers, barriers);
+	if (depthPeel) m_KBufferDepths[frameIndex].SetBarrier(barriers, ResourceState::UNORDERED_ACCESS); // Implicit state promotion
 
 	// Set descriptor tables
 	commandList.SetGraphicsPipelineLayout(m_pipelineLayouts[layoutIdx]);
