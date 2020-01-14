@@ -55,7 +55,7 @@ private:
 	// App resources.
 	std::unique_ptr<Voxelizer> m_voxelizer;
 	XUSG::DepthStencil	m_depth;
-	XMFLOAT4X4			m_proj;
+	XMFLOAT4X4	m_proj;
 	XMFLOAT4X4	m_view;
 	XMFLOAT3	m_focusPt;
 	XMFLOAT3	m_eyePt;
