@@ -49,7 +49,7 @@ bool Voxelizer::Init(const CommandList& commandList, uint32_t width, uint32_t he
 
 	for (auto& grid : m_grids)
 		N_RETURN(grid.Create(m_device, GRID_SIZE, GRID_SIZE, GRID_SIZE,
-			Format::R10G10B10A2_UNORM, ResourceFlag::BIND_PACKED_UAV), false);
+			Format::R10G10B10A2_UNORM, ResourceFlag::NEED_PACKED_UAV), false);
 
 	for (auto& KBufferDepth : m_KBufferDepths)
 		N_RETURN(KBufferDepth.Create(m_device, GRID_SIZE, GRID_SIZE, Format::R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
