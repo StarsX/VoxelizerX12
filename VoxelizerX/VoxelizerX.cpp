@@ -157,7 +157,7 @@ void VoxelizerX::LoadAssets()
 	if (!m_voxelizer) ThrowIfFailed(E_FAIL);
 
 	vector<Resource> uploaders(0);
-	if (!m_voxelizer->Init(m_commandList, m_width, m_height,
+	if (!m_voxelizer->Init(m_commandList.get(), m_width, m_height,
 		static_cast<Format>(m_renderTargets[0]->GetResource()->GetDesc().Format),
 		static_cast<Format>(m_depth->GetResource()->GetDesc().Format), uploaders,
 		m_meshFileName.c_str(), m_meshPosScale)) ThrowIfFailed(E_FAIL);
@@ -371,7 +371,7 @@ void VoxelizerX::PopulateCommandList()
 	m_commandList->ClearDepthStencilView(m_depth->GetDSV(), ClearFlag::DEPTH, 1.0f);
 
 	// Voxelizer rendering
-	m_voxelizer->Render(m_commandList, m_solid, m_voxMethod, m_frameIndex, m_renderTargets[m_frameIndex]->GetRTV(), m_depth->GetDSV());
+	m_voxelizer->Render(m_commandList.get(), m_solid, m_voxMethod, m_frameIndex, m_renderTargets[m_frameIndex]->GetRTV(), m_depth->GetDSV());
 
 	// Indicate that the back buffer will now be used to present.
 	numBarriers = m_renderTargets[m_frameIndex]->SetBarrier(&barrier, ResourceState::PRESENT);
