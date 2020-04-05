@@ -15,3 +15,5 @@ Hot keys:
 [V] change voxelization method
 
 [S] surface/solid voxelization
+
+Prerequisite: https://github.com/StarsX/XUSGCore
