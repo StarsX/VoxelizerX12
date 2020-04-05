@@ -148,11 +148,11 @@ protected:
 
 	XUSG::Device m_device;
 
-	XUSG::ShaderPool				m_shaderPool;
-	XUSG::Graphics::PipelineCache	m_graphicsPipelineCache;
-	XUSG::Compute::PipelineCache	m_computePipelineCache;
-	XUSG::PipelineLayoutCache		m_pipelineLayoutCache;
-	XUSG::DescriptorTableCache		m_descriptorTableCache;
+	XUSG::ShaderPool_uptr m_shaderPool;
+	XUSG::Graphics::PipelineCache_uptr	m_graphicsPipelineCache;
+	XUSG::Compute::PipelineCache_uptr	m_computePipelineCache;
+	XUSG::PipelineLayoutCache_uptr		m_pipelineLayoutCache;
+	XUSG::DescriptorTableCache_uptr		m_descriptorTableCache;
 
 	XUSG::InputLayout		m_inputLayout;
 	XUSG::PipelineLayout	m_pipelineLayouts[NUM_PASS];
@@ -163,17 +163,17 @@ protected:
 	XUSG::DescriptorTable	m_uavTables[FrameCount][NUM_UAV_TABLE];
 	XUSG::DescriptorTable	m_samplerTable;
 
-	XUSG::VertexBuffer		m_vertexBuffer;
-	XUSG::IndexBuffer		m_indexbuffer;
+	XUSG::VertexBuffer_uptr	m_vertexBuffer;
+	XUSG::IndexBuffer_uptr	m_indexbuffer;
 
-	XUSG::ConstantBuffer	m_cbMatrices;
-	XUSG::ConstantBuffer	m_cbPerFrame;
-	XUSG::ConstantBuffer	m_cbPerObject;
-	XUSG::ConstantBuffer	m_cbBound;
-	std::vector<XUSG::ConstantBuffer> m_cbPerMipLevels;
+	XUSG::ConstantBuffer_uptr	m_cbMatrices;
+	XUSG::ConstantBuffer_uptr	m_cbPerFrame;
+	XUSG::ConstantBuffer_uptr	m_cbPerObject;
+	XUSG::ConstantBuffer_uptr	m_cbBound;
+	std::vector<XUSG::ConstantBuffer_uptr> m_cbPerMipLevels;
 
-	XUSG::Texture3D			m_grids[FrameCount];
-	XUSG::Texture2D			m_KBufferDepths[FrameCount];
+	XUSG::Texture3D_uptr	m_grids[FrameCount];
+	XUSG::Texture2D_uptr	m_KBufferDepths[FrameCount];
 
 	DirectX::XMFLOAT4		m_bound;
 	DirectX::XMFLOAT2		m_viewport;

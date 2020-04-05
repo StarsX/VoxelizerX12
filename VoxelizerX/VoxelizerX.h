@@ -49,12 +49,12 @@ private:
 	XUSG::CommandQueue		m_commandQueue;
 
 	XUSG::Device			m_device;
-	XUSG::RenderTarget		m_renderTargets[Voxelizer::FrameCount];
-	XUSG::CommandList		m_commandList;
+	XUSG::RenderTarget_uptr	m_renderTargets[Voxelizer::FrameCount];
+	XUSG::CommandList_uptr	m_commandList;
 
 	// App resources.
 	std::unique_ptr<Voxelizer> m_voxelizer;
-	XUSG::DepthStencil	m_depth;
+	XUSG::DepthStencil_uptr	m_depth;
 	XMFLOAT4X4	m_proj;
 	XMFLOAT4X4	m_view;
 	XMFLOAT3	m_focusPt;
