@@ -173,7 +173,6 @@ COPY /Y "$(ProjectDir)XUSG\x64\Release\*.dll" "$(ProjectDir)..\Bin\"
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Common\d3dx12.h" />
-    <ClInclude Include="Common\dxcapi.h" />
     <ClInclude Include="Common\DXFramework.h" />
     <ClInclude Include="Common\DXFrameworkHelper.h" />
     <ClInclude Include="Common\StepTimer.h" />

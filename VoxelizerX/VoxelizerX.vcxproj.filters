@@ -72,9 +72,6 @@
     <ClInclude Include="Common\StepTimer.h">
       <Filter>Common\Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Common\dxcapi.h">
-      <Filter>Common\Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="XUSG\Optional\XUSGObjLoader.h">
       <Filter>XUSG\Optional\Header Files</Filter>
     </ClInclude>
