@@ -22,7 +22,7 @@ Voxelizer::~Voxelizer()
 {
 }
 
-bool Voxelizer::Init(const CommandList* pCommandList, uint32_t width, uint32_t height, Format rtFormat,
+bool Voxelizer::Init(CommandList* pCommandList, uint32_t width, uint32_t height, Format rtFormat,
 	Format dsFormat, vector<Resource>& uploaders, const char* fileName, const XMFLOAT4& posScale)
 {
 	m_viewport.x = static_cast<float>(width);
@@ -155,7 +155,7 @@ bool Voxelizer::createShaders()
 	return true;
 }
 
-bool Voxelizer::createVB(const CommandList* pCommandList, uint32_t numVert, uint32_t stride,
+bool Voxelizer::createVB(CommandList* pCommandList, uint32_t numVert, uint32_t stride,
 	const uint8_t* pData, vector<Resource>& uploaders)
 {
 	m_vertexBuffer = VertexBuffer::MakeUnique();
@@ -163,10 +163,10 @@ bool Voxelizer::createVB(const CommandList* pCommandList, uint32_t numVert, uint
 		ResourceFlag::NONE, MemoryType::DEFAULT), false);
 	uploaders.emplace_back();
 
-	return m_vertexBuffer->Upload(*pCommandList, uploaders.back(), pData, stride * numVert);
+	return m_vertexBuffer->Upload(pCommandList, uploaders.back(), pData, stride * numVert);
 }
 
-bool Voxelizer::createIB(const CommandList* pCommandList, uint32_t numIndices,
+bool Voxelizer::createIB(CommandList* pCommandList, uint32_t numIndices,
 	const uint32_t* pData, vector<Resource>& uploaders)
 {
 	m_numIndices = numIndices;
@@ -176,10 +176,10 @@ bool Voxelizer::createIB(const CommandList* pCommandList, uint32_t numIndices,
 		ResourceFlag::NONE, MemoryType::DEFAULT), false);
 	uploaders.emplace_back();
 
-	return m_indexbuffer->Upload(*pCommandList, uploaders.back(), pData, byteWidth);
+	return m_indexbuffer->Upload(pCommandList, uploaders.back(), pData, byteWidth);
 }
 
-bool Voxelizer::createCBs(const CommandList* pCommandList, vector<Resource>& uploaders)
+bool Voxelizer::createCBs(CommandList* pCommandList, vector<Resource>& uploaders)
 {
 	// Common CBs
 	{
@@ -196,7 +196,7 @@ bool Voxelizer::createCBs(const CommandList* pCommandList, vector<Resource>& upl
 		m_cbBound = ConstantBuffer::MakeUnique();
 		N_RETURN(m_cbBound->Create(m_device, sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
 		uploaders.emplace_back();
-		m_cbBound->Upload(*pCommandList, uploaders.back(), &m_bound, sizeof(XMFLOAT4));
+		m_cbBound->Upload(pCommandList, uploaders.back(), &m_bound, sizeof(XMFLOAT4));
 	}
 
 	m_cbPerMipLevels.resize(m_numLevels);
@@ -208,7 +208,7 @@ bool Voxelizer::createCBs(const CommandList* pCommandList, vector<Resource>& upl
 		N_RETURN(cb->Create(m_device, sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
 
 		uploaders.emplace_back();
-		cb->Upload(*pCommandList, uploaders.back(), &gridSize, sizeof(float));
+		cb->Upload(pCommandList, uploaders.back(), &gridSize, sizeof(float));
 	}
 
 	return true;

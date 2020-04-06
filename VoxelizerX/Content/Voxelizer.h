@@ -22,7 +22,7 @@ public:
 	Voxelizer(const XUSG::Device& device);
 	virtual ~Voxelizer();
 
-	bool Init(const XUSG::CommandList* pCommandList, uint32_t width, uint32_t height, XUSG::Format rtFormat,
+	bool Init(XUSG::CommandList* pCommandList, uint32_t width, uint32_t height, XUSG::Format rtFormat,
 		XUSG::Format dsFormat, std::vector<XUSG::Resource>& uploaders, const char* fileName,
 		const DirectX::XMFLOAT4& posScale);
 	void UpdateFrame(uint32_t frameIndex, DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
@@ -128,11 +128,11 @@ protected:
 	};
 
 	bool createShaders();
-	bool createVB(const XUSG::CommandList* pCommandList, uint32_t numVert, uint32_t stride,
+	bool createVB(XUSG::CommandList* pCommandList, uint32_t numVert, uint32_t stride,
 		const uint8_t* pData, std::vector<XUSG::Resource>& uploaders);
-	bool createIB(const XUSG::CommandList* pCommandList, uint32_t numIndices,
+	bool createIB(XUSG::CommandList* pCommandList, uint32_t numIndices,
 		const uint32_t* pData, std::vector<XUSG::Resource>& uploaders);
-	bool createCBs(const XUSG::CommandList* pCommandList, std::vector<XUSG::Resource>& uploaders);
+	bool createCBs(XUSG::CommandList* pCommandList, std::vector<XUSG::Resource>& uploaders);
 	void createInputLayout();
 	bool prevoxelize(uint8_t mipLevel = 0);
 	bool prerenderBoxArray(XUSG::Format rtFormat, XUSG::Format dsFormat);
@@ -148,11 +148,11 @@ protected:
 
 	XUSG::Device m_device;
 
-	XUSG::ShaderPool_uptr m_shaderPool;
-	XUSG::Graphics::PipelineCache_uptr	m_graphicsPipelineCache;
-	XUSG::Compute::PipelineCache_uptr	m_computePipelineCache;
-	XUSG::PipelineLayoutCache_uptr		m_pipelineLayoutCache;
-	XUSG::DescriptorTableCache_uptr		m_descriptorTableCache;
+	XUSG::ShaderPool::uptr m_shaderPool;
+	XUSG::Graphics::PipelineCache::uptr	m_graphicsPipelineCache;
+	XUSG::Compute::PipelineCache::uptr	m_computePipelineCache;
+	XUSG::PipelineLayoutCache::uptr		m_pipelineLayoutCache;
+	XUSG::DescriptorTableCache::uptr	m_descriptorTableCache;
 
 	XUSG::InputLayout		m_inputLayout;
 	XUSG::PipelineLayout	m_pipelineLayouts[NUM_PASS];
@@ -163,17 +163,17 @@ protected:
 	XUSG::DescriptorTable	m_uavTables[FrameCount][NUM_UAV_TABLE];
 	XUSG::DescriptorTable	m_samplerTable;
 
-	XUSG::VertexBuffer_uptr	m_vertexBuffer;
-	XUSG::IndexBuffer_uptr	m_indexbuffer;
+	XUSG::VertexBuffer::uptr m_vertexBuffer;
+	XUSG::IndexBuffer::uptr	m_indexbuffer;
 
-	XUSG::ConstantBuffer_uptr	m_cbMatrices;
-	XUSG::ConstantBuffer_uptr	m_cbPerFrame;
-	XUSG::ConstantBuffer_uptr	m_cbPerObject;
-	XUSG::ConstantBuffer_uptr	m_cbBound;
-	std::vector<XUSG::ConstantBuffer_uptr> m_cbPerMipLevels;
+	XUSG::ConstantBuffer::uptr	m_cbMatrices;
+	XUSG::ConstantBuffer::uptr	m_cbPerFrame;
+	XUSG::ConstantBuffer::uptr	m_cbPerObject;
+	XUSG::ConstantBuffer::uptr	m_cbBound;
+	std::vector<XUSG::ConstantBuffer::uptr> m_cbPerMipLevels;
 
-	XUSG::Texture3D_uptr	m_grids[FrameCount];
-	XUSG::Texture2D_uptr	m_KBufferDepths[FrameCount];
+	XUSG::Texture3D::uptr	m_grids[FrameCount];
+	XUSG::Texture2D::uptr	m_KBufferDepths[FrameCount];
 
 	DirectX::XMFLOAT4		m_bound;
 	DirectX::XMFLOAT2		m_viewport;

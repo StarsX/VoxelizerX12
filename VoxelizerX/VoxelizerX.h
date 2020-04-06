@@ -44,17 +44,17 @@ public:
 	virtual void ParseCommandLineArgs(wchar_t* argv[], int argc);
 
 private:
-	XUSG::SwapChain			m_swapChain;
-	XUSG::CommandAllocator	m_commandAllocators[Voxelizer::FrameCount];
-	XUSG::CommandQueue		m_commandQueue;
+	XUSG::SwapChain				m_swapChain;
+	XUSG::CommandAllocator		m_commandAllocators[Voxelizer::FrameCount];
+	XUSG::CommandQueue			m_commandQueue;
 
-	XUSG::Device			m_device;
-	XUSG::RenderTarget_uptr	m_renderTargets[Voxelizer::FrameCount];
-	XUSG::CommandList_uptr	m_commandList;
+	XUSG::Device				m_device;
+	XUSG::RenderTarget::uptr	m_renderTargets[Voxelizer::FrameCount];
+	XUSG::CommandList::uptr		m_commandList;
 
 	// App resources.
-	std::unique_ptr<Voxelizer> m_voxelizer;
-	XUSG::DepthStencil_uptr	m_depth;
+	std::unique_ptr<Voxelizer>	m_voxelizer;
+	XUSG::DepthStencil::uptr	m_depth;
 	XMFLOAT4X4	m_proj;
 	XMFLOAT4X4	m_view;
 	XMFLOAT3	m_focusPt;
