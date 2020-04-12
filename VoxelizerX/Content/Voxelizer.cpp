@@ -263,12 +263,12 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 	// Get graphics pipeline layouts
 	{
 		const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
-		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 2, 0, 0, DescriptorRangeFlag::DATA_STATIC);
-		utilPipelineLayout->SetRange(1, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
+		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 2, 0, 0, DescriptorFlag::DATA_STATIC);
+		utilPipelineLayout->SetRange(1, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
 		utilPipelineLayout->SetRange(2, DescriptorType::UAV, 2, 0, 0,
-			DescriptorRangeFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
+			DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		utilPipelineLayout->SetRange(3, DescriptorType::SRV, static_cast<uint32_t>(size(srvs)), 0,
-			0, DescriptorRangeFlag::DATA_STATIC);
+			0, DescriptorFlag::DATA_STATIC);
 		utilPipelineLayout->SetShaderStage(0, Shader::Stage::VS);
 		utilPipelineLayout->SetShaderStage(1, Shader::Stage::PS);
 		utilPipelineLayout->SetShaderStage(2, Shader::Stage::PS);
@@ -279,10 +279,10 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 
 	{
 		const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
-		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
-		utilPipelineLayout->SetRange(1, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
+		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
+		utilPipelineLayout->SetRange(1, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
 		utilPipelineLayout->SetRange(2, DescriptorType::UAV, 2, 0, 0,
-			DescriptorRangeFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
+			DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		utilPipelineLayout->SetShaderStage(0, Shader::Stage::VS);
 		utilPipelineLayout->SetShaderStage(1, Shader::Stage::PS);
 		utilPipelineLayout->SetShaderStage(2, Shader::Stage::PS);
@@ -293,11 +293,11 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 
 	{
 		const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
-		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
-		utilPipelineLayout->SetRange(1, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
+		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
+		utilPipelineLayout->SetRange(1, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
 		utilPipelineLayout->SetRange(2, DescriptorType::UAV, 2, 0, 0,
-			DescriptorRangeFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
-		utilPipelineLayout->SetRange(3, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
+			DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
+		utilPipelineLayout->SetRange(3, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
 		utilPipelineLayout->SetShaderStage(0, Shader::Stage::VS);
 		utilPipelineLayout->SetShaderStage(1, Shader::Stage::PS);
 		utilPipelineLayout->SetShaderStage(2, Shader::Stage::PS);
@@ -384,7 +384,7 @@ bool Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 
 	// Get pipeline layout
 	const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
-	utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
+	utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
 	utilPipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0);
 	utilPipelineLayout->SetShaderStage(0, Shader::Stage::VS);
 	utilPipelineLayout->SetShaderStage(1, Shader::Stage::VS);
@@ -430,7 +430,7 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 
 	// Get pipeline layout
 	const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
-	utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorRangeFlag::DATA_STATIC);
+	utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
 	utilPipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0);
 	utilPipelineLayout->SetRange(2, DescriptorType::SAMPLER, 1, 0);
 	utilPipelineLayout->SetShaderStage(0, Shader::Stage::PS);
