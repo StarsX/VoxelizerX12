@@ -239,25 +239,32 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 
 	// Get SRVs
 	const Descriptor srvs[] = { m_indexbuffer->GetSRV(), m_vertexBuffer->GetSRV() };
-	const auto utilSrvTable = Util::DescriptorTable::MakeUnique();
-	utilSrvTable->SetDescriptors(0, static_cast<uint32_t>(size(srvs)), srvs);
-	X_RETURN(m_srvTables[SRV_TABLE_VB_IB], utilSrvTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
+	const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+	descriptorTable->SetDescriptors(0, static_cast<uint32_t>(size(srvs)), srvs);
+	X_RETURN(m_srvTables[SRV_TABLE_VB_IB], descriptorTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
 
 	// Get SRVs and UAVs
 	for (auto i = 0ui8; i < FrameCount; ++i)
 	{
 		// Get SRV
-		const auto utilSrvTable = Util::DescriptorTable::MakeUnique();
-		utilSrvTable->SetDescriptors(0, 1, &m_KBufferDepths[i]->GetSRV());
-		X_RETURN(m_srvTables[SRV_K_DEPTH + i], utilSrvTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
+		{
+			const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+			descriptorTable->SetDescriptors(0, 1, &m_KBufferDepths[i]->GetSRV());
+			X_RETURN(m_srvTables[SRV_K_DEPTH + i], descriptorTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
+		}
 
-		const auto utilPackedUavGridTable = Util::DescriptorTable::MakeUnique();
-		utilPackedUavGridTable->SetDescriptors(0, 1, &m_grids[i]->GetPackedUAV());
-		X_RETURN(m_uavTables[i][UAV_TABLE_VOXELIZE], utilPackedUavGridTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
+		// Get UAVs
+		{
+			const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+			descriptorTable->SetDescriptors(0, 1, &m_grids[i]->GetPackedUAV());
+			X_RETURN(m_uavTables[i][UAV_TABLE_VOXELIZE], descriptorTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
+		}
 
-		const auto utilUavKBufferTable = Util::DescriptorTable::MakeUnique();
-		utilUavKBufferTable->SetDescriptors(0, 1, &m_KBufferDepths[i]->GetUAV());
-		X_RETURN(m_uavTables[i][UAV_TABLE_KBUFFER], utilUavKBufferTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
+		{
+			const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+			descriptorTable->SetDescriptors(0, 1, &m_KBufferDepths[i]->GetUAV());
+			X_RETURN(m_uavTables[i][UAV_TABLE_KBUFFER], descriptorTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
+		}
 	}
 
 	// Get graphics pipeline layouts
@@ -369,16 +376,16 @@ bool Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 	for (auto i = 0ui8; i < FrameCount; ++i)
 	{
 		// Get CBV
-		const auto utilCbvTable = Util::DescriptorTable::MakeUnique();
-		utilCbvTable->SetDescriptors(0, 1, &m_cbMatrices->GetCBV(i));
-		X_RETURN(m_cbvTables[CBV_TABLE_MATRICES + i], utilCbvTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
+		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+		descriptorTable->SetDescriptors(0, 1, &m_cbMatrices->GetCBV(i));
+		X_RETURN(m_cbvTables[CBV_TABLE_MATRICES + i], descriptorTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
 
 		// Get SRV
 		if (!m_srvTables[SRV_TABLE_GRID + i])
 		{
-			const auto utilSrvTable = Util::DescriptorTable::MakeUnique();
-			utilSrvTable->SetDescriptors(0, 1, &m_grids[i]->GetSRV());
-			X_RETURN(m_srvTables[SRV_TABLE_GRID + i], utilSrvTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
+			const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+			descriptorTable->SetDescriptors(0, 1, &m_grids[i]->GetSRV());
+			X_RETURN(m_srvTables[SRV_TABLE_GRID + i], descriptorTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
 		}
 	}
 
@@ -409,16 +416,16 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 	for (auto i = 0ui8; i < FrameCount; ++i)
 	{
 		// Get CBV
-		const auto utilCbvTable = Util::DescriptorTable::MakeUnique();
-		utilCbvTable->SetDescriptors(0, 1, &m_cbPerObject->GetCBV(i));
-		X_RETURN(m_cbvTables[CBV_TABLE_PER_OBJ + i], utilCbvTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
+		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+		descriptorTable->SetDescriptors(0, 1, &m_cbPerObject->GetCBV(i));
+		X_RETURN(m_cbvTables[CBV_TABLE_PER_OBJ + i], descriptorTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
 
 		// Get SRV
 		if (!m_srvTables[SRV_TABLE_GRID + i])
 		{
-			const auto utilSrvTable = Util::DescriptorTable::MakeUnique();
-			utilSrvTable->SetDescriptors(0, 1, &m_grids[i]->GetSRV());
-			X_RETURN(m_srvTables[SRV_TABLE_GRID + i], utilSrvTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
+			const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+			descriptorTable->SetDescriptors(0, 1, &m_grids[i]->GetSRV());
+			X_RETURN(m_srvTables[SRV_TABLE_GRID + i], descriptorTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
 		}
 	}
 
