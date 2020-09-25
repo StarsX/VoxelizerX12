@@ -109,7 +109,7 @@ void VoxelizerX::LoadPipeline()
 	swapChainDesc.BufferCount = Voxelizer::FrameCount;
 	swapChainDesc.Width = m_width;
 	swapChainDesc.Height = m_height;
-	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	swapChainDesc.Format = GetDXGIFormat(Format::R8G8B8A8_UNORM);
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.SampleDesc.Count = 1;
@@ -159,8 +159,8 @@ void VoxelizerX::LoadAssets()
 
 	vector<Resource> uploaders(0);
 	if (!m_voxelizer->Init(pCommandList, m_width, m_height,
-		static_cast<Format>(m_renderTargets[0]->GetResource()->GetDesc().Format),
-		static_cast<Format>(m_depth->GetResource()->GetDesc().Format), uploaders,
+		static_cast<Format>(m_renderTargets[0]->GetFormat()),
+		static_cast<Format>(m_depth->GetFormat()), uploaders,
 		m_meshFileName.c_str(), m_meshPosScale)) ThrowIfFailed(E_FAIL);
 
 	// Close the command list and execute it to begin the initial GPU setup.
