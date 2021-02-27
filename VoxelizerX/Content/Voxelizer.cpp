@@ -356,8 +356,9 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 	{
 		const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
 		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0);
-		utilPipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0);
-		utilPipelineLayout->SetRange(2, DescriptorType::UAV, 1, 0);
+		utilPipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0, 0, DescriptorFlag::DESCRIPTORS_VOLATILE);
+		utilPipelineLayout->SetRange(2, DescriptorType::UAV, 1, 0, 0,
+			DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE | DescriptorFlag::DESCRIPTORS_VOLATILE);
 		X_RETURN(m_pipelineLayouts[PASS_FILL_SOLID], utilPipelineLayout->GetPipelineLayout(
 			*m_pipelineLayoutCache, PipelineLayoutFlag::NONE, L"SolidFillPass"), false);
 	}
