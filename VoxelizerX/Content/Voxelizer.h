@@ -133,7 +133,7 @@ protected:
 	bool createIB(XUSG::CommandList* pCommandList, uint32_t numIndices,
 		const uint32_t* pData, std::vector<XUSG::Resource>& uploaders);
 	bool createCBs(XUSG::CommandList* pCommandList, std::vector<XUSG::Resource>& uploaders);
-	void createInputLayout();
+	bool createInputLayout();
 	bool prevoxelize(uint8_t mipLevel = 0);
 	bool prerenderBoxArray(XUSG::Format rtFormat, XUSG::Format dsFormat);
 	bool prerayCast(XUSG::Format rtFormat, XUSG::Format dsFormat);
@@ -154,7 +154,7 @@ protected:
 	XUSG::PipelineLayoutCache::uptr		m_pipelineLayoutCache;
 	XUSG::DescriptorTableCache::uptr	m_descriptorTableCache;
 
-	XUSG::InputLayout		m_inputLayout;
+	const XUSG::InputLayout* m_pInputLayout;
 	XUSG::PipelineLayout	m_pipelineLayouts[NUM_PASS];
 	XUSG::Pipeline			m_pipelines[NUM_PASS];
 

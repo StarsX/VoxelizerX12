@@ -36,7 +36,7 @@ bool Voxelizer::Init(CommandList* pCommandList, uint32_t width, uint32_t height,
 	ObjLoader objLoader;
 	if (!objLoader.Import(fileName, true, true)) return false;
 
-	createInputLayout();
+	N_RETURN(createInputLayout(), false);
 	N_RETURN(createVB(pCommandList, objLoader.GetNumVertices(), objLoader.GetVertexStride(), objLoader.GetVertices(), uploaders), false);
 	N_RETURN(createIB(pCommandList, objLoader.GetNumIndices(), objLoader.GetIndices(), uploaders), false);
 
@@ -214,16 +214,18 @@ bool Voxelizer::createCBs(CommandList* pCommandList, vector<Resource>& uploaders
 	return true;
 }
 
-void Voxelizer::createInputLayout()
+bool Voxelizer::createInputLayout()
 {
 	// Define the vertex input layout.
-	InputElementTable inputElementDescs =
+	const InputElement inputElements[] =
 	{
 		{ "POSITION",	0, Format::R32G32B32_FLOAT, 0, 0,								InputClassification::PER_VERTEX_DATA, 0 },
 		{ "NORMAL",		0, Format::R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,	InputClassification::PER_VERTEX_DATA, 0 }
 	};
 
-	m_inputLayout = m_graphicsPipelineCache->CreateInputLayout(inputElementDescs);
+	X_RETURN(m_pInputLayout, m_graphicsPipelineCache->CreateInputLayout(inputElements, static_cast<uint32_t>(size(inputElements))), false);
+
+	return true;
 }
 
 bool Voxelizer::prevoxelize(uint8_t mipLevel)
@@ -329,7 +331,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		state->SetShader(Shader::Stage::PS, m_shaderPool->GetShader(Shader::Stage::PS, PS_TRI_PROJ_SOLID));
 		X_RETURN(m_pipelines[PASS_VOXELIZE_SOLID], state->GetPipeline(*m_graphicsPipelineCache, L"VoxelizationSolid"), false);
 
-		state->IASetInputLayout(m_inputLayout);
+		state->IASetInputLayout(m_pInputLayout);
 		state->SetPipelineLayout(m_pipelineLayouts[PASS_VOXELIZE_UNION]);
 		state->SetShader(Shader::Stage::VS, m_shaderPool->GetShader(Shader::Stage::VS, VS_TRI_PROJ_UNION));
 		state->SetShader(Shader::Stage::PS, m_shaderPool->GetShader(Shader::Stage::PS, PS_TRI_PROJ_UNION));
