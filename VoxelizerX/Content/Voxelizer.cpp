@@ -356,9 +356,8 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 	{
 		const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
 		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0);
-		utilPipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0, 0, DescriptorFlag::DESCRIPTORS_VOLATILE);
-		utilPipelineLayout->SetRange(2, DescriptorType::UAV, 1, 0, 0,
-			DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE | DescriptorFlag::DESCRIPTORS_VOLATILE);
+		utilPipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0);
+		utilPipelineLayout->SetRange(2, DescriptorType::UAV, 1, 0, 0, DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		X_RETURN(m_pipelineLayouts[PASS_FILL_SOLID], utilPipelineLayout->GetPipelineLayout(
 			*m_pipelineLayoutCache, PipelineLayoutFlag::NONE, L"SolidFillPass"), false);
 	}
@@ -558,7 +557,8 @@ void Voxelizer::voxelizeSolid(const CommandList* pCommandList, Method voxMethod,
 	pCommandList->SetPipelineState(m_pipelines[PASS_FILL_SOLID]);
 
 	// Record commands.
-	pCommandList->Dispatch(GRID_SIZE / 32, GRID_SIZE / 16, GRID_SIZE);
+	const auto numGroups = DIV_UP(GRID_SIZE, 4);
+	pCommandList->Dispatch(numGroups, numGroups, numGroups);
 }
 
 void Voxelizer::renderBoxArray(const CommandList* pCommandList, uint32_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)

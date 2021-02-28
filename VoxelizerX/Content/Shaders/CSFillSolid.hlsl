@@ -31,7 +31,7 @@ RWTexture3D<uint>		g_rwGrid;
 //--------------------------------------------------------------------------------------
 // Fill solid voxels
 //--------------------------------------------------------------------------------------
-[numthreads(32, 16, 1)]
+[numthreads(4, 4, 4)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 #if	USE_MUTEX
