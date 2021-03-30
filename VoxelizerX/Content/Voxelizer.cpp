@@ -246,7 +246,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 	X_RETURN(m_srvTables[SRV_TABLE_VB_IB], descriptorTable->GetCbvSrvUavTable(*m_descriptorTableCache), false);
 
 	// Get SRVs and UAVs
-	for (auto i = 0ui8; i < FrameCount; ++i)
+	for (uint8_t i = 0; i < FrameCount; ++i)
 	{
 		// Get SRV
 		{
@@ -375,7 +375,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 
 bool Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 {
-	for (auto i = 0ui8; i < FrameCount; ++i)
+	for (uint8_t i = 0; i < FrameCount; ++i)
 	{
 		// Get CBV
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
@@ -415,7 +415,7 @@ bool Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 
 bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 {
-	for (auto i = 0ui8; i < FrameCount; ++i)
+	for (uint8_t i = 0; i < FrameCount; ++i)
 	{
 		// Get CBV
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();

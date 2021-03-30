@@ -29,7 +29,7 @@ public:
 	void Render(const XUSG::CommandList* pCommandList, bool solid, Method voxMethod, uint32_t frameIndex,
 		const XUSG::Descriptor& rtv, const XUSG::Descriptor& dsv);
 
-	static const uint32_t FrameCount = FRAME_COUNT;
+	static const uint8_t FrameCount = FRAME_COUNT;
 
 protected:
 	enum RenderPass : uint8_t
