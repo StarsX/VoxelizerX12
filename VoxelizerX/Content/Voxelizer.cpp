@@ -69,7 +69,7 @@ bool Voxelizer::Init(CommandList* pCommandList, uint32_t width, uint32_t height,
 	return true;
 }
 
-void Voxelizer::UpdateFrame(uint32_t frameIndex, CXMVECTOR eyePt, CXMMATRIX viewProj)
+void Voxelizer::UpdateFrame(uint8_t frameIndex, CXMVECTOR eyePt, CXMMATRIX viewProj)
 {
 	// General matrices
 	const auto scl = 1.0f / m_bound.w;
@@ -106,7 +106,7 @@ void Voxelizer::UpdateFrame(uint32_t frameIndex, CXMVECTOR eyePt, CXMMATRIX view
 }
 
 void Voxelizer::Render(const CommandList* pCommandList, bool solid, Method voxMethod,
-	uint32_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
+	uint8_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
 {
 	if (solid)
 	{
@@ -461,7 +461,7 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 	return true;
 }
 
-void Voxelizer::voxelize(const CommandList* pCommandList, Method voxMethod, uint32_t frameIndex, bool depthPeel, uint8_t mipLevel)
+void Voxelizer::voxelize(const CommandList* pCommandList, Method voxMethod, uint8_t frameIndex, bool depthPeel, uint8_t mipLevel)
 {
 	auto layoutIdx = PASS_VOXELIZE;
 	auto pipeIdx = depthPeel ? PASS_VOXELIZE_SOLID : PASS_VOXELIZE;
@@ -535,7 +535,7 @@ void Voxelizer::voxelize(const CommandList* pCommandList, Method voxMethod, uint
 		pCommandList->DrawIndexed(m_numIndices, instanceCount, 0, 0, 0);
 }
 
-void Voxelizer::voxelizeSolid(const CommandList* pCommandList, Method voxMethod, uint32_t frameIndex, uint8_t mipLevel)
+void Voxelizer::voxelizeSolid(const CommandList* pCommandList, Method voxMethod, uint8_t frameIndex, uint8_t mipLevel)
 {
 	// Surface voxelization with depth peeling
 	voxelize(pCommandList, voxMethod, frameIndex, true, mipLevel);
@@ -561,7 +561,7 @@ void Voxelizer::voxelizeSolid(const CommandList* pCommandList, Method voxMethod,
 	pCommandList->Dispatch(numGroups, numGroups, numGroups);
 }
 
-void Voxelizer::renderBoxArray(const CommandList* pCommandList, uint32_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
+void Voxelizer::renderBoxArray(const CommandList* pCommandList, uint8_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
 {
 	// Set resource barrier
 	ResourceBarrier barrier;
@@ -591,7 +591,7 @@ void Voxelizer::renderBoxArray(const CommandList* pCommandList, uint32_t frameIn
 	pCommandList->Draw(4, 6 * gridSize * gridSize * gridSize, 0, 0);
 }
 
-void Voxelizer::renderRayCast(const CommandList* pCommandList, uint32_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
+void Voxelizer::renderRayCast(const CommandList* pCommandList, uint8_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
 {
 	// Set resource barriers
 	ResourceBarrier barrier;
