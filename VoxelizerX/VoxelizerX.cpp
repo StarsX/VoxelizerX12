@@ -132,7 +132,7 @@ void VoxelizerX::LoadPipeline()
 
 	// Create frame resources.
 	// Create a RTV and a command allocator for each frame.
-	for (auto n = 0u; n < Voxelizer::FrameCount; n++)
+	for (uint8_t n = 0; n < Voxelizer::FrameCount; ++n)
 	{
 		m_renderTargets[n] = RenderTarget::MakeUnique();
 		N_RETURN(m_renderTargets[n]->CreateFromSwapChain(m_device, m_swapChain, n), ThrowIfFailed(E_FAIL));
