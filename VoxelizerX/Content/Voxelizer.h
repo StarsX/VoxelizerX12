@@ -19,11 +19,11 @@ public:
 		NUM_METHOD
 	};
 
-	Voxelizer(const XUSG::Device& device);
+	Voxelizer(const XUSG::Device::sptr& device);
 	virtual ~Voxelizer();
 
 	bool Init(XUSG::CommandList* pCommandList, uint32_t width, uint32_t height, XUSG::Format rtFormat,
-		XUSG::Format dsFormat, std::vector<XUSG::Resource>& uploaders, const char* fileName,
+		XUSG::Format dsFormat, std::vector<XUSG::Resource::uptr>& uploaders, const char* fileName,
 		const DirectX::XMFLOAT4& posScale);
 	void UpdateFrame(uint8_t frameIndex, DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
 	void Render(const XUSG::CommandList* pCommandList, bool solid, Method voxMethod, uint8_t frameIndex,
@@ -129,10 +129,10 @@ protected:
 
 	bool createShaders();
 	bool createVB(XUSG::CommandList* pCommandList, uint32_t numVert, uint32_t stride,
-		const uint8_t* pData, std::vector<XUSG::Resource>& uploaders);
+		const uint8_t* pData, std::vector<XUSG::Resource::uptr>& uploaders);
 	bool createIB(XUSG::CommandList* pCommandList, uint32_t numIndices,
-		const uint32_t* pData, std::vector<XUSG::Resource>& uploaders);
-	bool createCBs(XUSG::CommandList* pCommandList, std::vector<XUSG::Resource>& uploaders);
+		const uint32_t* pData, std::vector<XUSG::Resource::uptr>& uploaders);
+	bool createCBs(XUSG::CommandList* pCommandList, std::vector<XUSG::Resource::uptr>& uploaders);
 	bool createInputLayout();
 	bool prevoxelize(uint8_t mipLevel = 0);
 	bool prerenderBoxArray(XUSG::Format rtFormat, XUSG::Format dsFormat);
@@ -146,7 +146,7 @@ protected:
 	void renderRayCast(const XUSG::CommandList* pCommandList, uint8_t frameIndex,
 		const XUSG::Descriptor& rtv, const XUSG::Descriptor& dsv);
 
-	XUSG::Device m_device;
+	XUSG::Device::sptr m_device;
 
 	XUSG::ShaderPool::uptr m_shaderPool;
 	XUSG::Graphics::PipelineCache::uptr	m_graphicsPipelineCache;
