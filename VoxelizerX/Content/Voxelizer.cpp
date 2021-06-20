@@ -9,6 +9,25 @@ using namespace std;
 using namespace DirectX;
 using namespace XUSG;
 
+struct CBMatrices
+{
+	DirectX::XMMATRIX worldViewProj;
+	DirectX::XMFLOAT3X4 world;
+	DirectX::XMFLOAT3X4 worldIT;
+};
+
+struct CBPerFrame
+{
+	DirectX::XMFLOAT4 eyePos;
+};
+
+struct CBPerObject
+{
+	DirectX::XMVECTOR localSpaceLightPt;
+	DirectX::XMVECTOR localSpaceEyePt;
+	DirectX::XMMATRIX screenToLocal;
+};
+
 Voxelizer::Voxelizer(const Device::sptr& device) :
 	m_device(device)
 {
@@ -47,19 +66,26 @@ bool Voxelizer::Init(CommandList* pCommandList, uint32_t width, uint32_t height,
 	m_numLevels = max(static_cast<uint32_t>(log2(GRID_SIZE)), 1);
 	N_RETURN(createCBs(pCommandList, uploaders), false);
 
-	for (auto& grid : m_grids)
+#if	USE_MUTEX
+	for (auto& grid : m_grid)
 	{
 		grid = Texture3D::MakeUnique();
 		N_RETURN(grid->Create(m_device.get(), GRID_SIZE, GRID_SIZE, GRID_SIZE,
-			Format::R10G10B10A2_UNORM, ResourceFlag::NEED_PACKED_UAV), false);
+			Format::R32_FLOAT, ResourceFlag::ALLOW_UNORDERED_ACCESS), false);
 	}
 
-	for (auto& KBufferDepth : m_KBufferDepths)
-	{
-		KBufferDepth = Texture2D::MakeUnique();
-		N_RETURN(KBufferDepth->Create(m_device.get(), GRID_SIZE, GRID_SIZE, Format::R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
-			ResourceFlag::ALLOW_UNORDERED_ACCESS | ResourceFlag::ALLOW_SIMULTANEOUS_ACCESS), false);
-	}
+	m_mutex = Texture3D::MakeUnique();
+	N_RETURN(m_mutex->Create(m_device.get(), GRID_SIZE, GRID_SIZE, GRID_SIZE,
+		Format::R32_UINT, ResourceFlag::ALLOW_UNORDERED_ACCESS), false);
+#else
+	m_grid = Texture3D::MakeUnique();
+	N_RETURN(m_grid->Create(m_device.get(), GRID_SIZE, GRID_SIZE, GRID_SIZE,
+		Format::R10G10B10A2_UNORM, ResourceFlag::NEED_PACKED_UAV), false);
+#endif
+
+	m_KBufferDepth = Texture2D::MakeUnique();
+	N_RETURN(m_KBufferDepth->Create(m_device.get(), GRID_SIZE, GRID_SIZE, Format::R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
+		ResourceFlag::ALLOW_UNORDERED_ACCESS | ResourceFlag::ALLOW_SIMULTANEOUS_ACCESS), false);
 
 	// Prepare for rendering
 	N_RETURN(prevoxelize(), false);
@@ -81,8 +107,8 @@ void Voxelizer::UpdateFrame(uint8_t frameIndex, CXMVECTOR eyePt, CXMMATRIX viewP
 	const auto worldViewProj = world * viewProj;
 	const auto pCbMatrices = reinterpret_cast<CBMatrices*>(m_cbMatrices->Map(frameIndex));
 	pCbMatrices->worldViewProj = XMMatrixTranspose(worldViewProj);
-	pCbMatrices->world = world;
-	pCbMatrices->worldIT = XMMatrixIdentity();
+	XMStoreFloat3x4(&pCbMatrices->world, world);
+	XMStoreFloat3x4(&pCbMatrices->worldIT, XMMatrixIdentity());
 
 	// Screen space matrices
 	const auto pCbPerObject = reinterpret_cast<CBPerObject*>(m_cbPerObject->Map(frameIndex));
@@ -117,7 +143,7 @@ void Voxelizer::Render(const CommandList* pCommandList, bool solid, Method voxMe
 		};
 		pCommandList->SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
 
-		voxelizeSolid(pCommandList, voxMethod, frameIndex);
+		voxelizeSolid(pCommandList, voxMethod);
 		renderRayCast(pCommandList, frameIndex, rtv, dsv);
 	}
 	else
@@ -186,9 +212,9 @@ bool Voxelizer::createCBs(CommandList* pCommandList, vector<Resource::uptr>& upl
 		m_cbMatrices = ConstantBuffer::MakeUnique();
 		m_cbPerFrame = ConstantBuffer::MakeUnique();
 		m_cbPerObject = ConstantBuffer::MakeUnique();
-		N_RETURN(m_cbMatrices->Create(m_device.get(), sizeof(CBMatrices) * FrameCount, FrameCount), false);
-		N_RETURN(m_cbPerFrame->Create(m_device.get(), sizeof(CBPerFrame) * FrameCount, FrameCount), false);
-		N_RETURN(m_cbPerObject->Create(m_device.get(), sizeof(CBPerObject) * FrameCount, FrameCount), false);
+		N_RETURN(m_cbMatrices->Create(m_device.get(), sizeof(CBMatrices[FrameCount]), FrameCount), false);
+		N_RETURN(m_cbPerFrame->Create(m_device.get(), sizeof(CBPerFrame[FrameCount]), FrameCount), false);
+		N_RETURN(m_cbPerObject->Create(m_device.get(), sizeof(CBPerObject[FrameCount]), FrameCount), false);
 	}
 
 	// Immutable CBs
@@ -246,36 +272,49 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 	descriptorTable->SetDescriptors(0, static_cast<uint32_t>(size(srvs)), srvs);
 	X_RETURN(m_srvTables[SRV_TABLE_VB_IB], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 
-	// Get SRVs and UAVs
-	for (uint8_t i = 0; i < FrameCount; ++i)
+	// Get UAVs and SRVs
+	// Get UAVs
+#if	USE_MUTEX
+	for (uint8_t i = 0; i < 4; ++i)
 	{
-		// Get SRV
-		{
-			const auto descriptorTable = Util::DescriptorTable::MakeUnique();
-			descriptorTable->SetDescriptors(0, 1, &m_KBufferDepths[i]->GetSRV());
-			X_RETURN(m_srvTables[SRV_K_DEPTH + i], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
-		}
+		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+		descriptorTable->SetDescriptors(0, 1, &m_grid[i]->GetUAV());
+		X_RETURN(m_uavTables[UAV_TABLE_VOXELIZE + i], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+	}
 
-		// Get UAVs
-		{
-			const auto descriptorTable = Util::DescriptorTable::MakeUnique();
-			descriptorTable->SetDescriptors(0, 1, &m_grids[i]->GetPackedUAV());
-			X_RETURN(m_uavTables[i][UAV_TABLE_VOXELIZE], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
-		}
+	{
+		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+		descriptorTable->SetDescriptors(0, 1, &m_mutex->GetUAV());
+		X_RETURN(m_uavTables[UAV_TABLE_MUTEX], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+	}
+#else
+	{
+		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+		descriptorTable->SetDescriptors(0, 1, &m_grid->GetPackedUAV());
+		X_RETURN(m_uavTables[UAV_TABLE_VOXELIZE], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+	}
+#endif
 
-		{
-			const auto descriptorTable = Util::DescriptorTable::MakeUnique();
-			descriptorTable->SetDescriptors(0, 1, &m_KBufferDepths[i]->GetUAV());
-			X_RETURN(m_uavTables[i][UAV_TABLE_KBUFFER], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
-		}
+	{
+		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+		descriptorTable->SetDescriptors(0, 1, &m_KBufferDepth->GetUAV());
+		X_RETURN(m_uavTables[UAV_TABLE_KBUFFER], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+	}
+
+	// Get SRV
+	{
+		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+		descriptorTable->SetDescriptors(0, 1, &m_KBufferDepth->GetSRV());
+		X_RETURN(m_srvTables[SRV_K_DEPTH], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 
 	// Get graphics pipeline layouts
+	const auto numUAVs = USE_MUTEX ? 5u : 2u;
 	{
 		const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
 		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 2, 0, 0, DescriptorFlag::DATA_STATIC);
 		utilPipelineLayout->SetRange(1, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
-		utilPipelineLayout->SetRange(2, DescriptorType::UAV, 2, 0, 0,
+		utilPipelineLayout->SetRange(2, DescriptorType::UAV, numUAVs, 0, 0,
 			DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		utilPipelineLayout->SetRange(3, DescriptorType::SRV, static_cast<uint32_t>(size(srvs)), 0,
 			0, DescriptorFlag::DATA_STATIC);
@@ -291,7 +330,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
 		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
 		utilPipelineLayout->SetRange(1, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
-		utilPipelineLayout->SetRange(2, DescriptorType::UAV, 2, 0, 0,
+		utilPipelineLayout->SetRange(2, DescriptorType::UAV, numUAVs, 0, 0,
 			DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		utilPipelineLayout->SetShaderStage(0, Shader::Stage::VS);
 		utilPipelineLayout->SetShaderStage(1, Shader::Stage::PS);
@@ -305,7 +344,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
 		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
 		utilPipelineLayout->SetRange(1, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
-		utilPipelineLayout->SetRange(2, DescriptorType::UAV, 2, 0, 0,
+		utilPipelineLayout->SetRange(2, DescriptorType::UAV, numUAVs, 0, 0,
 			DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		utilPipelineLayout->SetRange(3, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
 		utilPipelineLayout->SetShaderStage(0, Shader::Stage::VS);
@@ -357,7 +396,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 	{
 		const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
 		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0);
-		utilPipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0);
+		utilPipelineLayout->SetRange(1, DescriptorType::SRV, USE_MUTEX ? 4 : 1, 0);
 		utilPipelineLayout->SetRange(2, DescriptorType::UAV, 1, 0, 0, DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		X_RETURN(m_pipelineLayouts[PASS_FILL_SOLID], utilPipelineLayout->GetPipelineLayout(
 			m_pipelineLayoutCache.get(), PipelineLayoutFlag::NONE, L"SolidFillPass"), false);
@@ -376,26 +415,40 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 
 bool Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 {
+	// Get SRV
+#if	USE_MUTEX
+	{
+		const Descriptor descriptors[] =
+		{
+			m_grid[1]->GetSRV(),
+			m_grid[2]->GetSRV(),
+			m_grid[3]->GetSRV()
+		};
+		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+		descriptorTable->SetDescriptors(0, static_cast<uint32_t>(size(descriptors)), descriptors);
+		X_RETURN(m_srvTables[SRV_TABLE_GRID_XYZ], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+	}
+#else
+	if (!m_srvTables[SRV_TABLE_GRID])
+	{
+		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+		descriptorTable->SetDescriptors(0, 1, &m_grid->GetSRV());
+		X_RETURN(m_srvTables[SRV_TABLE_GRID], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+	}
+#endif
+
 	for (uint8_t i = 0; i < FrameCount; ++i)
 	{
 		// Get CBV
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, 1, &m_cbMatrices->GetCBV(i));
 		X_RETURN(m_cbvTables[CBV_TABLE_MATRICES + i], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
-
-		// Get SRV
-		if (!m_srvTables[SRV_TABLE_GRID + i])
-		{
-			const auto descriptorTable = Util::DescriptorTable::MakeUnique();
-			descriptorTable->SetDescriptors(0, 1, &m_grids[i]->GetSRV());
-			X_RETURN(m_srvTables[SRV_TABLE_GRID + i], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
-		}
 	}
 
 	// Get pipeline layout
 	const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
 	utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
-	utilPipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0);
+	utilPipelineLayout->SetRange(1, DescriptorType::SRV, USE_MUTEX ? 4 : 1, 0);
 	utilPipelineLayout->SetShaderStage(0, Shader::Stage::VS);
 	utilPipelineLayout->SetShaderStage(1, Shader::Stage::VS);
 	X_RETURN(m_pipelineLayouts[PASS_DRAW_AS_BOX], utilPipelineLayout->GetPipelineLayout(
@@ -422,14 +475,18 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, 1, &m_cbPerObject->GetCBV(i));
 		X_RETURN(m_cbvTables[CBV_TABLE_PER_OBJ + i], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+	}
 
-		// Get SRV
-		if (!m_srvTables[SRV_TABLE_GRID + i])
-		{
-			const auto descriptorTable = Util::DescriptorTable::MakeUnique();
-			descriptorTable->SetDescriptors(0, 1, &m_grids[i]->GetSRV());
-			X_RETURN(m_srvTables[SRV_TABLE_GRID + i], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
-		}
+	// Get SRV
+	if (!m_srvTables[SRV_TABLE_GRID])
+	{
+		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
+#if	USE_MUTEX
+		descriptorTable->SetDescriptors(0, 1, &m_grid[0]->GetSRV());
+#else
+		descriptorTable->SetDescriptors(0, 1, &m_grid->GetSRV());
+#endif
+		X_RETURN(m_srvTables[SRV_TABLE_GRID], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 
 	// Create the sampler table
@@ -462,7 +519,7 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 	return true;
 }
 
-void Voxelizer::voxelize(const CommandList* pCommandList, Method voxMethod, uint8_t frameIndex, bool depthPeel, uint8_t mipLevel)
+void Voxelizer::voxelize(const CommandList* pCommandList, Method voxMethod, bool depthPeel, uint8_t mipLevel)
 {
 	auto layoutIdx = PASS_VOXELIZE;
 	auto pipeIdx = depthPeel ? PASS_VOXELIZE_SOLID : PASS_VOXELIZE;
@@ -483,16 +540,23 @@ void Voxelizer::voxelize(const CommandList* pCommandList, Method voxMethod, uint
 	}
 
 	// Set resource barriers
-	ResourceBarrier barriers[2];
-	auto numBarriers = m_grids[frameIndex]->SetBarrier(barriers, ResourceState::UNORDERED_ACCESS);
+#if	USE_MUTEX
+	ResourceBarrier barriers[4];
+	auto numBarriers = 0u;
+	for (uint8_t i = 1; i < 4; ++i)
+		numBarriers = m_grid[i]->SetBarrier(barriers, ResourceState::UNORDERED_ACCESS, numBarriers);
+#else
+	ResourceBarrier barriers[1];
+	auto numBarriers = m_grid->SetBarrier(barriers, ResourceState::UNORDERED_ACCESS);
+#endif
 	pCommandList->Barrier(numBarriers, barriers);
-	if (depthPeel) m_KBufferDepths[frameIndex]->SetBarrier(barriers, ResourceState::UNORDERED_ACCESS); // Implicit state promotion
+	if (depthPeel) m_KBufferDepth->SetBarrier(barriers, ResourceState::UNORDERED_ACCESS); // Implicit state promotion
 
 	// Set descriptor tables
 	pCommandList->SetGraphicsPipelineLayout(m_pipelineLayouts[layoutIdx]);
 	pCommandList->SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_VOXELIZE]);
 	pCommandList->SetGraphicsDescriptorTable(1, m_cbvTables[CBV_TABLE_PER_MIP]);
-	pCommandList->SetGraphicsDescriptorTable(2, m_uavTables[frameIndex][UAV_TABLE_VOXELIZE]);
+	pCommandList->SetGraphicsDescriptorTable(2, m_uavTables[UAV_TABLE_VOXELIZE + USE_MUTEX]);
 	switch (voxMethod)
 	{
 	case TRI_PROJ:
@@ -515,10 +579,14 @@ void Voxelizer::voxelize(const CommandList* pCommandList, Method voxMethod, uint
 	pCommandList->RSSetScissorRects(1, &scissorRect);
 
 	// Record commands.
-	pCommandList->ClearUnorderedAccessViewUint(m_uavTables[frameIndex][UAV_TABLE_VOXELIZE], m_grids[frameIndex]->GetPackedUAV(),
-		m_grids[frameIndex].get(), XMVECTORU32{ 0 }.u);
-	if (depthPeel) pCommandList->ClearUnorderedAccessViewUint(m_uavTables[frameIndex][UAV_TABLE_KBUFFER], m_KBufferDepths[frameIndex]->GetUAV(),
-		m_KBufferDepths[frameIndex].get(), XMVECTORU32{ UINT32_MAX }.u);
+#if	USE_MUTEX
+	for (uint8_t i = 1; i < 4; ++i)
+		pCommandList->ClearUnorderedAccessViewFloat(m_uavTables[UAV_TABLE_VOXELIZE + i], m_grid[i]->GetUAV(), m_grid[i].get(), XMVECTORF32{ 0.0f }.f);
+#else
+	pCommandList->ClearUnorderedAccessViewUint(m_uavTables[UAV_TABLE_VOXELIZE], m_grid->GetPackedUAV(), m_grid.get(), XMVECTORU32{ 0 }.u);
+#endif
+	if (depthPeel) pCommandList->ClearUnorderedAccessViewUint(m_uavTables[UAV_TABLE_KBUFFER], m_KBufferDepth->GetUAV(),
+		m_KBufferDepth.get(), XMVECTORU32{ UINT32_MAX }.u);
 
 	// Set IA
 	if (voxMethod != TRI_PROJ)
@@ -536,23 +604,34 @@ void Voxelizer::voxelize(const CommandList* pCommandList, Method voxMethod, uint
 		pCommandList->DrawIndexed(m_numIndices, instanceCount, 0, 0, 0);
 }
 
-void Voxelizer::voxelizeSolid(const CommandList* pCommandList, Method voxMethod, uint8_t frameIndex, uint8_t mipLevel)
+void Voxelizer::voxelizeSolid(const CommandList* pCommandList, Method voxMethod, uint8_t mipLevel)
 {
 	// Surface voxelization with depth peeling
-	voxelize(pCommandList, voxMethod, frameIndex, true, mipLevel);
+	voxelize(pCommandList, voxMethod, true, mipLevel);
 
 	// Set resource barriers
+#if	USE_MUTEX
+	ResourceBarrier barriers[5];
+	auto numBarriers = m_grid[0]->SetBarrier(barriers, ResourceState::UNORDERED_ACCESS);
+	for (uint8_t i = 1; i < 4; ++i)
+		numBarriers = m_grid[i]->SetBarrier(barriers, ResourceState::NON_PIXEL_SHADER_RESOURCE, numBarriers);
+#else
 	ResourceBarrier barriers[2];
-	auto numBarriers = m_grids[frameIndex]->SetBarrier(barriers, ResourceState::UNORDERED_ACCESS);
-	numBarriers = m_KBufferDepths[frameIndex]->SetBarrier(barriers, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+	auto numBarriers = m_grid->SetBarrier(barriers, ResourceState::UNORDERED_ACCESS);
+#endif
+	numBarriers = m_KBufferDepth->SetBarrier(barriers, ResourceState::NON_PIXEL_SHADER_RESOURCE, numBarriers);
 	pCommandList->Barrier(numBarriers, barriers);
+
+#if	USE_MUTEX
+	pCommandList->ClearUnorderedAccessViewFloat(m_uavTables[UAV_TABLE_VOXELIZE], m_grid[0]->GetUAV(), m_grid[0].get(), XMVECTORF32{ 0.0f }.f);
+#endif
 
 	// Set descriptor tables
 	pCommandList->SetComputePipelineLayout(m_pipelineLayouts[PASS_FILL_SOLID]);
 
 	pCommandList->SetComputeDescriptorTable(0, m_cbvTables[CBV_TABLE_PER_MIP]);
-	pCommandList->SetComputeDescriptorTable(1, m_srvTables[SRV_K_DEPTH + frameIndex]);
-	pCommandList->SetComputeDescriptorTable(2, m_uavTables[frameIndex][UAV_TABLE_VOXELIZE]);
+	pCommandList->SetComputeDescriptorTable(1, m_srvTables[SRV_K_DEPTH]);
+	pCommandList->SetComputeDescriptorTable(2, m_uavTables[UAV_TABLE_VOXELIZE]);
 
 	// Set pipeline state
 	pCommandList->SetPipelineState(m_pipelines[PASS_FILL_SOLID]);
@@ -565,15 +644,23 @@ void Voxelizer::voxelizeSolid(const CommandList* pCommandList, Method voxMethod,
 void Voxelizer::renderBoxArray(const CommandList* pCommandList, uint8_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
 {
 	// Set resource barrier
+#if	USE_MUTEX
+	ResourceBarrier barriers[3];
+	auto numBarriers = 0u;
+	for (uint8_t i = 1; i < 4; ++i)
+		numBarriers = m_grid[i]->SetBarrier(barriers, ResourceState::NON_PIXEL_SHADER_RESOURCE, numBarriers);
+	pCommandList->Barrier(numBarriers, barriers);
+#else
 	ResourceBarrier barrier;
-	const auto numBarriers = m_grids[frameIndex]->SetBarrier(&barrier, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+	const auto numBarriers = m_grid->SetBarrier(&barrier, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 	pCommandList->Barrier(numBarriers, &barrier);
+#endif
 
 	// Set descriptor tables
 	pCommandList->SetGraphicsPipelineLayout(m_pipelineLayouts[PASS_DRAW_AS_BOX]);
 
 	pCommandList->SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_MATRICES + frameIndex]);
-	pCommandList->SetGraphicsDescriptorTable(1, m_srvTables[SRV_TABLE_GRID + frameIndex]);
+	pCommandList->SetGraphicsDescriptorTable(1, m_srvTables[SRV_TABLE_GRID + USE_MUTEX]);
 
 	// Set pipeline state
 	pCommandList->SetPipelineState(m_pipelines[PASS_DRAW_AS_BOX]);
@@ -596,14 +683,18 @@ void Voxelizer::renderRayCast(const CommandList* pCommandList, uint8_t frameInde
 {
 	// Set resource barriers
 	ResourceBarrier barrier;
-	const auto numBarriers = m_grids[frameIndex]->SetBarrier(&barrier, ResourceState::PIXEL_SHADER_RESOURCE);
+#if	USE_MUTEX
+	const auto numBarriers = m_grid[0]->SetBarrier(&barrier, ResourceState::PIXEL_SHADER_RESOURCE);
+#else
+	const auto numBarriers = m_grid->SetBarrier(&barrier, ResourceState::PIXEL_SHADER_RESOURCE);
+#endif
 	pCommandList->Barrier(numBarriers, &barrier);
 
 	// Set descriptor tables
 	pCommandList->SetGraphicsPipelineLayout(m_pipelineLayouts[PASS_RAY_CAST]);
 
 	pCommandList->SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_PER_OBJ + frameIndex]);
-	pCommandList->SetGraphicsDescriptorTable(1, m_srvTables[SRV_TABLE_GRID + frameIndex]);
+	pCommandList->SetGraphicsDescriptorTable(1, m_srvTables[SRV_TABLE_GRID]);
 	pCommandList->SetGraphicsDescriptorTable(2, m_samplerTable);
 
 	// Set pipeline state

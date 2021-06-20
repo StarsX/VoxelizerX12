@@ -61,14 +61,23 @@ protected:
 	{
 		SRV_TABLE_VB_IB,
 		SRV_K_DEPTH,
-		SRV_TABLE_GRID = SRV_K_DEPTH + FrameCount,
+		SRV_TABLE_GRID,
+#if	USE_MUTEX
+		SRV_TABLE_GRID_XYZ,
+#endif
 
-		NUM_SRV_TABLE = SRV_TABLE_GRID + FrameCount
+		NUM_SRV_TABLE
 	};
 
 	enum UAVTable : uint8_t
 	{
 		UAV_TABLE_VOXELIZE,
+#if	USE_MUTEX
+		UAV_TABLE_VOXELIZE_X,
+		UAV_TABLE_VOXELIZE_Y,
+		UAV_TABLE_VOXELIZE_Z,
+		UAV_TABLE_MUTEX,
+#endif
 		UAV_TABLE_KBUFFER,
 
 		NUM_UAV_TABLE
@@ -108,25 +117,6 @@ protected:
 		CS_FILL_SOLID
 	};
 
-	struct CBMatrices
-	{
-		DirectX::XMMATRIX worldViewProj;
-		DirectX::XMMATRIX world;
-		DirectX::XMMATRIX worldIT;
-	};
-
-	struct CBPerFrame
-	{
-		DirectX::XMFLOAT4 eyePos;
-	};
-
-	struct CBPerObject
-	{
-		DirectX::XMVECTOR localSpaceLightPt;
-		DirectX::XMVECTOR localSpaceEyePt;
-		DirectX::XMMATRIX screenToLocal;
-	};
-
 	bool createShaders();
 	bool createVB(XUSG::CommandList* pCommandList, uint32_t numVert, uint32_t stride,
 		const uint8_t* pData, std::vector<XUSG::Resource::uptr>& uploaders);
@@ -137,10 +127,8 @@ protected:
 	bool prevoxelize(uint8_t mipLevel = 0);
 	bool prerenderBoxArray(XUSG::Format rtFormat, XUSG::Format dsFormat);
 	bool prerayCast(XUSG::Format rtFormat, XUSG::Format dsFormat);
-	void voxelize(const XUSG::CommandList* pCommandList, Method voxMethod, uint8_t frameIndex,
-		bool depthPeel = false, uint8_t mipLevel = 0);
-	void voxelizeSolid(const XUSG::CommandList* pCommandList, Method voxMethod,
-		uint8_t frameIndex, uint8_t mipLevel = 0);
+	void voxelize(const XUSG::CommandList* pCommandList, Method voxMethod, bool depthPeel = false, uint8_t mipLevel = 0);
+	void voxelizeSolid(const XUSG::CommandList* pCommandList, Method voxMethod, uint8_t mipLevel = 0);
 	void renderBoxArray(const XUSG::CommandList* pCommandList, uint8_t frameIndex,
 		const XUSG::Descriptor& rtv, const XUSG::Descriptor& dsv);
 	void renderRayCast(const XUSG::CommandList* pCommandList, uint8_t frameIndex,
@@ -160,7 +148,7 @@ protected:
 
 	XUSG::DescriptorTable	m_cbvTables[NUM_CBV_TABLE];
 	XUSG::DescriptorTable	m_srvTables[NUM_SRV_TABLE];
-	XUSG::DescriptorTable	m_uavTables[FrameCount][NUM_UAV_TABLE];
+	XUSG::DescriptorTable	m_uavTables[NUM_UAV_TABLE];
 	XUSG::DescriptorTable	m_samplerTable;
 
 	XUSG::VertexBuffer::uptr m_vertexBuffer;
@@ -172,8 +160,13 @@ protected:
 	XUSG::ConstantBuffer::uptr	m_cbBound;
 	std::vector<XUSG::ConstantBuffer::uptr> m_cbPerMipLevels;
 
-	XUSG::Texture3D::uptr	m_grids[FrameCount];
-	XUSG::Texture2D::uptr	m_KBufferDepths[FrameCount];
+#if	USE_MUTEX
+	XUSG::Texture3D::uptr	m_grid[4];
+	XUSG::Texture3D::uptr	m_mutex;
+#else
+	XUSG::Texture3D::uptr	m_grid;
+#endif
+	XUSG::Texture2D::uptr	m_KBufferDepth;
 
 	DirectX::XMFLOAT4		m_bound;
 	DirectX::XMFLOAT2		m_viewport;

@@ -4,7 +4,7 @@
 
 #ifndef U_DEPTH
 #if	USE_MUTEX
-#define	U_DEPTH	u5
+#define	U_DEPTH	u4
 #else
 #define	U_DEPTH	u1
 #endif

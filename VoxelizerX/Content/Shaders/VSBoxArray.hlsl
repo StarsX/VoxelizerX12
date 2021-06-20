@@ -19,16 +19,16 @@ struct VSOut
 //--------------------------------------------------------------------------------------
 cbuffer cbMatrices
 {
-	matrix	g_worldViewProj;
-	matrix	g_world;
-	matrix	g_worldIT;
+	matrix g_worldViewProj;
+	float3x3 g_world;
+	float3x3 g_worldIT;
 };
 
 //--------------------------------------------------------------------------------------
 // Textures
 //--------------------------------------------------------------------------------------
 #if	USE_MUTEX
-Texture3D<float>	g_txGrids[4];
+Texture3D<float>	g_txGrids[3];
 #else
 Texture3D			g_txGrid;
 #endif
@@ -72,19 +72,19 @@ VSOut main(uint vID : SV_VertexID, uint instID : SV_InstanceID)
 	pos += perBoxPos / gridSize;
 	
 #if	USE_MUTEX
-	min16float4 grid;
-	grid.x = g_txGrids[0].mips[SHOW_MIP][vLoc];
-	grid.y = g_txGrids[1].mips[SHOW_MIP][vLoc];
-	grid.z = g_txGrids[2].mips[SHOW_MIP][vLoc];
-	grid.w = g_txGrids[3].mips[SHOW_MIP][vLoc];
+	float4 grid;
+	grid.x = g_txGrids[0].mips[SHOW_MIP][loc];
+	grid.y = g_txGrids[1].mips[SHOW_MIP][loc];
+	grid.z = g_txGrids[2].mips[SHOW_MIP][loc];
+	grid.w = any(grid.xyz);
 #else
-	min16float4 grid = min16float4(g_txGrid.mips[SHOW_MIP][loc]);
+	float4 grid = g_txGrid.mips[SHOW_MIP][loc];
 	grid.xyz -= 0.5;
 #endif
 	
 	output.Pos = mul(float4(pos, 1.0), g_worldViewProj);
-	output.NrmMesh = min16float4(mul(normalize(grid.xyz), (float3x3)g_worldIT), grid.w);
-	output.NrmCube = min16float3(mul(plane[planeID][2], (float3x3)g_worldIT));
+	output.NrmMesh = min16float4(mul(normalize(grid.xyz), g_worldIT), grid.w);
+	output.NrmCube = min16float3(mul(plane[planeID][2], g_worldIT));
 
 	output.Pos.w = grid.w > 0.0 ? output.Pos.w : 0.0;
 

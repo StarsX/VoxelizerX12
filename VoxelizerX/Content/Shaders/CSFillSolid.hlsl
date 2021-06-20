@@ -39,7 +39,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	data.x = g_txGrids[0][DTid];
 	data.y = g_txGrids[1][DTid];
 	data.z = g_txGrids[2][DTid];
-	data.w = any(vData.xyz);
+	data.w = any(data.xyz);
 #else
 	const float4 data = unpack(g_rwGrid[DTid]);
 #endif

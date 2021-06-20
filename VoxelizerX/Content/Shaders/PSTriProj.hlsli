@@ -36,7 +36,7 @@ cbuffer cbPerMipLevel
 //--------------------------------------------------------------------------------------
 #if	USE_MUTEX
 globallycoherent
-RWTexture3D<float>	g_rwGrids[4]	: register (u0);
+RWTexture3D<float>	g_rwGrids[3]	: register (u0);
 #else
 RWTexture3D<uint>	g_rwGrid		: register (u0);
 #endif
@@ -60,18 +60,17 @@ void PSTriProj(PSIn input, uint3 loc)
 
 #if	USE_MUTEX
 
-	mutexLock(loc);
-	// Critical section
 #ifdef _CONSERVATIVE_
 	if (needWrite)
 #endif
 	{
-		g_RWGrids[0][loc] += normal.x;
-		g_RWGrids[1][loc] += normal.y;
-		g_RWGrids[2][loc] += normal.z;
-		g_RWGrids[3][loc] = 1.0;
+		mutexLock(loc);
+		// Critical section
+		g_rwGrids[0][loc] += normal.x;
+		g_rwGrids[1][loc] += normal.y;
+		g_rwGrids[2][loc] += normal.z;
+		mutexUnlock(loc);
 	}
-	mutexUnlock(loc);
 
 #else
 

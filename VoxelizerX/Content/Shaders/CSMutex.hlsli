@@ -3,7 +3,7 @@
 //--------------------------------------------------------------------------------------
 
 #ifndef U_MUTEX
-#define	U_MUTEX			u4
+#define	U_MUTEX			u3
 #endif
 
 #ifndef RWTexture
@@ -11,12 +11,12 @@
 #endif
 
 #define	mutexLock(x)	{	\
-							uint lock;				\
+							uint lock = 1;			\
 							[allow_uav_condition]	\
 							for (uint i = 0; i < 0xffffffff; ++i)	\
 							{	\
-								InterlockedExchange(g_rwMutex[x], 1, lock);	\
-								DeviceMemoryBarrier();						\
+								InterlockedCompareExchange(g_rwMutex[x], 0, 1, lock);	\
+								DeviceMemoryBarrier();	\
 								if (lock != 1)	\
 								{
 #define	mutexUnlock(x)				g_rwMutex[x] = 0;	\
