@@ -35,7 +35,7 @@ VoxelizerX::VoxelizerX(uint32_t width, uint32_t height, std::wstring name) :
 	m_pausing(false),
 	m_tracking(false),
 	m_voxMethod(Voxelizer::TRI_PROJ),
-	m_meshFileName("Media/bunny.obj"),
+	m_meshFileName("Assets/bunny.obj"),
 	m_meshPosScale(0.0f, 0.0f, 0.0f, 1.0f),
 	m_voxMethodDesc(VoxMethodDescs[m_voxMethod]),
 	m_solidDesc(SolidDescs[m_solid])
@@ -44,8 +44,9 @@ VoxelizerX::VoxelizerX(uint32_t width, uint32_t height, std::wstring name) :
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	AllocConsole();
 	FILE* stream;
-	freopen_s(&stream, "CONOUT$", "w+t", stdout);
 	freopen_s(&stream, "CONIN$", "r+t", stdin);
+	freopen_s(&stream, "CONOUT$", "w+t", stdout);
+	freopen_s(&stream, "CONOUT$", "w+t", stderr);
 #endif
 }
 

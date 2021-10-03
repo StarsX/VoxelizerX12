@@ -1,1 +1,1 @@
-start VoxelizerX.exe -mesh Media/dragon.obj
+start VoxelizerX.exe -mesh Assets/dragon.obj
