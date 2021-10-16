@@ -48,7 +48,7 @@ private:
 	XUSG::CommandAllocator::uptr	m_commandAllocators[Voxelizer::FrameCount];
 	XUSG::CommandQueue::uptr		m_commandQueue;
 
-	XUSG::Device::sptr				m_device;
+	XUSG::Device::sptr			m_device;
 	XUSG::RenderTarget::uptr	m_renderTargets[Voxelizer::FrameCount];
 	XUSG::CommandList::uptr		m_commandList;
 
