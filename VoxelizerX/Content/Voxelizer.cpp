@@ -131,7 +131,7 @@ void Voxelizer::UpdateFrame(uint8_t frameIndex, CXMVECTOR eyePt, CXMMATRIX viewP
 	XMStoreFloat4(&pCbPerFrame->eyePos, eyePt);
 }
 
-void Voxelizer::Render(const CommandList* pCommandList, bool solid, Method voxMethod,
+void Voxelizer::Render(CommandList* pCommandList, bool solid, Method voxMethod,
 	uint8_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
 {
 	if (solid)
@@ -519,7 +519,7 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 	return true;
 }
 
-void Voxelizer::voxelize(const CommandList* pCommandList, Method voxMethod, bool depthPeel, uint8_t mipLevel)
+void Voxelizer::voxelize(CommandList* pCommandList, Method voxMethod, bool depthPeel, uint8_t mipLevel)
 {
 	auto layoutIdx = PASS_VOXELIZE;
 	auto pipeIdx = depthPeel ? PASS_VOXELIZE_SOLID : PASS_VOXELIZE;
@@ -604,7 +604,7 @@ void Voxelizer::voxelize(const CommandList* pCommandList, Method voxMethod, bool
 		pCommandList->DrawIndexed(m_numIndices, instanceCount, 0, 0, 0);
 }
 
-void Voxelizer::voxelizeSolid(const CommandList* pCommandList, Method voxMethod, uint8_t mipLevel)
+void Voxelizer::voxelizeSolid(CommandList* pCommandList, Method voxMethod, uint8_t mipLevel)
 {
 	// Surface voxelization with depth peeling
 	voxelize(pCommandList, voxMethod, true, mipLevel);
@@ -641,7 +641,7 @@ void Voxelizer::voxelizeSolid(const CommandList* pCommandList, Method voxMethod,
 	pCommandList->Dispatch(numGroups, numGroups, numGroups);
 }
 
-void Voxelizer::renderBoxArray(const CommandList* pCommandList, uint8_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
+void Voxelizer::renderBoxArray(CommandList* pCommandList, uint8_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
 {
 	// Set resource barrier
 #if	USE_MUTEX
@@ -679,7 +679,7 @@ void Voxelizer::renderBoxArray(const CommandList* pCommandList, uint8_t frameInd
 	pCommandList->Draw(4, 6 * gridSize * gridSize * gridSize, 0, 0);
 }
 
-void Voxelizer::renderRayCast(const CommandList* pCommandList, uint8_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
+void Voxelizer::renderRayCast(CommandList* pCommandList, uint8_t frameIndex, const Descriptor& rtv, const Descriptor& dsv)
 {
 	// Set resource barriers
 	ResourceBarrier barrier;
