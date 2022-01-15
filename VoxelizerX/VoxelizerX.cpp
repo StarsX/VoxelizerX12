@@ -95,7 +95,7 @@ void VoxelizerX::LoadPipeline()
 		dxgiAdapter = nullptr;
 		ThrowIfFailed(factory->EnumAdapters1(i, &dxgiAdapter));
 
-		m_device = Device::MakeShared();
+		m_device = Device::MakeUnique();
 		hr = m_device->Create(dxgiAdapter.get(), D3D_FEATURE_LEVEL_11_0);
 	}
 
@@ -146,7 +146,7 @@ void VoxelizerX::LoadAssets()
 	N_RETURN(pCommandList->Create(m_device.get(), 0, CommandListType::DIRECT,
 		m_commandAllocators[m_frameIndex].get(), nullptr), ThrowIfFailed(E_FAIL));
 
-	m_voxelizer = make_unique<Voxelizer>(m_device);
+	m_voxelizer = make_unique<Voxelizer>();
 	if (!m_voxelizer) ThrowIfFailed(E_FAIL);
 
 	vector<Resource::uptr> uploaders(0);

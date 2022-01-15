@@ -19,7 +19,7 @@ public:
 		NUM_METHOD
 	};
 
-	Voxelizer(const XUSG::Device::sptr& device);
+	Voxelizer();
 	virtual ~Voxelizer();
 
 	bool Init(XUSG::CommandList* pCommandList, uint32_t width, uint32_t height, XUSG::Format rtFormat,
@@ -133,8 +133,6 @@ protected:
 		const XUSG::Descriptor& rtv, const XUSG::Descriptor& dsv);
 	void renderRayCast(XUSG::CommandList* pCommandList, uint8_t frameIndex,
 		const XUSG::Descriptor& rtv, const XUSG::Descriptor& dsv);
-
-	XUSG::Device::sptr m_device;
 
 	XUSG::ShaderPool::uptr m_shaderPool;
 	XUSG::Graphics::PipelineCache::uptr	m_graphicsPipelineCache;

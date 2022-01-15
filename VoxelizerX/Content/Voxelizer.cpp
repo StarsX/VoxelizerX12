@@ -28,13 +28,8 @@ struct CBPerObject
 	DirectX::XMMATRIX screenToLocal;
 };
 
-Voxelizer::Voxelizer(const Device::sptr& device) :
-	m_device(device)
+Voxelizer::Voxelizer()
 {
-	m_graphicsPipelineCache = Graphics::PipelineCache::MakeUnique(device.get());
-	m_computePipelineCache = Compute::PipelineCache::MakeUnique(device.get());
-	m_descriptorTableCache = DescriptorTableCache::MakeUnique(device.get());
-	m_pipelineLayoutCache = PipelineLayoutCache::MakeUnique(device.get());
 }
 
 Voxelizer::~Voxelizer()
@@ -44,6 +39,12 @@ Voxelizer::~Voxelizer()
 bool Voxelizer::Init(CommandList* pCommandList, uint32_t width, uint32_t height, Format rtFormat,
 	Format dsFormat, vector<Resource::uptr>& uploaders, const char* fileName, const XMFLOAT4& posScale)
 {
+	const auto pDevice = pCommandList->GetDevice();
+	m_graphicsPipelineCache = Graphics::PipelineCache::MakeUnique(pDevice);
+	m_computePipelineCache = Compute::PipelineCache::MakeUnique(pDevice);
+	m_descriptorTableCache = DescriptorTableCache::MakeUnique(pDevice);
+	m_pipelineLayoutCache = PipelineLayoutCache::MakeUnique(pDevice);
+
 	m_viewport.x = static_cast<float>(width);
 	m_viewport.y = static_cast<float>(height);
 	m_posScale = posScale;
@@ -79,12 +80,12 @@ bool Voxelizer::Init(CommandList* pCommandList, uint32_t width, uint32_t height,
 		Format::R32_UINT, ResourceFlag::ALLOW_UNORDERED_ACCESS), false);
 #else
 	m_grid = Texture3D::MakeUnique();
-	N_RETURN(m_grid->Create(m_device.get(), GRID_SIZE, GRID_SIZE, GRID_SIZE,
+	N_RETURN(m_grid->Create(pDevice, GRID_SIZE, GRID_SIZE, GRID_SIZE,
 		Format::R10G10B10A2_UNORM, ResourceFlag::NEED_PACKED_UAV), false);
 #endif
 
 	m_KBufferDepth = Texture2D::MakeUnique();
-	N_RETURN(m_KBufferDepth->Create(m_device.get(), GRID_SIZE, GRID_SIZE, Format::R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
+	N_RETURN(m_KBufferDepth->Create(pDevice, GRID_SIZE, GRID_SIZE, Format::R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
 		ResourceFlag::ALLOW_UNORDERED_ACCESS | ResourceFlag::ALLOW_SIMULTANEOUS_ACCESS), false);
 
 	// Prepare for rendering
@@ -185,8 +186,8 @@ bool Voxelizer::createVB(CommandList* pCommandList, uint32_t numVert, uint32_t s
 	const uint8_t* pData, vector<Resource::uptr>& uploaders)
 {
 	m_vertexBuffer = VertexBuffer::MakeUnique();
-	N_RETURN(m_vertexBuffer->Create(m_device.get(), numVert, stride,
-		ResourceFlag::NONE, MemoryType::DEFAULT), false);
+	N_RETURN(m_vertexBuffer->Create(pCommandList->GetDevice(), numVert,
+		stride, ResourceFlag::NONE, MemoryType::DEFAULT), false);
 	uploaders.emplace_back(Resource::MakeUnique());
 
 	return m_vertexBuffer->Upload(pCommandList, uploaders.back().get(), pData, stride * numVert);
@@ -198,7 +199,7 @@ bool Voxelizer::createIB(CommandList* pCommandList, uint32_t numIndices,
 	m_numIndices = numIndices;
 	const uint32_t byteWidth = sizeof(uint32_t) * numIndices;
 	m_indexbuffer = IndexBuffer::MakeUnique();
-	N_RETURN(m_indexbuffer->Create(m_device.get(), byteWidth, Format::R32_UINT,
+	N_RETURN(m_indexbuffer->Create(pCommandList->GetDevice(), byteWidth, Format::R32_UINT,
 		ResourceFlag::NONE, MemoryType::DEFAULT), false);
 	uploaders.emplace_back(Resource::MakeUnique());
 
@@ -207,20 +208,22 @@ bool Voxelizer::createIB(CommandList* pCommandList, uint32_t numIndices,
 
 bool Voxelizer::createCBs(CommandList* pCommandList, vector<Resource::uptr>& uploaders)
 {
+	const auto pDevice = pCommandList->GetDevice();
+
 	// Common CBs
 	{
 		m_cbMatrices = ConstantBuffer::MakeUnique();
 		m_cbPerFrame = ConstantBuffer::MakeUnique();
 		m_cbPerObject = ConstantBuffer::MakeUnique();
-		N_RETURN(m_cbMatrices->Create(m_device.get(), sizeof(CBMatrices[FrameCount]), FrameCount), false);
-		N_RETURN(m_cbPerFrame->Create(m_device.get(), sizeof(CBPerFrame[FrameCount]), FrameCount), false);
-		N_RETURN(m_cbPerObject->Create(m_device.get(), sizeof(CBPerObject[FrameCount]), FrameCount), false);
+		N_RETURN(m_cbMatrices->Create(pDevice, sizeof(CBMatrices[FrameCount]), FrameCount), false);
+		N_RETURN(m_cbPerFrame->Create(pDevice, sizeof(CBPerFrame[FrameCount]), FrameCount), false);
+		N_RETURN(m_cbPerObject->Create(pDevice, sizeof(CBPerObject[FrameCount]), FrameCount), false);
 	}
 
 	// Immutable CBs
 	{
 		m_cbBound = ConstantBuffer::MakeUnique();
-		N_RETURN(m_cbBound->Create(m_device.get(), sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
+		N_RETURN(m_cbBound->Create(pDevice, sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
 
 		uploaders.emplace_back(Resource::MakeUnique());
 		m_cbBound->Upload(pCommandList, uploaders.back().get(), &m_bound, sizeof(XMFLOAT4));
@@ -232,7 +235,7 @@ bool Voxelizer::createCBs(CommandList* pCommandList, vector<Resource::uptr>& upl
 		auto& cb = m_cbPerMipLevels[i];
 		cb = ConstantBuffer::MakeUnique();
 		const auto gridSize = static_cast<float>(GRID_SIZE >> i);
-		N_RETURN(cb->Create(m_device.get(), sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
+		N_RETURN(cb->Create(pDevice, sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
 
 		uploaders.emplace_back(Resource::MakeUnique());
 		cb->Upload(pCommandList, uploaders.back().get(), &gridSize, sizeof(float));
