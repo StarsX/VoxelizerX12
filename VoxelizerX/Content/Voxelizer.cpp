@@ -50,48 +50,48 @@ bool Voxelizer::Init(CommandList* pCommandList, uint32_t width, uint32_t height,
 	m_posScale = posScale;
 
 	// Create shaders
-	N_RETURN(createShaders(), false);
+	XUSG_N_RETURN(createShaders(), false);
 
 	// Load inputs
 	ObjLoader objLoader;
 	if (!objLoader.Import(fileName, true, true)) return false;
 
-	N_RETURN(createInputLayout(), false);
-	N_RETURN(createVB(pCommandList, objLoader.GetNumVertices(), objLoader.GetVertexStride(), objLoader.GetVertices(), uploaders), false);
-	N_RETURN(createIB(pCommandList, objLoader.GetNumIndices(), objLoader.GetIndices(), uploaders), false);
+	XUSG_N_RETURN(createInputLayout(), false);
+	XUSG_N_RETURN(createVB(pCommandList, objLoader.GetNumVertices(), objLoader.GetVertexStride(), objLoader.GetVertices(), uploaders), false);
+	XUSG_N_RETURN(createIB(pCommandList, objLoader.GetNumIndices(), objLoader.GetIndices(), uploaders), false);
 
 	// Extract boundary
 	const auto center = objLoader.GetCenter();
 	m_bound = XMFLOAT4(center.x, center.y, center.z, objLoader.GetRadius());
 
 	m_numLevels = max(static_cast<uint32_t>(log2(GRID_SIZE)), 1);
-	N_RETURN(createCBs(pCommandList, uploaders), false);
+	XUSG_N_RETURN(createCBs(pCommandList, uploaders), false);
 
 #if	USE_MUTEX
 	for (auto& grid : m_grid)
 	{
 		grid = Texture3D::MakeUnique();
-		N_RETURN(grid->Create(m_device.get(), GRID_SIZE, GRID_SIZE, GRID_SIZE,
+		XUSG_N_RETURN(grid->Create(m_device.get(), GRID_SIZE, GRID_SIZE, GRID_SIZE,
 			Format::R32_FLOAT, ResourceFlag::ALLOW_UNORDERED_ACCESS), false);
 	}
 
 	m_mutex = Texture3D::MakeUnique();
-	N_RETURN(m_mutex->Create(m_device.get(), GRID_SIZE, GRID_SIZE, GRID_SIZE,
+	XUSG_N_RETURN(m_mutex->Create(m_device.get(), GRID_SIZE, GRID_SIZE, GRID_SIZE,
 		Format::R32_UINT, ResourceFlag::ALLOW_UNORDERED_ACCESS), false);
 #else
 	m_grid = Texture3D::MakeUnique();
-	N_RETURN(m_grid->Create(pDevice, GRID_SIZE, GRID_SIZE, GRID_SIZE,
+	XUSG_N_RETURN(m_grid->Create(pDevice, GRID_SIZE, GRID_SIZE, GRID_SIZE,
 		Format::R10G10B10A2_UNORM, ResourceFlag::NEED_PACKED_UAV), false);
 #endif
 
 	m_KBufferDepth = Texture2D::MakeUnique();
-	N_RETURN(m_KBufferDepth->Create(pDevice, GRID_SIZE, GRID_SIZE, Format::R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
+	XUSG_N_RETURN(m_KBufferDepth->Create(pDevice, GRID_SIZE, GRID_SIZE, Format::R32_UINT, static_cast<uint32_t>(GRID_SIZE * DEPTH_SCALE),
 		ResourceFlag::ALLOW_UNORDERED_ACCESS | ResourceFlag::ALLOW_SIMULTANEOUS_ACCESS), false);
 
 	// Prepare for rendering
-	N_RETURN(prevoxelize(), false);
-	N_RETURN(prerenderBoxArray(rtFormat, dsFormat), false);
-	N_RETURN(prerayCast(rtFormat, dsFormat), false);
+	XUSG_N_RETURN(prevoxelize(), false);
+	XUSG_N_RETURN(prerenderBoxArray(rtFormat, dsFormat), false);
+	XUSG_N_RETURN(prerayCast(rtFormat, dsFormat), false);
 
 	return true;
 }
@@ -161,23 +161,23 @@ void Voxelizer::Render(CommandList* pCommandList, bool solid, Method voxMethod,
 bool Voxelizer::createShaders()
 {
 	m_shaderPool = ShaderPool::MakeUnique();
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::VS, VS_TRI_PROJ, L"VSTriProj.cso"), false);
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::VS, VS_TRI_PROJ_TESS, L"VSTriProjTess.cso"), false);
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::VS, VS_TRI_PROJ_UNION, L"VSTriProjUnion.cso"), false);
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::VS, VS_BOX_ARRAY, L"VSBoxArray.cso"), false);
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::VS, VS_SCREEN_QUAD, L"VSScreenQuad.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::VS, VS_TRI_PROJ, L"VSTriProj.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::VS, VS_TRI_PROJ_TESS, L"VSTriProjTess.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::VS, VS_TRI_PROJ_UNION, L"VSTriProjUnion.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::VS, VS_BOX_ARRAY, L"VSBoxArray.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::VS, VS_SCREEN_QUAD, L"VSScreenQuad.cso"), false);
 
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::HS, HS_TRI_PROJ, L"HSTriProj.cso"), false);
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::DS, DS_TRI_PROJ, L"DSTriProj.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::HS, HS_TRI_PROJ, L"HSTriProj.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::DS, DS_TRI_PROJ, L"DSTriProj.cso"), false);
 
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::PS, PS_TRI_PROJ, L"PSTriProj.cso"), false);
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::PS, PS_TRI_PROJ_SOLID, L"PSTriProjSolid.cso"), false);
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::PS, PS_TRI_PROJ_UNION, L"PSTriProjUnion.cso"), false);
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::PS, PS_TRI_PROJ_UNION_SOLID, L"PSTriProjUnionSolid.cso"), false);
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::PS, PS_SIMPLE, L"PSSimple.cso"), false);
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::PS, PS_RAY_CAST, L"PSRayCast.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::PS, PS_TRI_PROJ, L"PSTriProj.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::PS, PS_TRI_PROJ_SOLID, L"PSTriProjSolid.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::PS, PS_TRI_PROJ_UNION, L"PSTriProjUnion.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::PS, PS_TRI_PROJ_UNION_SOLID, L"PSTriProjUnionSolid.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::PS, PS_SIMPLE, L"PSSimple.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::PS, PS_RAY_CAST, L"PSRayCast.cso"), false);
 
-	N_RETURN(m_shaderPool->CreateShader(Shader::Stage::CS, CS_FILL_SOLID, L"CSFillSolid.cso"), false);
+	XUSG_N_RETURN(m_shaderPool->CreateShader(Shader::Stage::CS, CS_FILL_SOLID, L"CSFillSolid.cso"), false);
 
 	return true;
 }
@@ -186,7 +186,7 @@ bool Voxelizer::createVB(CommandList* pCommandList, uint32_t numVert, uint32_t s
 	const uint8_t* pData, vector<Resource::uptr>& uploaders)
 {
 	m_vertexBuffer = VertexBuffer::MakeUnique();
-	N_RETURN(m_vertexBuffer->Create(pCommandList->GetDevice(), numVert,
+	XUSG_N_RETURN(m_vertexBuffer->Create(pCommandList->GetDevice(), numVert,
 		stride, ResourceFlag::NONE, MemoryType::DEFAULT), false);
 	uploaders.emplace_back(Resource::MakeUnique());
 
@@ -199,7 +199,7 @@ bool Voxelizer::createIB(CommandList* pCommandList, uint32_t numIndices,
 	m_numIndices = numIndices;
 	const uint32_t byteWidth = sizeof(uint32_t) * numIndices;
 	m_indexbuffer = IndexBuffer::MakeUnique();
-	N_RETURN(m_indexbuffer->Create(pCommandList->GetDevice(), byteWidth, Format::R32_UINT,
+	XUSG_N_RETURN(m_indexbuffer->Create(pCommandList->GetDevice(), byteWidth, Format::R32_UINT,
 		ResourceFlag::NONE, MemoryType::DEFAULT), false);
 	uploaders.emplace_back(Resource::MakeUnique());
 
@@ -215,15 +215,15 @@ bool Voxelizer::createCBs(CommandList* pCommandList, vector<Resource::uptr>& upl
 		m_cbMatrices = ConstantBuffer::MakeUnique();
 		m_cbPerFrame = ConstantBuffer::MakeUnique();
 		m_cbPerObject = ConstantBuffer::MakeUnique();
-		N_RETURN(m_cbMatrices->Create(pDevice, sizeof(CBMatrices[FrameCount]), FrameCount), false);
-		N_RETURN(m_cbPerFrame->Create(pDevice, sizeof(CBPerFrame[FrameCount]), FrameCount), false);
-		N_RETURN(m_cbPerObject->Create(pDevice, sizeof(CBPerObject[FrameCount]), FrameCount), false);
+		XUSG_N_RETURN(m_cbMatrices->Create(pDevice, sizeof(CBMatrices[FrameCount]), FrameCount), false);
+		XUSG_N_RETURN(m_cbPerFrame->Create(pDevice, sizeof(CBPerFrame[FrameCount]), FrameCount), false);
+		XUSG_N_RETURN(m_cbPerObject->Create(pDevice, sizeof(CBPerObject[FrameCount]), FrameCount), false);
 	}
 
 	// Immutable CBs
 	{
 		m_cbBound = ConstantBuffer::MakeUnique();
-		N_RETURN(m_cbBound->Create(pDevice, sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
+		XUSG_N_RETURN(m_cbBound->Create(pDevice, sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
 
 		uploaders.emplace_back(Resource::MakeUnique());
 		m_cbBound->Upload(pCommandList, uploaders.back().get(), &m_bound, sizeof(XMFLOAT4));
@@ -235,7 +235,7 @@ bool Voxelizer::createCBs(CommandList* pCommandList, vector<Resource::uptr>& upl
 		auto& cb = m_cbPerMipLevels[i];
 		cb = ConstantBuffer::MakeUnique();
 		const auto gridSize = static_cast<float>(GRID_SIZE >> i);
-		N_RETURN(cb->Create(pDevice, sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
+		XUSG_N_RETURN(cb->Create(pDevice, sizeof(XMFLOAT4), 1, nullptr, MemoryType::DEFAULT), false);
 
 		uploaders.emplace_back(Resource::MakeUnique());
 		cb->Upload(pCommandList, uploaders.back().get(), &gridSize, sizeof(float));
@@ -253,7 +253,7 @@ bool Voxelizer::createInputLayout()
 		{ "NORMAL",		0, Format::R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT,	InputClassification::PER_VERTEX_DATA, 0 }
 	};
 
-	X_RETURN(m_pInputLayout, m_graphicsPipelineCache->CreateInputLayout(inputElements, static_cast<uint32_t>(size(inputElements))), false);
+	XUSG_X_RETURN(m_pInputLayout, m_graphicsPipelineCache->CreateInputLayout(inputElements, static_cast<uint32_t>(size(inputElements))), false);
 
 	return true;
 }
@@ -263,17 +263,17 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 	// Get CBVs
 	const auto utilCbvTable = Util::DescriptorTable::MakeUnique();
 	utilCbvTable->SetDescriptors(0, 1, &m_cbBound->GetCBV());
-	X_RETURN(m_cbvTables[CBV_TABLE_VOXELIZE], utilCbvTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+	XUSG_X_RETURN(m_cbvTables[CBV_TABLE_VOXELIZE], utilCbvTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 
 	const auto utilCbvPerMipLevelTable = Util::DescriptorTable::MakeUnique();
 	utilCbvPerMipLevelTable->SetDescriptors(0, 1, &m_cbPerMipLevels[mipLevel]->GetCBV());
-	X_RETURN(m_cbvTables[CBV_TABLE_PER_MIP], utilCbvPerMipLevelTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+	XUSG_X_RETURN(m_cbvTables[CBV_TABLE_PER_MIP], utilCbvPerMipLevelTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 
 	// Get SRVs
 	const Descriptor srvs[] = { m_indexbuffer->GetSRV(), m_vertexBuffer->GetSRV() };
 	const auto descriptorTable = Util::DescriptorTable::MakeUnique();
 	descriptorTable->SetDescriptors(0, static_cast<uint32_t>(size(srvs)), srvs);
-	X_RETURN(m_srvTables[SRV_TABLE_VB_IB], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+	XUSG_X_RETURN(m_srvTables[SRV_TABLE_VB_IB], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 
 	// Get UAVs and SRVs
 	// Get UAVs
@@ -282,33 +282,33 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 	{
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, 1, &m_grid[i]->GetUAV());
-		X_RETURN(m_uavTables[UAV_TABLE_VOXELIZE + i], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		XUSG_X_RETURN(m_uavTables[UAV_TABLE_VOXELIZE + i], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 
 	{
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, 1, &m_mutex->GetUAV());
-		X_RETURN(m_uavTables[UAV_TABLE_MUTEX], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		XUSG_X_RETURN(m_uavTables[UAV_TABLE_MUTEX], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 #else
 	{
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, 1, &m_grid->GetPackedUAV());
-		X_RETURN(m_uavTables[UAV_TABLE_VOXELIZE], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		XUSG_X_RETURN(m_uavTables[UAV_TABLE_VOXELIZE], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 #endif
 
 	{
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, 1, &m_KBufferDepth->GetUAV());
-		X_RETURN(m_uavTables[UAV_TABLE_KBUFFER], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		XUSG_X_RETURN(m_uavTables[UAV_TABLE_KBUFFER], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 
 	// Get SRV
 	{
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, 1, &m_KBufferDepth->GetSRV());
-		X_RETURN(m_srvTables[SRV_K_DEPTH], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		XUSG_X_RETURN(m_srvTables[SRV_K_DEPTH], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 
 	// Get graphics pipeline layouts
@@ -325,7 +325,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		utilPipelineLayout->SetShaderStage(1, Shader::Stage::PS);
 		utilPipelineLayout->SetShaderStage(2, Shader::Stage::PS);
 		utilPipelineLayout->SetShaderStage(3, Shader::Stage::VS);
-		X_RETURN(m_pipelineLayouts[PASS_VOXELIZE], utilPipelineLayout->GetPipelineLayout(
+		XUSG_X_RETURN(m_pipelineLayouts[PASS_VOXELIZE], utilPipelineLayout->GetPipelineLayout(
 			m_pipelineLayoutCache.get(), PipelineLayoutFlag::NONE, L"VoxelizationPass"), false);
 	}
 
@@ -338,7 +338,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		utilPipelineLayout->SetShaderStage(0, Shader::Stage::VS);
 		utilPipelineLayout->SetShaderStage(1, Shader::Stage::PS);
 		utilPipelineLayout->SetShaderStage(2, Shader::Stage::PS);
-		X_RETURN(m_pipelineLayouts[PASS_VOXELIZE_UNION], utilPipelineLayout->GetPipelineLayout(
+		XUSG_X_RETURN(m_pipelineLayouts[PASS_VOXELIZE_UNION], utilPipelineLayout->GetPipelineLayout(
 			m_pipelineLayoutCache.get(), PipelineLayoutFlag::ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT,
 			L"VoxelizationByUnionPass"), false);
 	}
@@ -354,7 +354,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		utilPipelineLayout->SetShaderStage(1, Shader::Stage::PS);
 		utilPipelineLayout->SetShaderStage(2, Shader::Stage::PS);
 		utilPipelineLayout->SetShaderStage(3, Shader::Stage::DS);
-		X_RETURN(m_pipelineLayouts[PASS_VOXELIZE_TESS], utilPipelineLayout->GetPipelineLayout(
+		XUSG_X_RETURN(m_pipelineLayouts[PASS_VOXELIZE_TESS], utilPipelineLayout->GetPipelineLayout(
 			m_pipelineLayoutCache.get(), PipelineLayoutFlag::ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT,
 			L"VoxelizationByTessellationPass"), false);
 	}
@@ -369,19 +369,19 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		state->IASetPrimitiveTopologyType(PrimitiveTopologyType::TRIANGLE);
 		state->RSSetState(Graphics::RasterizerPreset::CULL_NONE, m_graphicsPipelineCache.get());
 		state->OMSetNumRenderTargets(0);
-		X_RETURN(m_pipelines[PASS_VOXELIZE], state->GetPipeline(m_graphicsPipelineCache.get(), L"Voxelization"), false);
+		XUSG_X_RETURN(m_pipelines[PASS_VOXELIZE], state->GetPipeline(m_graphicsPipelineCache.get(), L"Voxelization"), false);
 
 		state->SetShader(Shader::Stage::PS, m_shaderPool->GetShader(Shader::Stage::PS, PS_TRI_PROJ_SOLID));
-		X_RETURN(m_pipelines[PASS_VOXELIZE_SOLID], state->GetPipeline(m_graphicsPipelineCache.get(), L"VoxelizationSolid"), false);
+		XUSG_X_RETURN(m_pipelines[PASS_VOXELIZE_SOLID], state->GetPipeline(m_graphicsPipelineCache.get(), L"VoxelizationSolid"), false);
 
 		state->IASetInputLayout(m_pInputLayout);
 		state->SetPipelineLayout(m_pipelineLayouts[PASS_VOXELIZE_UNION]);
 		state->SetShader(Shader::Stage::VS, m_shaderPool->GetShader(Shader::Stage::VS, VS_TRI_PROJ_UNION));
 		state->SetShader(Shader::Stage::PS, m_shaderPool->GetShader(Shader::Stage::PS, PS_TRI_PROJ_UNION));
-		X_RETURN(m_pipelines[PASS_VOXELIZE_UNION], state->GetPipeline(m_graphicsPipelineCache.get(), L"VoxelizationUnion"), false);
+		XUSG_X_RETURN(m_pipelines[PASS_VOXELIZE_UNION], state->GetPipeline(m_graphicsPipelineCache.get(), L"VoxelizationUnion"), false);
 
 		state->SetShader(Shader::Stage::PS, m_shaderPool->GetShader(Shader::Stage::PS, PS_TRI_PROJ_UNION_SOLID));
-		X_RETURN(m_pipelines[PASS_VOXELIZE_UNION_SOLID], state->GetPipeline(m_graphicsPipelineCache.get(), L"VoxelizationUnionSolid"), false);
+		XUSG_X_RETURN(m_pipelines[PASS_VOXELIZE_UNION_SOLID], state->GetPipeline(m_graphicsPipelineCache.get(), L"VoxelizationUnionSolid"), false);
 
 		state->SetPipelineLayout(m_pipelineLayouts[PASS_VOXELIZE_TESS]);
 		state->SetShader(Shader::Stage::VS, m_shaderPool->GetShader(Shader::Stage::VS, VS_TRI_PROJ_TESS));
@@ -389,10 +389,10 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		state->SetShader(Shader::Stage::DS, m_shaderPool->GetShader(Shader::Stage::DS, DS_TRI_PROJ));
 		state->SetShader(Shader::Stage::PS, m_shaderPool->GetShader(Shader::Stage::PS, PS_TRI_PROJ));
 		state->IASetPrimitiveTopologyType(PrimitiveTopologyType::PATCH);
-		X_RETURN(m_pipelines[PASS_VOXELIZE_TESS], state->GetPipeline(m_graphicsPipelineCache.get(), L"VoxelizationTess"), false);
+		XUSG_X_RETURN(m_pipelines[PASS_VOXELIZE_TESS], state->GetPipeline(m_graphicsPipelineCache.get(), L"VoxelizationTess"), false);
 
 		state->SetShader(Shader::Stage::PS, m_shaderPool->GetShader(Shader::Stage::PS, PS_TRI_PROJ_SOLID));
-		X_RETURN(m_pipelines[PASS_VOXELIZE_TESS_SOLID], state->GetPipeline(m_graphicsPipelineCache.get(), L"VoxelizatioTessSolid"), false);
+		XUSG_X_RETURN(m_pipelines[PASS_VOXELIZE_TESS_SOLID], state->GetPipeline(m_graphicsPipelineCache.get(), L"VoxelizatioTessSolid"), false);
 	}
 
 	// Get compute pipeline layout
@@ -401,7 +401,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0);
 		utilPipelineLayout->SetRange(1, DescriptorType::SRV, USE_MUTEX ? 4 : 1, 0);
 		utilPipelineLayout->SetRange(2, DescriptorType::UAV, 1, 0, 0, DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
-		X_RETURN(m_pipelineLayouts[PASS_FILL_SOLID], utilPipelineLayout->GetPipelineLayout(
+		XUSG_X_RETURN(m_pipelineLayouts[PASS_FILL_SOLID], utilPipelineLayout->GetPipelineLayout(
 			m_pipelineLayoutCache.get(), PipelineLayoutFlag::NONE, L"SolidFillPass"), false);
 	}
 
@@ -410,7 +410,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 		const auto state = Compute::State::MakeUnique();
 		state->SetPipelineLayout(m_pipelineLayouts[PASS_FILL_SOLID]);
 		state->SetShader(m_shaderPool->GetShader(Shader::Stage::CS, CS_FILL_SOLID));
-		X_RETURN(m_pipelines[PASS_FILL_SOLID], state->GetPipeline(m_computePipelineCache.get(), L"SolidFill"), false);
+		XUSG_X_RETURN(m_pipelines[PASS_FILL_SOLID], state->GetPipeline(m_computePipelineCache.get(), L"SolidFill"), false);
 	}
 
 	return true;
@@ -429,14 +429,14 @@ bool Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 		};
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, static_cast<uint32_t>(size(descriptors)), descriptors);
-		X_RETURN(m_srvTables[SRV_TABLE_GRID_XYZ], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		XUSG_X_RETURN(m_srvTables[SRV_TABLE_GRID_XYZ], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 #else
 	if (!m_srvTables[SRV_TABLE_GRID])
 	{
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, 1, &m_grid->GetSRV());
-		X_RETURN(m_srvTables[SRV_TABLE_GRID], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		XUSG_X_RETURN(m_srvTables[SRV_TABLE_GRID], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 #endif
 
@@ -445,7 +445,7 @@ bool Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 		// Get CBV
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, 1, &m_cbMatrices->GetCBV(i));
-		X_RETURN(m_cbvTables[CBV_TABLE_MATRICES + i], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		XUSG_X_RETURN(m_cbvTables[CBV_TABLE_MATRICES + i], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 
 	// Get pipeline layout
@@ -454,7 +454,7 @@ bool Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 	utilPipelineLayout->SetRange(1, DescriptorType::SRV, USE_MUTEX ? 4 : 1, 0);
 	utilPipelineLayout->SetShaderStage(0, Shader::Stage::VS);
 	utilPipelineLayout->SetShaderStage(1, Shader::Stage::VS);
-	X_RETURN(m_pipelineLayouts[PASS_DRAW_AS_BOX], utilPipelineLayout->GetPipelineLayout(
+	XUSG_X_RETURN(m_pipelineLayouts[PASS_DRAW_AS_BOX], utilPipelineLayout->GetPipelineLayout(
 		m_pipelineLayoutCache.get(), PipelineLayoutFlag::NONE, L"DrawAsBoxPass"), false);
 
 	// Get pipeline
@@ -465,7 +465,7 @@ bool Voxelizer::prerenderBoxArray(Format rtFormat, Format dsFormat)
 	state->IASetPrimitiveTopologyType(PrimitiveTopologyType::TRIANGLE);
 	state->OMSetRTVFormats(&rtFormat, 1);
 	state->OMSetDSVFormat(dsFormat);
-	X_RETURN(m_pipelines[PASS_DRAW_AS_BOX], state->GetPipeline(m_graphicsPipelineCache.get(), L"DrawAsBox"), false);
+	XUSG_X_RETURN(m_pipelines[PASS_DRAW_AS_BOX], state->GetPipeline(m_graphicsPipelineCache.get(), L"DrawAsBox"), false);
 
 	return true;
 }
@@ -477,7 +477,7 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 		// Get CBV
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, 1, &m_cbPerObject->GetCBV(i));
-		X_RETURN(m_cbvTables[CBV_TABLE_PER_OBJ + i], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		XUSG_X_RETURN(m_cbvTables[CBV_TABLE_PER_OBJ + i], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 
 	// Get SRV
@@ -489,14 +489,14 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 #else
 		descriptorTable->SetDescriptors(0, 1, &m_grid->GetSRV());
 #endif
-		X_RETURN(m_srvTables[SRV_TABLE_GRID], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		XUSG_X_RETURN(m_srvTables[SRV_TABLE_GRID], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 
 	// Create the sampler table
 	const auto samplerTable = Util::DescriptorTable::MakeUnique();
 	const auto sampler = LINEAR_CLAMP;
 	samplerTable->SetSamplers(0, 1, &sampler, m_descriptorTableCache.get());
-	X_RETURN(m_samplerTable, samplerTable->GetSamplerTable(m_descriptorTableCache.get()), false);
+	XUSG_X_RETURN(m_samplerTable, samplerTable->GetSamplerTable(m_descriptorTableCache.get()), false);
 
 	// Get pipeline layout
 	const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
@@ -506,7 +506,7 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 	utilPipelineLayout->SetShaderStage(0, Shader::Stage::PS);
 	utilPipelineLayout->SetShaderStage(1, Shader::Stage::PS);
 	utilPipelineLayout->SetShaderStage(2, Shader::Stage::PS);
-	X_RETURN(m_pipelineLayouts[PASS_RAY_CAST], utilPipelineLayout->GetPipelineLayout(
+	XUSG_X_RETURN(m_pipelineLayouts[PASS_RAY_CAST], utilPipelineLayout->GetPipelineLayout(
 		m_pipelineLayoutCache.get(), PipelineLayoutFlag::NONE, L"RayCastPass"), false);
 
 	// Get pipeline
@@ -517,7 +517,7 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 	state->DSSetState(Graphics::DepthStencilPreset::DEPTH_STENCIL_NONE, m_graphicsPipelineCache.get());
 	state->IASetPrimitiveTopologyType(PrimitiveTopologyType::TRIANGLE);
 	state->OMSetRTVFormats(&rtFormat, 1);
-	X_RETURN(m_pipelines[PASS_RAY_CAST], state->GetPipeline(m_graphicsPipelineCache.get(), L"RayCast"), false);
+	XUSG_X_RETURN(m_pipelines[PASS_RAY_CAST], state->GetPipeline(m_graphicsPipelineCache.get(), L"RayCast"), false);
 
 	return true;
 }
@@ -640,7 +640,7 @@ void Voxelizer::voxelizeSolid(CommandList* pCommandList, Method voxMethod, uint8
 	pCommandList->SetPipelineState(m_pipelines[PASS_FILL_SOLID]);
 
 	// Record commands.
-	const auto numGroups = DIV_UP(GRID_SIZE, 4);
+	const auto numGroups = XUSG_DIV_UP(GRID_SIZE, 4);
 	pCommandList->Dispatch(numGroups, numGroups, numGroups);
 }
 
