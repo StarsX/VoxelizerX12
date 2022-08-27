@@ -22,9 +22,9 @@ public:
 	Voxelizer();
 	virtual ~Voxelizer();
 
-	bool Init(XUSG::CommandList* pCommandList, uint32_t width, uint32_t height, XUSG::Format rtFormat,
-		XUSG::Format dsFormat, std::vector<XUSG::Resource::uptr>& uploaders, const char* fileName,
-		const DirectX::XMFLOAT4& posScale);
+	bool Init(XUSG::CommandList* pCommandList, const XUSG::DescriptorTableCache::sptr& descriptorTableCache,
+		uint32_t width, uint32_t height, XUSG::Format rtFormat, XUSG::Format dsFormat,
+		std::vector<XUSG::Resource::uptr>& uploaders, const char* fileName, const DirectX::XMFLOAT4& posScale);
 	void UpdateFrame(uint8_t frameIndex, DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
 	void Render(XUSG::CommandList* pCommandList, bool solid, Method voxMethod, uint8_t frameIndex,
 		const XUSG::Descriptor& rtv, const XUSG::Descriptor& dsv);
@@ -138,7 +138,7 @@ protected:
 	XUSG::Graphics::PipelineCache::uptr	m_graphicsPipelineCache;
 	XUSG::Compute::PipelineCache::uptr	m_computePipelineCache;
 	XUSG::PipelineLayoutCache::uptr		m_pipelineLayoutCache;
-	XUSG::DescriptorTableCache::uptr	m_descriptorTableCache;
+	XUSG::DescriptorTableCache::sptr	m_descriptorTableCache;
 
 	const XUSG::InputLayout* m_pInputLayout;
 	XUSG::PipelineLayout	m_pipelineLayouts[NUM_PASS];
@@ -147,7 +147,6 @@ protected:
 	XUSG::DescriptorTable	m_cbvTables[NUM_CBV_TABLE];
 	XUSG::DescriptorTable	m_srvTables[NUM_SRV_TABLE];
 	XUSG::DescriptorTable	m_uavTables[NUM_UAV_TABLE];
-	XUSG::DescriptorTable	m_samplerTable;
 
 	XUSG::VertexBuffer::uptr m_vertexBuffer;
 	XUSG::IndexBuffer::uptr	m_indexbuffer;

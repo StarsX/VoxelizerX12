@@ -36,14 +36,15 @@ Voxelizer::~Voxelizer()
 {
 }
 
-bool Voxelizer::Init(CommandList* pCommandList, uint32_t width, uint32_t height, Format rtFormat,
-	Format dsFormat, vector<Resource::uptr>& uploaders, const char* fileName, const XMFLOAT4& posScale)
+bool Voxelizer::Init(CommandList* pCommandList, const DescriptorTableCache::sptr& descriptorTableCache,
+	uint32_t width, uint32_t height, Format rtFormat, Format dsFormat, vector<Resource::uptr>& uploaders,
+	const char* fileName, const XMFLOAT4& posScale)
 {
 	const auto pDevice = pCommandList->GetDevice();
 	m_graphicsPipelineCache = Graphics::PipelineCache::MakeUnique(pDevice);
 	m_computePipelineCache = Compute::PipelineCache::MakeUnique(pDevice);
-	m_descriptorTableCache = DescriptorTableCache::MakeUnique(pDevice);
 	m_pipelineLayoutCache = PipelineLayoutCache::MakeUnique(pDevice);
+	m_descriptorTableCache = descriptorTableCache;
 
 	m_viewport.x = static_cast<float>(width);
 	m_viewport.y = static_cast<float>(height);
@@ -137,22 +138,11 @@ void Voxelizer::Render(CommandList* pCommandList, bool solid, Method voxMethod,
 {
 	if (solid)
 	{
-		const DescriptorPool descriptorPools[] =
-		{
-			m_descriptorTableCache->GetDescriptorPool(CBV_SRV_UAV_POOL),
-			m_descriptorTableCache->GetDescriptorPool(SAMPLER_POOL)
-		};
-		pCommandList->SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
-
 		voxelizeSolid(pCommandList, voxMethod);
 		renderRayCast(pCommandList, frameIndex, rtv, dsv);
 	}
 	else
 	{
-		const DescriptorPool descriptorPools[] =
-		{ m_descriptorTableCache->GetDescriptorPool(CBV_SRV_UAV_POOL) };
-		pCommandList->SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
-
 		voxelize(pCommandList, voxMethod, frameIndex);
 		renderBoxArray(pCommandList, frameIndex, rtv, dsv);
 	}
@@ -492,20 +482,16 @@ bool Voxelizer::prerayCast(Format rtFormat, Format dsFormat)
 		XUSG_X_RETURN(m_srvTables[SRV_TABLE_GRID], descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 
-	// Create the sampler table
-	const auto samplerTable = Util::DescriptorTable::MakeUnique();
-	const auto sampler = LINEAR_CLAMP;
-	samplerTable->SetSamplers(0, 1, &sampler, m_descriptorTableCache.get());
-	XUSG_X_RETURN(m_samplerTable, samplerTable->GetSamplerTable(m_descriptorTableCache.get()), false);
+	// Create sampler
+	const auto& sampler = m_descriptorTableCache->GetSampler(SamplerPreset::LINEAR_CLAMP);
 
 	// Get pipeline layout
 	const auto utilPipelineLayout = Util::PipelineLayout::MakeUnique();
 	utilPipelineLayout->SetRange(0, DescriptorType::CBV, 1, 0, 0, DescriptorFlag::DATA_STATIC);
 	utilPipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0);
-	utilPipelineLayout->SetRange(2, DescriptorType::SAMPLER, 1, 0);
+	utilPipelineLayout->SetStaticSamplers(&sampler, 1, 0, 0, Shader::Stage::PS);
 	utilPipelineLayout->SetShaderStage(0, Shader::Stage::PS);
 	utilPipelineLayout->SetShaderStage(1, Shader::Stage::PS);
-	utilPipelineLayout->SetShaderStage(2, Shader::Stage::PS);
 	XUSG_X_RETURN(m_pipelineLayouts[PASS_RAY_CAST], utilPipelineLayout->GetPipelineLayout(
 		m_pipelineLayoutCache.get(), PipelineLayoutFlag::NONE, L"RayCastPass"), false);
 
@@ -698,7 +684,6 @@ void Voxelizer::renderRayCast(CommandList* pCommandList, uint8_t frameIndex, con
 
 	pCommandList->SetGraphicsDescriptorTable(0, m_cbvTables[CBV_TABLE_PER_OBJ + frameIndex]);
 	pCommandList->SetGraphicsDescriptorTable(1, m_srvTables[SRV_TABLE_GRID]);
-	pCommandList->SetGraphicsDescriptorTable(2, m_samplerTable);
 
 	// Set pipeline state
 	pCommandList->SetPipelineState(m_pipelines[PASS_RAY_CAST]);
