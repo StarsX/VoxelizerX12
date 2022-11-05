@@ -22,7 +22,7 @@ public:
 	Voxelizer();
 	virtual ~Voxelizer();
 
-	bool Init(XUSG::CommandList* pCommandList, const XUSG::DescriptorTableCache::sptr& descriptorTableCache,
+	bool Init(XUSG::CommandList* pCommandList, const XUSG::DescriptorTableLib::sptr& descriptorTableLib,
 		uint32_t width, uint32_t height, XUSG::Format rtFormat, XUSG::Format dsFormat,
 		std::vector<XUSG::Resource::uptr>& uploaders, const char* fileName, const DirectX::XMFLOAT4& posScale);
 	void UpdateFrame(uint8_t frameIndex, DirectX::CXMVECTOR eyePt, DirectX::CXMMATRIX viewProj);
@@ -134,11 +134,11 @@ protected:
 	void renderRayCast(XUSG::CommandList* pCommandList, uint8_t frameIndex,
 		const XUSG::Descriptor& rtv, const XUSG::Descriptor& dsv);
 
-	XUSG::ShaderPool::uptr m_shaderPool;
-	XUSG::Graphics::PipelineCache::uptr	m_graphicsPipelineCache;
-	XUSG::Compute::PipelineCache::uptr	m_computePipelineCache;
-	XUSG::PipelineLayoutCache::uptr		m_pipelineLayoutCache;
-	XUSG::DescriptorTableCache::sptr	m_descriptorTableCache;
+	XUSG::ShaderLib::uptr				m_shaderLib;
+	XUSG::Graphics::PipelineLib::uptr	m_graphicsPipelineLib;
+	XUSG::Compute::PipelineLib::uptr	m_computePipelineLib;
+	XUSG::PipelineLayoutLib::uptr		m_pipelineLayoutLib;
+	XUSG::DescriptorTableLib::sptr		m_descriptorTableLib;
 
 	const XUSG::InputLayout* m_pInputLayout;
 	XUSG::PipelineLayout	m_pipelineLayouts[NUM_PASS];

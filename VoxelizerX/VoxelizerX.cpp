@@ -136,8 +136,8 @@ void VoxelizerX::LoadPipeline()
 	XUSG_N_RETURN(m_depth->Create(m_device.get(), m_width, m_height, Format::D24_UNORM_S8_UINT,
 		ResourceFlag::DENY_SHADER_RESOURCE), ThrowIfFailed(E_FAIL));
 
-	// Create descriptor table cache.
-	m_descriptorTableCache = DescriptorTableCache::MakeShared(m_device.get(), L"DescriptorTableCache");
+	// Create descriptor-table lib.
+	m_descriptorTableLib = DescriptorTableLib::MakeShared(m_device.get(), L"DescriptorTableLib");
 }
 
 // Load the sample assets.
@@ -153,7 +153,7 @@ void VoxelizerX::LoadAssets()
 	if (!m_voxelizer) ThrowIfFailed(E_FAIL);
 
 	vector<Resource::uptr> uploaders(0);
-	if (!m_voxelizer->Init(pCommandList, m_descriptorTableCache, m_width, m_height,
+	if (!m_voxelizer->Init(pCommandList, m_descriptorTableLib, m_width, m_height,
 		static_cast<Format>(m_renderTargets[0]->GetFormat()),
 		static_cast<Format>(m_depth->GetFormat()), uploaders,
 		m_meshFileName.c_str(), m_meshPosScale)) ThrowIfFailed(E_FAIL);
@@ -360,7 +360,7 @@ void VoxelizerX::PopulateCommandList()
 
 	// Record commands.
 	// Bind the descriptor pool
-	const auto descriptorPool = m_descriptorTableCache->GetDescriptorPool(CBV_SRV_UAV_POOL);
+	const auto descriptorPool = m_descriptorTableLib->GetDescriptorPool(CBV_SRV_UAV_POOL);
 	pCommandList->SetDescriptorPools(1, &descriptorPool);
 
 	// Indicate that the back buffer will be used as a render target.

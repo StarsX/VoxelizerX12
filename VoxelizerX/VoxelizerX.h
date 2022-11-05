@@ -44,7 +44,7 @@ public:
 	virtual void ParseCommandLineArgs(wchar_t* argv[], int argc);
 
 private:
-	XUSG::DescriptorTableCache::sptr m_descriptorTableCache;
+	XUSG::DescriptorTableLib::sptr	m_descriptorTableLib;
 
 	XUSG::SwapChain::uptr			m_swapChain;
 	XUSG::CommandAllocator::uptr	m_commandAllocators[Voxelizer::FrameCount];
