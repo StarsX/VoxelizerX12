@@ -10,6 +10,7 @@
 //*********************************************************
 
 #include "VoxelizerX.h"
+#include "stb_image_write.h"
 
 using namespace std;
 using namespace XUSG;
@@ -247,6 +248,9 @@ void VoxelizerX::OnKeyUp(uint8_t key)
 	case VK_F1:
 		m_showFPS = !m_showFPS;
 		break;
+	case VK_F11:
+		m_screenShot = 1;
+		break;
 	case 'V':
 		m_voxMethod = static_cast<Voxelizer::Method>((m_voxMethod + 1) % Voxelizer::NUM_METHOD);
 		m_voxMethodDesc = VoxMethodDescs[m_voxMethod];
@@ -363,24 +367,34 @@ void VoxelizerX::PopulateCommandList()
 	const auto descriptorHeap = m_descriptorTableLib->GetDescriptorHeap(CBV_SRV_UAV_HEAP);
 	pCommandList->SetDescriptorHeaps(1, &descriptorHeap);
 
+	const auto pRenderTarget = m_renderTargets[m_frameIndex].get();
+
 	// Indicate that the back buffer will be used as a render target.
 	ResourceBarrier barrier;
-	auto numBarriers = m_renderTargets[m_frameIndex]->SetBarrier(&barrier, ResourceState::RENDER_TARGET);
+	auto numBarriers = pRenderTarget->SetBarrier(&barrier, ResourceState::RENDER_TARGET);
 	pCommandList->Barrier(numBarriers, &barrier);
 
 	if (!m_solid)
 	{
 		const float clearColor[] = { CLEAR_COLOR, 0.0f };
-		pCommandList->ClearRenderTargetView(m_renderTargets[m_frameIndex]->GetRTV(), clearColor);
+		pCommandList->ClearRenderTargetView(pRenderTarget->GetRTV(), clearColor);
 	}
 	pCommandList->ClearDepthStencilView(m_depth->GetDSV(), ClearFlag::DEPTH, 1.0f);
 
 	// Voxelizer rendering
-	m_voxelizer->Render(pCommandList, m_solid, m_voxMethod, m_frameIndex, m_renderTargets[m_frameIndex]->GetRTV(), m_depth->GetDSV());
+	m_voxelizer->Render(pCommandList, m_solid, m_voxMethod, m_frameIndex, pRenderTarget->GetRTV(), m_depth->GetDSV());
 
 	// Indicate that the back buffer will now be used to present.
-	numBarriers = m_renderTargets[m_frameIndex]->SetBarrier(&barrier, ResourceState::PRESENT);
+	numBarriers = pRenderTarget->SetBarrier(&barrier, ResourceState::PRESENT);
 	pCommandList->Barrier(numBarriers, &barrier);
+
+	// Screen-shot helper
+	if (m_screenShot == 1)
+	{
+		if (!m_readBuffer) m_readBuffer = Buffer::MakeUnique();
+		pRenderTarget->ReadBack(pCommandList, m_readBuffer.get());
+		m_screenShot = 2;
+	}
 
 	XUSG_N_RETURN(pCommandList->Close(), ThrowIfFailed(E_FAIL));
 }
@@ -418,6 +432,37 @@ void VoxelizerX::MoveToNextFrame()
 
 	// Set the fence value for the next frame.
 	m_fenceValues[m_frameIndex] = currentFenceValue + 1;
+
+	// Screen-shot helper
+	if (m_screenShot)
+	{
+		if (m_screenShot > Voxelizer::FrameCount)
+		{
+			char timeStr[15];
+			tm dateTime;
+			const auto now = time(nullptr);
+			if (!localtime_s(&dateTime, &now) && strftime(timeStr, sizeof(timeStr), "%Y%m%d%H%M%S", &dateTime))
+				SaveImage((string("VoxelizerX_") + timeStr + ".png").c_str(), m_readBuffer.get(), m_width, m_height);
+			m_screenShot = 0;
+		}
+		else ++m_screenShot;
+	}
+}
+
+void VoxelizerX::SaveImage(char const* fileName, Buffer* imageBuffer, uint32_t w, uint32_t h, uint8_t comp)
+{
+	assert(comp == 3 || comp == 4);
+	const auto pData = static_cast<uint8_t*>(imageBuffer->Map());
+
+	//stbi_write_png_compression_level = 1024;
+	vector<uint8_t> imageData(comp * w * h);
+	for (auto i = 0u; i < w * h; ++i)
+		for (uint8_t j = 0; j < comp; ++j)
+			imageData[comp * i + j] = pData[4 * i + j];
+
+	stbi_write_png(fileName, w, h, comp, imageData.data(), 0);
+
+	m_readBuffer->Unmap();
 }
 
 double VoxelizerX::CalculateFrameStats(float* pTimeStep)
@@ -443,6 +488,8 @@ double VoxelizerX::CalculateFrameStats(float* pTimeStep)
 		if (m_showFPS) windowText << setprecision(2) << fixed << fps;
 		else windowText << L"[F1]";
 		windowText << L"    [V] " << m_voxMethodDesc << L"    [S] " << m_solidDesc;
+		windowText << L"    [F11] screen shot";
+
 		SetCustomWindowText(windowText.str().c_str());
 	}
 
