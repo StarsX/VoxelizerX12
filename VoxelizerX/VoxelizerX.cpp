@@ -39,7 +39,8 @@ VoxelizerX::VoxelizerX(uint32_t width, uint32_t height, std::wstring name) :
 	m_meshFileName("Assets/bunny.obj"),
 	m_meshPosScale(0.0f, 0.0f, 0.0f, 1.0f),
 	m_voxMethodDesc(VoxMethodDescs[m_voxMethod]),
-	m_solidDesc(SolidDescs[m_solid])
+	m_solidDesc(SolidDescs[m_solid]),
+	m_screenShot(0)
 {
 #if defined (_DEBUG)
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
