@@ -63,8 +63,12 @@ bool Voxelizer::Init(CommandList* pCommandList, const DescriptorTableLib::sptr& 
 	XUSG_N_RETURN(createIB(pCommandList, objLoader.GetNumIndices(), objLoader.GetIndices(), uploaders), false);
 
 	// Extract boundary
-	const auto center = objLoader.GetCenter();
-	m_bound = XMFLOAT4(center.x, center.y, center.z, objLoader.GetRadius());
+	const auto& aabb = objLoader.GetAABB();
+	const XMFLOAT3 ext(aabb.Max.x - aabb.Min.x, aabb.Max.y - aabb.Min.y, aabb.Max.z - aabb.Min.z);
+	m_bound.x = (aabb.Max.x + aabb.Min.x) / 2.0f;
+	m_bound.y = (aabb.Max.y + aabb.Min.y) / 2.0f;
+	m_bound.z = (aabb.Max.z + aabb.Min.z) / 2.0f;
+	m_bound.w = (max)(ext.x, (max)(ext.y, ext.z)) / 2.0f;
 
 	m_numLevels = max(static_cast<uint32_t>(log2(GRID_SIZE)), 1);
 	XUSG_N_RETURN(createCBs(pCommandList, uploaders), false);
