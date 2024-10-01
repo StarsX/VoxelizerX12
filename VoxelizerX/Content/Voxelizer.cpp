@@ -85,9 +85,11 @@ bool Voxelizer::Init(CommandList* pCommandList, const DescriptorTableLib::sptr& 
 	XUSG_N_RETURN(m_mutex->Create(m_device.get(), GRID_SIZE, GRID_SIZE, GRID_SIZE,
 		Format::R32_UINT, ResourceFlag::ALLOW_UNORDERED_ACCESS), false);
 #else
+	const auto uavFormat = Format::R32_UINT;
 	m_grid = Texture3D::MakeUnique();
-	XUSG_N_RETURN(m_grid->Create(pDevice, GRID_SIZE, GRID_SIZE, GRID_SIZE,
-		Format::R10G10B10A2_UNORM, ResourceFlag::NEED_PACKED_UAV), false);
+	XUSG_N_RETURN(m_grid->Create(pDevice, GRID_SIZE, GRID_SIZE, GRID_SIZE, Format::R10G10B10A2_UNORM,
+		ResourceFlag::ALLOW_UNORDERED_ACCESS, 1, MemoryFlag::NONE, L"Grid", XUSG_DEFAULT_SRV_COMPONENT_MAPPING,
+		TextureLayout::UNKNOWN, 1, &uavFormat), false);
 #endif
 
 	m_KBufferDepth = Texture2D::MakeUnique();
@@ -287,7 +289,7 @@ bool Voxelizer::prevoxelize(uint8_t mipLevel)
 #else
 	{
 		const auto descriptorTable = Util::DescriptorTable::MakeUnique();
-		descriptorTable->SetDescriptors(0, 1, &m_grid->GetPackedUAV());
+		descriptorTable->SetDescriptors(0, 1, &m_grid->GetUAV(0, Format::R32_UINT));
 		XUSG_X_RETURN(m_uavTables[UAV_TABLE_VOXELIZE], descriptorTable->GetCbvSrvUavTable(m_descriptorTableLib.get()), false);
 	}
 #endif
@@ -576,7 +578,8 @@ void Voxelizer::voxelize(CommandList* pCommandList, Method voxMethod, bool depth
 	for (uint8_t i = 1; i < 4; ++i)
 		pCommandList->ClearUnorderedAccessViewFloat(m_uavTables[UAV_TABLE_VOXELIZE + i], m_grid[i]->GetUAV(), m_grid[i].get(), XMVECTORF32{ 0.0f }.f);
 #else
-	pCommandList->ClearUnorderedAccessViewUint(m_uavTables[UAV_TABLE_VOXELIZE], m_grid->GetPackedUAV(), m_grid.get(), XMVECTORU32{ 0 }.u);
+	pCommandList->ClearUnorderedAccessViewUint(m_uavTables[UAV_TABLE_VOXELIZE],
+		m_grid->GetUAV(0, Format::R32_UINT), m_grid.get(), XMVECTORU32{ 0 }.u);
 #endif
 	if (depthPeel) pCommandList->ClearUnorderedAccessViewUint(m_uavTables[UAV_TABLE_KBUFFER], m_KBufferDepth->GetUAV(),
 		m_KBufferDepth.get(), XMVECTORU32{ UINT32_MAX }.u);
