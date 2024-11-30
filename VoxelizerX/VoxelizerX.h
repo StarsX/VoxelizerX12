@@ -44,6 +44,13 @@ public:
 	virtual void ParseCommandLineArgs(wchar_t* argv[], int argc);
 
 private:
+	enum DeviceType : uint8_t
+	{
+		DEVICE_DISCRETE,
+		DEVICE_UMA,
+		DEVICE_WARP
+	};
+
 	XUSG::DescriptorTableLib::sptr	m_descriptorTableLib;
 
 	XUSG::SwapChain::uptr			m_swapChain;
@@ -69,13 +76,14 @@ private:
 	uint64_t	m_fenceValues[Voxelizer::FrameCount];
 
 	// Application state
-	bool		m_solid;
-	bool		m_showFPS;
-	bool		m_pausing;
+	DeviceType	m_deviceType;
 	StepTimer	m_timer;
 	Voxelizer::Method m_voxMethod;
 	std::wstring m_voxMethodDesc;
 	std::wstring m_solidDesc;
+	bool		m_solid;
+	bool		m_showFPS;
+	bool		m_isPaused;
 
 	// User camera interactions
 	bool m_tracking;
